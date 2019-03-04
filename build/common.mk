@@ -1,5 +1,6 @@
 # Common tools used by actions
 RM = rm -v -f
+FSUTIL = $(TOPDIR)/tools/fsutil.py
 
 # Current directory without common prefix
 DIR = $(patsubst $(TOPDIR)/%,%,$(CURDIR)/)
@@ -24,6 +25,14 @@ endif
 %.o: %.S
 	@echo "[AS] $(DIR)$< -> $(DIR)$@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $(realpath $<)
+
+%.bin: %.S
+	@echo "[AS] $(DIR)$< -> $(DIR)$@"
+	$(AS) -Fbin $(CPPFLAGS) $(ASFLAGS) -o $@ $(realpath $<)
+
+%.adf:
+	@echo "[ADF] $(DIR)$^ -> $(DIR)$@"
+	$(FSUTIL) -b $(TOPDIR)/bootloader.bin create $@ $^
 
 # Define main rules of the build system
 build: build-dependencies $(BUILD-FILES) build-here
