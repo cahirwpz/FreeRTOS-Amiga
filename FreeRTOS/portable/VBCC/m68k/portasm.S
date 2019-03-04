@@ -25,20 +25,21 @@
 ; ulPortSetIPL() and mcf5xxx_wr_cacr() copied with permission from FreeScale
 ; supplied source files.
 
-        xdef ulPortSetIPL
-        xdef vPortStartFirstTask
+        xdef _ulPortSetIPL
+        xdef _vPortStartFirstTask
+        xref _pxCurrentTCB
 
         section "portasm.S",text
 
         macro portSAVE_CONTEXT
 	lea.l   -60(sp),sp
 	movem.l	d0-a6,(sp)
-	move.l	pxCurrentTCB,a0
+	move.l	_pxCurrentTCB,a0
 	move.l	sp,(a0)
 	endm
 
         macro portRESTORE_CONTEXT
-	move.l	pxCurrentTCB,a0
+	move.l	_pxCurrentTCB,a0
 	move.l	(a0),sp
 	movem.l	(sp),d0-a6
 	lea.l	60(sp),sp
@@ -54,7 +55,7 @@
 ; Note that only the least significant three bits of the passed
 ; value are used.
 
-ulPortSetIPL:
+_ulPortSetIPL:
     link    a6,#-8
     movem.l d6-d7,(sp)
 
@@ -79,7 +80,7 @@ ulPortSetIPL:
 
 ;********************************************************************
 
-vPortStartFirstTask:
+_vPortStartFirstTask:
 	portRESTORE_CONTEXT
 
 ; vim: ft=asm68k

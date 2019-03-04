@@ -10,6 +10,7 @@ CPPFLAGS = -I$(TOPDIR)/FreeRTOS/include \
 	   -I$(TOPDIR)/FreeRTOS/portable/VBCC/m68k \
 	   -I$(TOPDIR)/toolchain/m68k-amigaos/include \
 	   -I$(TOPDIR)
+LDFLAGS = -S -s
 
 include $(TOPDIR)/build/compile.mk
 include $(TOPDIR)/build/common.mk

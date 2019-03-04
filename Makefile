@@ -4,7 +4,7 @@ RTOS_DIR = FreeRTOS
 MMAN_DIR = FreeRTOS/portable/MemMang
 PORT_DIR = FreeRTOS/portable/VBCC/m68k
 
-SOURCES = main.c \
+SOURCES = startup.c main.c \
 	  $(RTOS_DIR)/croutine.c \
 	  $(RTOS_DIR)/tasks.c \
 	  $(RTOS_DIR)/queue.c \
@@ -21,14 +21,16 @@ all: build
 include $(TOPDIR)/build/build.vbcc.mk
 
 build-here: bootloader.bin freertos.adf
-	
-freertos.adf: main.o
+
+freertos.exe: $(OBJECTS)
+
+freertos.adf: freertos.exe
 
 vbcc:
 	make -C external/vbcc DESTDIR=$(PWD)/toolchain
 
 clean-here:
 	$(RM) bootloader.bin
-	$(RM) *.adf *~
+	$(RM) *.adf *.exe *~
 
 .PHONY: build clean vbcc

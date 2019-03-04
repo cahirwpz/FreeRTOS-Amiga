@@ -30,6 +30,10 @@ endif
 	@echo "[AS] $(DIR)$< -> $(DIR)$@"
 	$(AS) -Fbin $(CPPFLAGS) $(ASFLAGS) -o $@ $(realpath $<)
 
+%.exe:
+	@echo "[LD] $^ -> $(DIR)$@"
+	$(LD) $(LDFLAGS) -o $@ $^
+
 %.adf:
 	@echo "[ADF] $(DIR)$^ -> $(DIR)$@"
 	$(FSUTIL) -b $(TOPDIR)/bootloader.bin create $@ $^

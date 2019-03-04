@@ -35,3 +35,4 @@ int main(void) {
 }
 
 void vApplicationIdleHook(void) { custom->color[0] = 0x00f; }
+void vApplicationSetupInterrupts(void) {}
