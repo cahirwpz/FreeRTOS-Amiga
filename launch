@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import os.path
+import shutil
+import shlex
+import subprocess
+from libtmux import Server, Session
+
+
+TMUX_CONF = './.tmux.conf'
+SOCKET = 'fsuae'
+SESSION = 'fsuae'
+
+
+class Launchable():
+    def __init__(self, name, cmd):
+        self.name = name
+        self.cmd = cmd
+        self.window = None
+        self.options = []
+
+    def configure(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def start(self, session):
+        cmd = ' '.join([self.cmd] + list(map(shlex.quote, self.options)))
+        self.window = session.new_window(
+            attach=False, window_name=self.name, window_shell=cmd)
+
+
+class FSUAE(Launchable):
+    def __init__(self):
+        super().__init__('fs-uae', shutil.which('fs-uae'))
+
+    def configure(self, adf):
+        self.options = ['--stdout=1',
+                        '--floppy_drive_0=' + os.path.realpath(adf),
+                        os.path.realpath('Config.fs-uae')]
+
+
+class SOCAT(Launchable):
+    def __init__(self, name):
+        super().__init__(name, 'socat')
+
+    def configure(self, tcp_port):
+        # The simulator will only open the server after some time has
+        # passed.  To minimize the delay, keep reconnecting until success.
+        self.options = [
+            'STDIO', 'tcp:localhost:{},retry,forever'.format(tcp_port)]
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Launch FreeRTOS kernel in FS-UAE emulator.')
+    parser.add_argument('adf', metavar='ADF', type=str,
+                        help='Floppy disk image in ADF format.')
+    args = parser.parse_args()
+
+    # Check if floppy disk image file is available
+    if not os.path.isfile(args.adf):
+        raise SystemExit('%s: file does not exist!' % args.kernel)
+
+    uae = FSUAE()
+    uae.configure(adf=args.adf)
+
+    ser_port = SOCAT('serial')
+    ser_port.configure(tcp_port=9000)
+
+    par_port = SOCAT('parallel')
+    par_port.configure(tcp_port=9001)
+
+    subprocess.run(['tmux', '-f', TMUX_CONF, '-L', SOCKET, 'start-server'])
+
+    server = Server(config_file=TMUX_CONF, socket_name=SOCKET)
+
+    if server.has_session(SESSION):
+        server.kill_session(SESSION)
+
+    session = server.new_session(session_name=SESSION, attach=False,
+                                 window_name=':0', window_command='sleep 1')
+
+    try:
+        uae.start(session)
+        ser_port.start(session)
+        par_port.start(session)
+
+        session.kill_window(':0')
+        # session.select_window(uae.name)
+        session.attach_session()
+    finally:
+        session.kill_session()
+        server.kill_server()
