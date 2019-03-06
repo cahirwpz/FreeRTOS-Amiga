@@ -30,39 +30,43 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#define portINITIAL_FORMAT_VECTOR ((StackType_t)0x4000)
+#define portINITIAL_FORMAT_VECTOR ((uint16_t)0x0000)
 
 /* Supervisor mode set. */
-#define portINITIAL_STATUS_REGISTER ((StackType_t)0x2000)
+#define portINITIAL_STATUS_REGISTER ((uint16_t)0x2000)
 
 /* Used to keep track of the number of nested calls to taskENTER_CRITICAL().
 This will be set to 0 prior to the first task being started. */
 static uint32_t ulCriticalNesting = 0x9999UL;
 
-/*-----------------------------------------------------------*/
+#define MOVEL(v)                        \
+  *(uint32_t *)sp = (uint32_t)(v)
+
+#define PUSHL(v)                        \
+  sp -= sizeof(uint32_t);               \
+  *(uint32_t *)sp = (uint32_t)(v);
+
+#define PUSHW(v)                        \
+  sp -= sizeof(uint16_t);               \
+  *(uint16_t *)sp = (uint16_t)(v);
 
 StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
                                    TaskFunction_t pxCode, void *pvParameters) {
-  *pxTopOfStack = (StackType_t)pvParameters;
-  pxTopOfStack--;
+  char *sp = (char *)pxTopOfStack;
 
-  *pxTopOfStack = (StackType_t)0xDEADBEEF;
-  pxTopOfStack--;
+  MOVEL(pvParameters);
+  PUSHL(0xDEADBEEF);
 
   /* Exception stack frame starts with the return address. */
-  *pxTopOfStack = (StackType_t)pxCode;
-  pxTopOfStack--;
+  /* only for 68010 and above
+   * PUSHW(portINITIAL_FORMAT_VECTOR); */
+  PUSHL(pxCode);
+  PUSHW(portINITIAL_STATUS_REGISTER);
 
-  *pxTopOfStack =
-      (portINITIAL_FORMAT_VECTOR << 16UL) | (portINITIAL_STATUS_REGISTER);
-  pxTopOfStack--;
+  sp -= 15 * sizeof(uint32_t);  /* A6 to D0. */
 
-  *pxTopOfStack = (StackType_t)0x0; /*FP*/
-  pxTopOfStack -= 14;               /* A5 to D0. */
-
-  return pxTopOfStack;
+  return (StackType_t *)sp;
 }
-/*-----------------------------------------------------------*/
 
 BaseType_t xPortStartScheduler(void) {
   extern void vPortStartFirstTask(void);
@@ -77,48 +81,24 @@ BaseType_t xPortStartScheduler(void) {
 
   return pdFALSE;
 }
-/*-----------------------------------------------------------*/
 
 void vPortEndScheduler(void) {
   /* Not implemented as there is nothing to return to. */
 }
-/*-----------------------------------------------------------*/
 
 void vPortEnterCritical(void) {
-  if (ulCriticalNesting == 0UL) {
-    /* Guard against context switches being pended simultaneously with a
-    critical section being entered. */
-    do {
-      portDISABLE_INTERRUPTS();
-#if 0
-      if (MCF_INTC0_INTFRCL == 0UL) {
-        break;
-      }
-#endif
-      portENABLE_INTERRUPTS();
-
-    } while (1);
-  }
+  portDISABLE_INTERRUPTS();
   ulCriticalNesting++;
 }
-/*-----------------------------------------------------------*/
 
 void vPortExitCritical(void) {
   ulCriticalNesting--;
-  if (ulCriticalNesting == 0) {
+  if (ulCriticalNesting == 0)
     portENABLE_INTERRUPTS();
-  }
 }
-/*-----------------------------------------------------------*/
 
 void vPortYieldHandler(void) {
-  uint32_t ulSavedInterruptMask;
-
-  ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
-  /* Note this will clear all forced interrupts - this is done for speed. */
-#if 0
-  MCF_INTC0_INTFRCL = 0;
-#endif
+  uint32_t ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
   vTaskSwitchContext();
   portCLEAR_INTERRUPT_MASK_FROM_ISR(ulSavedInterruptMask);
 }

@@ -65,22 +65,16 @@ typedef uint32_t TickType_t;
 #define portSTACK_GROWTH -1
 #define portTICK_PERIOD_MS ((TickType_t)1000 / configTICK_RATE_HZ)
 /*-----------------------------------------------------------*/
-uint32_t ulPortSetIPL(uint32_t);
-#define portDISABLE_INTERRUPTS()                                               \
-  ulPortSetIPL(configMAX_SYSCALL_INTERRUPT_PRIORITY)
-#define portENABLE_INTERRUPTS() ulPortSetIPL(0)
+void portDISABLE_INTERRUPTS() = "\tmove.w\t#$4000,$df009a\n";
+void portENABLE_INTERRUPTS() = "\tmove.w\t#$c000,$df009a\n";
 
 extern void vPortEnterCritical(void);
 extern void vPortExitCritical(void);
 #define portENTER_CRITICAL() vPortEnterCritical()
 #define portEXIT_CRITICAL() vPortExitCritical()
 
-extern UBaseType_t uxPortSetInterruptMaskFromISR(void);
-extern void vPortClearInterruptMaskFromISR(UBaseType_t);
-#define portSET_INTERRUPT_MASK_FROM_ISR()                                      \
-  ulPortSetIPL(configMAX_SYSCALL_INTERRUPT_PRIORITY)
-#define portCLEAR_INTERRUPT_MASK_FROM_ISR(uxSavedStatusRegister)               \
-  ulPortSetIPL(uxSavedStatusRegister)
+#define portSET_INTERRUPT_MASK_FROM_ISR() 0
+#define portCLEAR_INTERRUPT_MASK_FROM_ISR(uxSavedStatusRegister)
 
 /*-----------------------------------------------------------*/
 
@@ -88,12 +82,13 @@ extern void vPortClearInterruptMaskFromISR(UBaseType_t);
 
 /* Task utilities. */
 
-#define portNOP()
+void portNOP() = "\tnop\n";
+void portBREAK() = "\tillegal\n";
 
 /* Note this will overwrite all other bits in the force register, it is done
  * this way for speed. */
-#define portYIELD() portNOP()
-#define portYIELD_WITHIN_API() portNOP()
+extern void vPortYield(void);
+#define portYIELD() vPortYield()
 
 #define portSETUP_TCB(pxTCB)
 #define portCLEAN_UP_TCB(pxTCB)

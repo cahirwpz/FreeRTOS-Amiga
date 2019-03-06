@@ -66,10 +66,10 @@ if __name__ == '__main__':
     uae.configure(adf=args.adf)
 
     ser_port = SOCAT('serial')
-    ser_port.configure(tcp_port=9000)
+    ser_port.configure(tcp_port=8000)
 
     par_port = SOCAT('parallel')
-    par_port.configure(tcp_port=9001)
+    par_port.configure(tcp_port=8001)
 
     subprocess.run(['tmux', '-f', TMUX_CONF, '-L', SOCKET, 'start-server'])
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
         par_port.start(session)
 
         session.kill_window(':0')
-        # session.select_window(uae.name)
+        session.select_window(uae.name)
         session.attach_session()
     finally:
         session.kill_session()

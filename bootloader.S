@@ -9,6 +9,8 @@
         include 'hardware/custom.i'
 
 ; include 'lvo/exec_lib.i'
+_LVOSuperState          EQU     -150
+_LVOUserState           EQU     -156
 _LVOAllocMem            EQU     -198
 _LVOFreeMem             EQU     -210
 _LVOFindTask            EQU     -294
@@ -105,7 +107,9 @@ Entry:
         lea     .cmd(pc),a0
         moveq   #1,d0
         movem.l d2-d7/a2-a6,-(sp)
+        JSRLIB  SuperState
         jsr     SEG_START(a4)
+        JSRLIB  UserState
         movem.l (sp)+,d2-d7/a2-a6
 
         ; free hunk list

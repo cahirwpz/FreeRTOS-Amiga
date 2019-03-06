@@ -34,6 +34,7 @@
 #define configUSE_COUNTING_SEMAPHORES   0
 
 #define configMAX_PRIORITIES            (4)
+#define configSUPPORT_STATIC_ALLOCATION  0
 #define configSUPPORT_DYNAMIC_ALLOCATION 1
 #define configAPPLICATION_ALLOCATED_HEAP 0
 
