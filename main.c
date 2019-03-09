@@ -1,11 +1,10 @@
-#include <hardware/custom.h>
 #include <FreeRTOS.h>
 #include <task.h>
 
+#include <hardware.h>
+
 #define mainRED_TASK_PRIORITY 3
 #define mainGREEN_TASK_PRIORITY 3
-
-volatile struct Custom* const custom = (APTR)0xdff000;
 
 static void vRedTask(void *) {
   for (;;) {
@@ -35,4 +34,3 @@ int main(void) {
 }
 
 void vApplicationIdleHook(void) { custom->color[0] = 0x00f; }
-void vApplicationSetupInterrupts(void) {}

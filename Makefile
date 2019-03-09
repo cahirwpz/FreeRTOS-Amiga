@@ -4,13 +4,14 @@ RTOS_DIR = FreeRTOS
 MMAN_DIR = FreeRTOS/portable/MemMang
 PORT_DIR = FreeRTOS/portable/VBCC/m68k
 
-SOURCES = startup.c main.c \
+SOURCES = startup.c intr.c main.c \
 	  $(RTOS_DIR)/tasks.c \
 	  $(RTOS_DIR)/queue.c \
 	  $(RTOS_DIR)/list.c \
 	  $(MMAN_DIR)/heap_1.c \
 	  $(PORT_DIR)/port.c \
 	  $(PORT_DIR)/portasm.S
+
 	  # $(RTOS_DIR)/croutine.c \
 	  $(RTOS_DIR)/stream_buffer.c \
 	  $(RTOS_DIR)/event_groups.c \

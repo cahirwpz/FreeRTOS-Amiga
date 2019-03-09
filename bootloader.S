@@ -106,11 +106,25 @@ Entry:
         ; call executable
         lea     .cmd(pc),a0
         moveq   #1,d0
-        movem.l d2-d7/a2-a6,-(sp)
+        ; disable all interrupts
+        move.w  intenar+$dff000,d2
+        move.w  #$3fff,intena+$dff000
+        ; enter supervisor mode
         JSRLIB  SuperState
+        ; set highest priority level
+        move.w  sr,d3
+        or.w    #$0700,sr
+        ; enter the kernel
+        movem.l d2-d7/a2-a6,-(sp)
         jsr     SEG_START(a4)
-        JSRLIB  UserState
         movem.l (sp)+,d2-d7/a2-a6
+        ; restore previous priority level
+        move.w  d3,sr
+        ; leave supervisor mode
+        JSRLIB  UserState
+        ; restore the state of interrupts
+        or.w    #$8000,d2
+        move.w  d2,intena+$dff000
 
         ; free hunk list
 .free   move.l  a4,a1

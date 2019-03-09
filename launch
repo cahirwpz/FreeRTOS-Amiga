@@ -90,5 +90,8 @@ if __name__ == '__main__':
         session.select_window(uae.name)
         session.attach_session()
     finally:
-        session.kill_session()
+        try:
+            session.kill_session()
+        except:
+            pass
         server.kill_server()

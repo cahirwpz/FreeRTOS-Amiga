@@ -1,23 +1,5 @@
-; FreeRTOS Kernel V10.2.0
-; Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
-;
-; Permission is hereby granted, free of charge, to any person obtaining a copy of
-; this software and associated documentation files (the "Software"), to deal in
-; the Software without restriction, including without limitation the rights to
-; use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-; the Software, and to permit persons to whom the Software is furnished to do so,
-; subject to the following conditions:
-;
-; The above copyright notice and this permission notice shall be included in all
-; copies or substantial portions of the Software.
-;
-; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-; FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-; COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-; IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
+        xdef _ulPortSetInterruptMaskFromISR
+        xdef _vPortClearInterruptMaskFromISR
         xdef _vPortYield
         xdef _vPortStartFirstTask
         xref _pxCurrentTCB
@@ -25,8 +7,8 @@
         section "portasm.S",text
 
         macro portSAVE_CONTEXT
-	lea.l   -60(sp),sp
-	movem.l	d0-a6,(sp)
+        move.w  sr,-(sp)                ; SR will be restored by RTE
+	movem.l	d0-a6,-(sp)
 	move.l	_pxCurrentTCB,a0
 	move.l	sp,(a0)
 	endm
@@ -34,24 +16,25 @@
         macro portRESTORE_CONTEXT
 	move.l	_pxCurrentTCB,a0
 	move.l	(a0),sp
-	movem.l	(sp),d0-a6
-	lea.l	60(sp),sp
+	movem.l	(sp)+,d0-a6
+        rte                             ; pops SR from stack
 	endm
+
+_ulPortSetInterruptMaskFromISR:
+        move.w  sr,d0
+        or.w    #$0700,sr
+        rts
+
+_vPortClearInterruptMaskFromISR:
+        move.w  d0,sr
+        rts
 
 _vPortYield:
         portSAVE_CONTEXT
         jsr     _vTaskSwitchContext
         portRESTORE_CONTEXT
-        rts
-
-_vPortYieldISR:
-        portSAVE_CONTEXT
-        jsr     _vPortYieldHandler
-        portRESTORE_CONTEXT
-        rte
 
 _vPortStartFirstTask:
         portRESTORE_CONTEXT
-        rte
 
-; vim: ft=asm68k
+; vim: ft=asm68k ts=8 sw=8
