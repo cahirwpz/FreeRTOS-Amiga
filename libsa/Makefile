@@ -9,6 +9,8 @@ SOURCES = \
 	bzero.S \
 	dprintf.c \
 	kvprintf.c \
+	memcpy.S \
+	strlen.S \
 	rawio.S
 
 all: build
@@ -18,5 +20,7 @@ include $(TOPDIR)/build/build.vbcc.mk
 build-here: sa.lib
 
 sa.lib: $(OBJECTS)
+
+CLEAN-FILES += sa.lib
 
 # vim: ts=8 sw=8 noet

@@ -43,7 +43,6 @@ typedef intptr_t PTRDIFF_T;
 typedef unsigned long u_long;
 typedef unsigned int u_int;
 typedef long ssize_t;
-typedef unsigned long size_t;
 
 #define NBBY 8
 

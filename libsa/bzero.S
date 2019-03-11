@@ -71,4 +71,4 @@ _bzero:
 	move.l	(sp)+,d2
 	rts
 
-; vim: ft=asm68k:ts=8:sw=8
+; vim: ft=asm68k:ts=8:sw=8:noet:
