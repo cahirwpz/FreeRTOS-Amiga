@@ -1,21 +1,7 @@
 TOPDIR = $(CURDIR)
 
-RTOS_DIR = FreeRTOS
-MMAN_DIR = FreeRTOS/portable/MemMang
-PORT_DIR = FreeRTOS/portable/VBCC/m68k
-
-SOURCES = startup.c intr.c main.c \
-	  $(RTOS_DIR)/tasks.c \
-	  $(RTOS_DIR)/queue.c \
-	  $(RTOS_DIR)/list.c \
-	  $(MMAN_DIR)/heap_1.c \
-	  $(PORT_DIR)/port.c \
-	  $(PORT_DIR)/portasm.S
-
-	  # $(RTOS_DIR)/croutine.c \
-	  $(RTOS_DIR)/stream_buffer.c \
-	  $(RTOS_DIR)/event_groups.c \
-	  $(RTOS_DIR)/timers.c \
+SUBDIR = libsa FreeRTOS
+SOURCES = startup.c intr.c main.c
 
 all: build
 
@@ -23,7 +9,7 @@ include $(TOPDIR)/build/build.vbcc.mk
 
 build-here: bootloader.bin freertos.adf
 
-freertos.exe: $(OBJECTS)
+freertos.exe: $(OBJECTS) libsa/sa.lib FreeRTOS/freertos.lib
 
 freertos.adf: freertos.exe
 
@@ -34,4 +20,4 @@ clean-here:
 	$(RM) bootloader.bin
 	$(RM) *.adf *.exe *~
 
-.PHONY: build clean vbcc
+.PHONY: vbcc

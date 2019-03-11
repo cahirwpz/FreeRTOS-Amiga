@@ -26,22 +26,40 @@ endif
 	@echo "[AS] $(DIR)$< -> $(DIR)$@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $(realpath $<)
 
+%.lib:
+	@echo "[LD] $(addprefix $(DIR),$^) -> $(DIR)$@"
+	$(LD) -r -o $@ $^
+
 %.bin: %.S
 	@echo "[AS] $(DIR)$< -> $(DIR)$@"
 	$(AS) -Fbin $(CPPFLAGS) $(ASFLAGS) -o $@ $(realpath $<)
 
 %.exe:
 	@echo "[LD] $^ -> $(DIR)$@"
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(LD) $(LDFLAGS) -gc-all -mtype -o $@ $^
 
 %.adf:
 	@echo "[ADF] $(DIR)$^ -> $(DIR)$@"
 	$(FSUTIL) -b $(TOPDIR)/bootloader.bin create $@ $^
 
-# Define main rules of the build system
-build: build-dependencies $(BUILD-FILES) build-here
+# Generate recursive rules for subdirectories
+define emit_subdir_rule
+$(1)-$(2):
+	@echo "[MAKE] $(2) $(DIR)$(1)"
+	$(MAKE) -C $(1) $(2)
+PHONY-TARGETS += $(1)-$(2)
+endef
 
-clean: clean-here
+$(foreach dir,$(SUBDIR),$(eval $(call emit_subdir_rule,$(dir),build)))
+$(foreach dir,$(SUBDIR),$(eval $(call emit_subdir_rule,$(dir),clean)))
+
+build-recursive: $(SUBDIR:%=%-build)
+clean-recursive: $(SUBDIR:%=%-clean)
+
+# Define main rules of the build system
+build: build-dependencies build-recursive $(BUILD-FILES) build-here
+
+clean: clean-recursive clean-here
 	$(RM) $(CLEAN-FILES)
 	$(RM) $(BUILD-FILES)
 	$(RM) *~
