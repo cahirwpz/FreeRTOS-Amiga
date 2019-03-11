@@ -6,16 +6,20 @@
         include 'dos/doshunks.i'
         include 'devices/bootblock.i'
         include 'devices/trackdisk.i'
+        include 'hardware/cia.i'
         include 'hardware/custom.i'
 
+; custom chips addresses
+CUSTOM          EQU     $dff000
+CIAA            EQU     $bfe001
+CIAB            EQU     $bfd000
+
 ; include 'lvo/exec_lib.i'
-_LVOSuperState          EQU     -150
-_LVOUserState           EQU     -156
-_LVOAllocMem            EQU     -198
-_LVOFreeMem             EQU     -210
-_LVOFindTask            EQU     -294
-_LVODoIO                EQU     -456
-_LVOCopyMem             EQU     -624
+_LVOSuperState  EQU     -150
+_LVOAllocMem    EQU     -198
+_LVOFreeMem     EQU     -210
+_LVODoIO        EQU     -456
+_LVOCopyMem     EQU     -624
 
  STRUCTURE SEG,0
 	LONG	SEG_LEN
@@ -59,13 +63,16 @@ Entry:
         move.l  (a2)+,d7
         swap    d7
 
-.loop   ; [d2] file offset 
+        ; [d2] file offset 
         ; [d3] file size (executable)
-        movem.l (a2)+,d2-d3     ; offset, size
+        subq.w  #1,d7
+.loop   movem.l (a2)+,d2-d3     ; offset, size
         add.l   #TD_SECTOR-1,d3
         and.l   #-TD_SECTOR,d3
         tst.l   d2              ; executable ?
-        bge     .next
+        bmi     .exec
+        dbra    d7,.loop
+        bra     .exit
 
 .exec   neg.l   d2
 
@@ -73,72 +80,36 @@ Entry:
         move.l  d3,d0
         move.l  #MEMF_CHIP,d1
         JSRLIB  AllocMem
-        move.l  d0,a3           ; [a3] block pointer (executable file)
+        move.l  d0,a2           ; [a2] block pointer (executable file)
 
         ; read directory entries into memory
         move.l  d2,d1
         move.l  d3,d0
-        move.l  a3,a0
+        move.l  a2,a0
         bsr     ReadSectors
 
         ; move hunks around and relocate them
-        move.l  a3,a0
+        move.l  a2,a0
         bsr     SetupHunkFile
-        move.l  d0,a4           ; [a4] first hunk of executable file
+        tst.l   d0
+        beq     .exit           ; oops... it failed
+        move.l  d0,a2           ; [a2] first hunk of executable file
 
-        ; free executable file
-        move.l  a3,a1
-        move.l  d3,d0
-        JSRLIB  FreeMem
-
-        move.l  a4,d0           ; oops... it failed
-        beq.b   .next
-
-        ; make executable startup think it was called from CLI
-        sub.l   a1,a1
-        JSRLIB  FindTask
-        move.l  d0,a0
-        move.l  #$DEADC0DE,pr_CLI(a0)
-
-        ; put segment list into Task's user data for debugging purposes
-        move.l  a4,TC_Userdata(a0)
-
-        ; call executable
-        lea     .cmd(pc),a0
-        moveq   #1,d0
-        ; disable all interrupts
-        move.w  intenar+$dff000,d2
-        move.w  #$3fff,intena+$dff000
-        ; enter supervisor mode
-        JSRLIB  SuperState
-        ; set highest priority level
-        move.w  sr,d3
-        or.w    #$0700,sr
-        ; enter the kernel
-        movem.l d2-d7/a2-a6,-(sp)
-        jsr     SEG_START(a4)
-        movem.l (sp)+,d2-d7/a2-a6
-        ; restore previous priority level
-        move.w  d3,sr
-        ; leave supervisor mode
-        JSRLIB  UserState
-        ; restore the state of interrupts
-        or.w    #$8000,d2
-        move.w  d2,intena+$dff000
-
-        ; free hunk list
-.free   move.l  a4,a1
-        movem.l (a1),d0/a4              ; SEG_LEN / SEG_NEXT
-        JSRLIB  FreeMem
-        move.l  a4,d0
-        bne     .free
-
-.next   subq.w  #1,d7
-        bgt     .loop
+        ; set up initial environment and jump to kernel
+        move.w  #$3fff,intena+CUSTOM    ; disable all interrupts
+        JSRLIB  SuperState              ; enter supervisor mode
+        or.w    #$0700,sr               ; set highest priority level
+        bsr     FloppyMotorOff
+        jsr     SEG_START(a2)           ; enter the kernel
 
 .exit   bra     .exit
 
-.cmd    dc.b    '\n',0,0
+FloppyMotorOff:
+        lea     ciaprb+CIAB,a0
+        bset.b  #CIAB_DSKSEL0,(a0)
+        bset.b  #CIAB_DSKMOTOR,(a0)
+        bclr.b  #CIAB_DSKSEL0,(a0)
+        rts
 
 ; [d0] length in bytes (multiple of 512)
 ; [d1] offset from beginning of disk
