@@ -7,11 +7,12 @@ SOURCES = \
 	__udivsi3.S \
 	__umodsi3.S \
 	bzero.S \
+	dhexdump.c \
 	dprintf.c \
+	dputchar.S \
 	kvprintf.c \
 	memcpy.S \
-	strlen.S \
-	rawio.S
+	strlen.S
 
 all: build
 

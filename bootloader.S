@@ -20,6 +20,7 @@ _LVOAllocMem    EQU     -198
 _LVOFreeMem     EQU     -210
 _LVODoIO        EQU     -456
 _LVOCopyMem     EQU     -624
+_LVOAvailMem    EQU     -216
 
  STRUCTURE SEG,0
 	LONG	SEG_LEN
@@ -41,6 +42,11 @@ DirLen: dc.l	0               ; sector aligned
         ;  [a1] IOStdReq (trackdisk.device)
         ;  [a6] ExecBase
 Entry:
+        ; align stack to 4 bytes boundary
+        move.l  sp,d0
+        bclr.l  #1,d0
+        move.l  d0,sp
+
         lea     TDIOReq(pc),a0
         move.l  a1,(a0)
 
@@ -94,6 +100,28 @@ Entry:
         tst.l   d0
         beq     .exit           ; oops... it failed
         move.l  d0,a2           ; [a2] first hunk of executable file
+
+        ; allocate all available memory for the kernel
+        clr.l   -(sp)                           ; array terminator
+
+        move.l  #MEMF_CHIP|MEMF_LARGEST,d1
+        JSRLIB  AvailMem
+        move.l  d0,-(sp)                        ; chip memory size
+        move.l  #MEMF_CHIP,d1
+        JSRLIB  AllocMem
+        move.l  d0,-(sp)                        ; chip memory pointer
+
+        move.l  #MEMF_FAST|MEMF_LARGEST,d1
+        JSRLIB  AvailMem
+        tst.l   d0
+        beq     .nofast
+        move.l  d0,-(sp)                        ; fast memory size
+        move.l  #MEMF_FAST,d1
+        JSRLIB  AllocMem
+        move.l  d0,-(sp)                        ; fast memory pointer
+        
+        ; [1st arg of _start] the address of memory areas array
+.nofast move.l  sp,-(sp)
 
         ; set up initial environment and jump to kernel
         move.w  #$3fff,intena+CUSTOM    ; disable all interrupts

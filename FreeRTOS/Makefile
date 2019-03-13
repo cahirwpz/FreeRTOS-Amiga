@@ -11,7 +11,7 @@ SOURCES = \
 	  stream_buffer.c \
 	  tasks.c \
 	  timers.c \
-	  $(MMAN_DIR)/heap_1.c \
+	  $(MMAN_DIR)/heap_5.c \
 	  $(PORT_DIR)/port.c \
 	  $(PORT_DIR)/portasm.S
 
