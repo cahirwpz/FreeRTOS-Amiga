@@ -87,7 +87,7 @@ if __name__ == '__main__':
         par_port.start(session)
 
         session.kill_window(':0')
-        session.select_window(uae.name)
+        session.select_window(par_port.name)
         session.attach_session()
     finally:
         try:

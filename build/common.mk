@@ -35,12 +35,13 @@ endif
 	$(AS) -Fbin $(CPPFLAGS) $(ASFLAGS) -o $@ $(realpath $<)
 
 %.exe:
-	@echo "[LD] $^ -> $(DIR)$@"
+	@echo "[LD] $(addprefix $(DIR),$^) -> $(DIR)$@"
 	$(LD) $(LDFLAGS) -gc-all -mtype -o $@ $^
 
-%.adf:
-	@echo "[ADF] $(DIR)$^ -> $(DIR)$@"
-	$(FSUTIL) -b $(TOPDIR)/bootloader.bin create $@ $^
+%.adf: $(TOPDIR)/bootloader.bin
+	@echo "[ADF] $(filter-out %bootloader.bin,$^) -> $(DIR)$@"
+	$(FSUTIL) -b $(TOPDIR)/bootloader.bin create $@ \
+		$(filter-out %bootloader.bin,$^)
 
 # Generate recursive rules for subdirectories
 define emit_subdir_rule
