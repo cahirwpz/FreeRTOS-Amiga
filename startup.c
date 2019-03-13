@@ -16,5 +16,7 @@ __entry void _start(HeapRegion_t *xHeapRegions) {
  
   vPortDefineHeapRegions(xHeapRegions);
 
+  dprintf("FreeHeapSize: %d\n", xPortGetFreeHeapSize());
+
   main();
 }

@@ -103,13 +103,7 @@ Entry:
 
         ; allocate all available memory for the kernel
         clr.l   -(sp)                           ; array terminator
-
-        move.l  #MEMF_CHIP|MEMF_LARGEST,d1
-        JSRLIB  AvailMem
-        move.l  d0,-(sp)                        ; chip memory size
-        move.l  #MEMF_CHIP,d1
-        JSRLIB  AllocMem
-        move.l  d0,-(sp)                        ; chip memory pointer
+        clr.l   -(sp) 
 
         move.l  #MEMF_FAST|MEMF_LARGEST,d1
         JSRLIB  AvailMem
@@ -119,9 +113,16 @@ Entry:
         move.l  #MEMF_FAST,d1
         JSRLIB  AllocMem
         move.l  d0,-(sp)                        ; fast memory pointer
+
+.nofast move.l  #MEMF_CHIP|MEMF_LARGEST,d1
+        JSRLIB  AvailMem
+        move.l  d0,-(sp)                        ; chip memory size
+        move.l  #MEMF_CHIP,d1
+        JSRLIB  AllocMem
+        move.l  d0,-(sp)                        ; chip memory pointer
         
         ; [1st arg of _start] the address of memory areas array
-.nofast move.l  sp,-(sp)
+        move.l  sp,-(sp)
 
         ; set up initial environment and jump to kernel
         move.w  #$3fff,intena+CUSTOM    ; disable all interrupts
