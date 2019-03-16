@@ -1,7 +1,7 @@
 TOPDIR = $(CURDIR)
 
 SUBDIR = libsa FreeRTOS
-SOURCES = startup.c intr.c main.c
+SOURCES = startup.c main.c
 
 all: build
 

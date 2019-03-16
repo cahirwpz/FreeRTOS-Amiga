@@ -56,6 +56,8 @@ to exclude the API function. */
 #define configYIELD_INTERRUPT_VECTOR			      16UL
 #define configKERNEL_INTERRUPT_PRIORITY 		    1
 
+/* Amiga port specific definitions. */
+__interrupt void vDummyExceptionHandler(void);
 void vApplicationSetupInterrupts(void);
 void *pvPortMallocChip(size_t size);
 

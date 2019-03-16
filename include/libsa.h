@@ -23,4 +23,4 @@ size_t strlen(const char *s);
 #define malloc(s) pvPortMalloc(s)
 #define free(p) pvPortFree(p)
 
-#endif
+#endif /* !_LIBSA_H_ */

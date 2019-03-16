@@ -1,5 +1,6 @@
 #include <FreeRTOS.h>
 #include <task.h>
+#include <evec.h>
 
 extern void vPortStartFirstTask(void);
 
@@ -62,6 +63,10 @@ static uint32_t ulCriticalNesting = 0x9999UL;
  */
 BaseType_t xPortStartScheduler(void) {
   ulCriticalNesting = 0UL;
+
+  /* Initialize interrupt vector. */
+  for (int i = EV_BUSERR; i <= EV_LAST; i++)
+    ExcVec[i] = vDummyExceptionHandler;
 
   /* Configure the interrupts used by this port. */
   vApplicationSetupInterrupts();

@@ -1,8 +1,11 @@
 #include <FreeRTOS.h>
 #include <hardware.h>
+#include <evec.h>
 #include <libsa.h>
 
 volatile struct Custom* const custom = (APTR)0xdff000;
+
+ExcVec_t *ExcVecBase = (ExcVec_t *)0L;
 
 extern int main(void);
 
