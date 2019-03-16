@@ -20,9 +20,12 @@ static void vGreenTask(void *) {
   }
 }
 
-ISR(vDummyExceptionHandler) { portHALT(); }
+ISR(vDummyExceptionHandler) {
+  dprintf("Exception handler!\n");
+  portHALT();
+}
 
-static ISR(lvl3intr) {
+static ISR(VertBlankHandler) {
   /* Clear the interrupt. */
   custom->intreq = INTF_VERTB;
 
@@ -33,15 +36,17 @@ static ISR(lvl3intr) {
   portCLEAR_INTERRUPT_MASK_FROM_ISR(ulSavedInterruptMask);
 }
 
-void vApplicationSetupInterrupts(void) {
-  ExcVec[EV_INTLVL(3)] = lvl3intr;
-  custom->intena = INTF_SETCLR|INTF_INTEN|INTF_VERTB;
+static void SystemTimerInit(void) {
+  ExcVec[EV_INTLVL(3)] = VertBlankHandler;
+  custom->intena = INTF_SETCLR|INTF_VERTB;
 }
 
 static xTaskHandle red_handle;
 static xTaskHandle green_handle;
 
 int main(void) {
+  SystemTimerInit();
+
   xTaskCreate(vRedTask, "red", configMINIMAL_STACK_SIZE, NULL,
               mainRED_TASK_PRIORITY, &red_handle);
 

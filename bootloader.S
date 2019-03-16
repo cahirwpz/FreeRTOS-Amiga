@@ -131,7 +131,7 @@ Entry:
         move.w  AttnFlags(a6),2(sp)
 
         ; set up initial environment and jump to kernel
-        move.w  #$3fff,intena+CUSTOM    ; disable all interrupts
+        move.w  #$7fff,intena+CUSTOM    ; disable all interrupts
         JSRLIB  SuperState              ; enter supervisor mode
         or.w    #$0700,sr               ; set highest priority level
         bsr     FloppyMotorOff

@@ -1,6 +1,6 @@
 TOPDIR = $(CURDIR)
 
-SUBDIR = libsa FreeRTOS
+SUBDIR = libsa drivers FreeRTOS
 SOURCES = startup.c main.c
 
 all: build
@@ -9,7 +9,7 @@ include $(TOPDIR)/build/build.vbcc.mk
 
 build-here: bootloader.bin freertos.adf
 
-freertos.exe: $(OBJECTS) libsa/sa.lib FreeRTOS/freertos.lib
+freertos.exe: $(OBJECTS) drivers/drivers.lib libsa/sa.lib FreeRTOS/freertos.lib
 
 freertos.adf: freertos.exe
 

@@ -1,5 +1,6 @@
 #include <FreeRTOS.h>
 #include <task.h>
+#include <hardware.h>
 #include <evec.h>
 #include <cpu.h>
 
@@ -67,15 +68,11 @@ static uint32_t ulCriticalNesting = 0x9999UL;
 BaseType_t xPortStartScheduler(void) {
   ulCriticalNesting = 0UL;
 
-  /* Initialize interrupt vector. */
-  for (int i = EV_BUSERR; i <= EV_LAST; i++)
-    ExcVec[i] = vDummyExceptionHandler;
-
   /* Use TRAP #0 for Yield system call. */
   ExcVec[EV_TRAP(0)] = vPortYieldHandler;
 
-  /* Configure the interrupts used by this port. */
-  vApplicationSetupInterrupts();
+  /* Unmask all interrupts in INTENA. They're still masked by SR. */
+  custom->intena = INTF_SETCLR|INTF_INTEN;
 
   /* Start the first task executing. */
   vPortStartFirstTask();

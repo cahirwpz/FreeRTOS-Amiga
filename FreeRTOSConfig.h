@@ -58,7 +58,6 @@ to exclude the API function. */
 
 /* Amiga port specific definitions. */
 __interrupt void vDummyExceptionHandler(void);
-void vApplicationSetupInterrupts(void);
 void *pvPortMallocChip(size_t size);
 
 #endif /* FREERTOS_CONFIG_H */
