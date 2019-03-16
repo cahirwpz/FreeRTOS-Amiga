@@ -56,6 +56,7 @@ to exclude the API function. */
 #define configYIELD_INTERRUPT_VECTOR			      16UL
 #define configKERNEL_INTERRUPT_PRIORITY 		    1
 
-void vApplicationSetupInterrupts( void );
+void vApplicationSetupInterrupts(void);
+void *pvPortMallocChip(size_t size);
 
 #endif /* FREERTOS_CONFIG_H */

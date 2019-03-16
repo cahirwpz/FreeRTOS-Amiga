@@ -22,13 +22,13 @@ struct memory {
   block_p firstFree;  /* pointer to first free block */
   uint32_t totalFree; /* total number of free bytes */
   uint32_t minFree;   /* minimum recorded number of free bytes */
-  intptr_t final;
+  uintptr_t final;
   block_t first[];
 };
 
 #define DEAD_BLOCK (void *)0xDEADC0DE
 #define BLOCK_SIZE sizeof(block_t)
-#define BLOCK_OF(p) (block_t *)((intptr_t)(p)-BLOCK_SIZE)
+#define BLOCK_OF(p) (block_t *)((uintptr_t)(p)-BLOCK_SIZE)
 
 #define ALIGN(x, n) (((x) + (n)-1) & -(n))
 
@@ -145,14 +145,16 @@ static void _vPortFree(void *p, memory_t m) {
   xTaskResumeAll();
 }
 
-static const HeapRegion_t *HeapRegions;
+const HeapRegion_t *HeapRegions;
 
-void *pvPortMalloc(size_t xSize) {
+void *_pvPortMallocBelow(size_t xSize, uintptr_t xUpperAddr) {
   void *ptr;
 
-  for (const HeapRegion_t *hr = HeapRegions; hr->xSizeInBytes; hr++)
-    if ((ptr = _pvPortMalloc(xSize, (memory_t)hr->pucStartAddress)))
+  for (const HeapRegion_t *hr = HeapRegions; hr->xSizeInBytes; hr++) {
+    memory_t m = (memory_t)hr->pucStartAddress;
+    if (((uintptr_t)m < xUpperAddr) && (ptr = _pvPortMalloc(xSize, m)))
       return ptr;
+  }
 
 #if (configUSE_MALLOC_FAILED_HOOK == 1)
   extern void vApplicationMallocFailedHook(void);
@@ -161,11 +163,23 @@ void *pvPortMalloc(size_t xSize) {
   return NULL;
 }
 
+/* There's no real Amiga that has more than 2MiB of chip memory. */
+#define MEM_ANY (-1U)
+#define MEM_CHIP (1U << 21)
+
+void *pvPortMalloc(size_t xSize) {
+  return _pvPortMallocBelow(xSize, MEM_ANY);
+}
+
+void *pvPortMallocChip(size_t xSize) {
+  return _pvPortMallocBelow(xSize, MEM_CHIP);
+}
+
 void vPortFree(void *p) {
   for (const HeapRegion_t *hr = HeapRegions; hr->xSizeInBytes; hr++) {
-    intptr_t start = (intptr_t)hr->pucStartAddress;
-    intptr_t end = start + hr->xSizeInBytes;
-    if ((intptr_t)p > start && (intptr_t)p < end) {
+    uintptr_t start = (uintptr_t)hr->pucStartAddress;
+    uintptr_t end = start + hr->xSizeInBytes;
+    if ((uintptr_t)p > start && (uintptr_t)p < end) {
       _vPortFree(p, (memory_t)hr->pucStartAddress);
       return;
     }
@@ -196,8 +210,8 @@ void vPortDefineHeapRegions(const HeapRegion_t *const pxHeapRegions) {
   HeapRegions = pxHeapRegions;
 
   for (const HeapRegion_t *hr = pxHeapRegions; hr->xSizeInBytes; hr++) {
-    intptr_t start = (intptr_t)hr->pucStartAddress;
-    intptr_t end = (intptr_t)hr->pucStartAddress + hr->xSizeInBytes;
+    uintptr_t start = (uintptr_t)hr->pucStartAddress;
+    uintptr_t end = (uintptr_t)hr->pucStartAddress + hr->xSizeInBytes;
 
     configASSERT((start & (BLOCK_SIZE - 1)) == 0);
     configASSERT((end & (BLOCK_SIZE - 1)) == 0);
