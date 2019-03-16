@@ -1,5 +1,6 @@
         include 'exec/macros.i'
         include 'exec/io.i'
+        include 'exec/execbase.i'
         include 'exec/memory.i'
         include 'exec/tasks.i'
         include 'dos/dosextens.i'
@@ -122,8 +123,12 @@ Entry:
         move.l  d0,-(sp)                        ; fast memory pointer
 .nofast
         
-        ; [1st arg of _start] the address of memory areas array
+        ; [2nd arg of _start] the address of memory areas array
         move.l  sp,-(sp)
+
+        ; [1st arg of _start] cpu model flags
+        clr.l   -(sp)
+        move.w  AttnFlags(a6),2(sp)
 
         ; set up initial environment and jump to kernel
         move.w  #$3fff,intena+CUSTOM    ; disable all interrupts
