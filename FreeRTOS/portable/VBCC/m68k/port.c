@@ -1,8 +1,10 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <evec.h>
+#include <cpu.h>
 
 extern void vPortStartFirstTask(void);
+extern __interrupt void vPortYieldHandler(void);
 
 /* When calling RTE the stack must look as follows:
  *
@@ -42,9 +44,10 @@ StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
   MOVEL(pvParameters);
   PUSHL(0xDEADBEEF);
 
-  /* Exception stack frame starts with the return address. */
-  /* only for 68010 and above
-   * PUSHW(portINITIAL_FORMAT_VECTOR); */
+  /* Exception stack frame starts with the return address, unless we're running
+   * on 68010 and above. Then we need to put format vector word on stack. */
+  if (CpuModel & CF_68010)
+    PUSHW(portINITIAL_FORMAT_VECTOR);
   PUSHL(pxCode);
   PUSHW(portINITIAL_STATUS_REGISTER);
 
@@ -67,6 +70,9 @@ BaseType_t xPortStartScheduler(void) {
   /* Initialize interrupt vector. */
   for (int i = EV_BUSERR; i <= EV_LAST; i++)
     ExcVec[i] = vDummyExceptionHandler;
+
+  /* Use TRAP #0 for Yield system call. */
+  ExcVec[EV_TRAP(0)] = vPortYieldHandler;
 
   /* Configure the interrupts used by this port. */
   vApplicationSetupInterrupts();

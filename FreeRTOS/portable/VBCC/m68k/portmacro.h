@@ -62,13 +62,13 @@ void vPortClearInterruptMaskFromISR(__reg("d0") int uxSavedStatusRegister);
 
 /* When simulator is configured to enter debugger on illegal instructions,
  * this macro can be used to set breakpoints in your code. */
-void portBREAK() = "\tillegal\n";
+void portBREAK(void) = "\tillegal\n";
 
 /* Make the processor wait for interrupt. */
-void portWFI() = "\tstop\t#$2000\n";
+void portWFI(void) = "\tstop\t#$2000\n";
 
 /* Halt the processor by masking all interrupts and waiting for NMI. */
-void portHALT() = "\tstop\t#$2700\n";
+void portHALT(void) = "\tstop\t#$2700\n";
 
 #define configASSERT(x)                                                        \
   {                                                                            \
@@ -76,8 +76,8 @@ void portHALT() = "\tstop\t#$2700\n";
       portHALT();                                                              \
   }
 
-/* Following procedure is used to yield CPU time. */
-extern void vPortYield(void);
+/* To yield we use system call that is invoked by TRAP instruction. */
+void vPortYield(void) = "\ttrap\t#0\n";
 
 #define portYIELD() vPortYield()
 #define portEND_SWITCHING_ISR(xSwitchRequired)                                 \
