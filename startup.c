@@ -6,7 +6,7 @@ volatile struct Custom* const custom = (APTR)0xdff000;
 
 extern int main(void);
 
-__entry void _start(HeapRegion_t *xHeapRegions) {
+__entry void _start(const HeapRegion_t *const xHeapRegions) {
   dprintf("FreeRTOS running on Amiga!\n");
 
   for (int i = 0; xHeapRegions[i].pucStartAddress; i++)

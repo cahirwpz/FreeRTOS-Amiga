@@ -36,7 +36,7 @@
 #define configMAX_PRIORITIES            (4)
 #define configSUPPORT_STATIC_ALLOCATION  0
 #define configSUPPORT_DYNAMIC_ALLOCATION 1
-#define configAPPLICATION_ALLOCATED_HEAP 0
+#define configUSE_MALLOC_FAILED_HOOK     1
 
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */

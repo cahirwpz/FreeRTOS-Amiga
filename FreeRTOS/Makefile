@@ -1,6 +1,5 @@
 TOPDIR = $(realpath ..)
 
-MMAN_DIR = portable/MemMang
 PORT_DIR = portable/VBCC/m68k
 
 SOURCES = \
@@ -11,7 +10,7 @@ SOURCES = \
 	  stream_buffer.c \
 	  tasks.c \
 	  timers.c \
-	  $(MMAN_DIR)/heap_5.c \
+	  $(PORT_DIR)/heap.c \
 	  $(PORT_DIR)/port.c \
 	  $(PORT_DIR)/portasm.S
 

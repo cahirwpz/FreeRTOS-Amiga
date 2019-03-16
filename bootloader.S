@@ -105,7 +105,14 @@ Entry:
         clr.l   -(sp)                           ; array terminator
         clr.l   -(sp) 
 
-        move.l  #MEMF_FAST|MEMF_LARGEST,d1
+.chip   move.l  #MEMF_CHIP|MEMF_LARGEST,d1
+        JSRLIB  AvailMem
+        move.l  d0,-(sp)                        ; chip memory size
+        move.l  #MEMF_CHIP,d1
+        JSRLIB  AllocMem
+        move.l  d0,-(sp)                        ; chip memory pointer
+
+.fast   move.l  #MEMF_FAST|MEMF_LARGEST,d1
         JSRLIB  AvailMem
         tst.l   d0
         beq     .nofast
@@ -113,13 +120,7 @@ Entry:
         move.l  #MEMF_FAST,d1
         JSRLIB  AllocMem
         move.l  d0,-(sp)                        ; fast memory pointer
-
-.nofast move.l  #MEMF_CHIP|MEMF_LARGEST,d1
-        JSRLIB  AvailMem
-        move.l  d0,-(sp)                        ; chip memory size
-        move.l  #MEMF_CHIP,d1
-        JSRLIB  AllocMem
-        move.l  d0,-(sp)                        ; chip memory pointer
+.nofast
         
         ; [1st arg of _start] the address of memory areas array
         move.l  sp,-(sp)

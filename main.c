@@ -2,6 +2,7 @@
 #include <task.h>
 
 #include <hardware.h>
+#include <libsa.h>
 
 #define mainRED_TASK_PRIORITY 3
 #define mainGREEN_TASK_PRIORITY 3
@@ -34,3 +35,8 @@ int main(void) {
 }
 
 void vApplicationIdleHook(void) { custom->color[0] = 0x00f; }
+
+void vApplicationMallocFailedHook(void) {
+  dprintf("Memory exhausted!\n");
+  portHALT();
+}
