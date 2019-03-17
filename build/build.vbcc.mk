@@ -8,8 +8,8 @@ ASFLAGS = -m68010 -quiet
 CFLAGS = -c99 -cpu=68010 -O3 -size # -warn=-1 -dontwarn=307
 CPPFLAGS = -I$(TOPDIR)/FreeRTOS/include \
 	   -I$(TOPDIR)/FreeRTOS/portable/VBCC/m68k \
-	   -I$(TOPDIR)/toolchain/m68k-amigaos/include \
 	   -I$(TOPDIR)/include \
+	   -I$(TOPDIR)/toolchain/m68k-amigaos/include \
 	   -I$(TOPDIR)
 LDFLAGS = -S -x
 

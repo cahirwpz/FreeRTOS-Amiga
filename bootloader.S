@@ -43,11 +43,6 @@ DirLen: dc.l	0               ; sector aligned
         ;  [a1] IOStdReq (trackdisk.device)
         ;  [a6] ExecBase
 Entry:
-        ; align stack to 4 bytes boundary
-        move.l  sp,d0
-        bclr.l  #1,d0
-        move.l  d0,sp
-
         lea     TDIOReq(pc),a0
         move.l  a1,(a0)
 
