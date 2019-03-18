@@ -10,28 +10,32 @@
 #define CLOCK 3546895
 #define QUEUELEN 64
 
-#define SERDATR_RBF (1 << 14)
-#define SERDATR_TBE (1 << 13)
-#define SERDATR_TSRE (1 << 12)
+#define SERDATF_RBF (1 << 14)
+#define SERDATF_TBE (1 << 13)
+#define SERDATF_TSRE (1 << 12)
 
 static QueueHandle_t SendQ;
 static QueueHandle_t RecvQ;
 
-static ISR(SendIntHandler) {
-  custom->color[0] = 0x0ff;
-  BaseType_t xTaskWokenByReceive = pdFALSE;
-  char cSend;
+#define SendByte(byte) { custom->serdat = (uint16_t)(byte) | (uint16_t)0x100; }
+
+ISR(SendIntHandler) {
+  /* Signal end of interrupt. */
   custom->intreq = INTF_TBE;
-  if (xQueueReceiveFromISR(SendQ, (void *)&cSend, &xTaskWokenByReceive))
-    custom->serdat = cSend | 0x100;
+
+  /* Send one byte into the wire. */
+  uint8_t cSend;
+  if (xQueueReceiveFromISR(SendQ, &cSend, NULL))
+    SendByte(cSend);
 }
 
 static ISR(RecvIntHandler) {
-  custom->color[0] = 0xff0;
-  BaseType_t xTaskWokenByReceive = pdFALSE;
-  char cRecv = custom->serdatr;
+  /* Signal end of interrupt. */
   custom->intreq = INTF_RBF;
-  (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, &xTaskWokenByReceive);
+
+  /* Send one byte to waiting task. */
+  char cRecv = custom->serdatr;
+  (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, NULL);
 }
 
 static ISR_t oldTBE;
@@ -64,18 +68,22 @@ void SerialKill(void) {
   vQueueDelete(SendQ);
 }
 
-void SerialPutChar(__reg("d0") char data) {
-  char cSend = data;
-  custom->intena = INTF_TBE;
-  if (custom->serdatr & SERDATR_TBE) {
-    custom->serdat = cSend | 0x100;
+static void TriggerSend(uint8_t cSend) {
+  taskENTER_CRITICAL();
+  if (uxQueueMessagesWaiting(SendQ) == 0) {
+    SendByte(cSend);
   } else {
-    (void)xQueueSend(SendQ, &cSend, portMAX_DELAY);
+    uint8_t data = cSend;
+    (void)xQueueSend(SendQ, &data, portMAX_DELAY);
   }
-  custom->intena = INTF_SETCLR | INTF_TBE;
-  if (cSend == '\n') {
-    cSend = '\r';
-    (void)xQueueSend(SendQ, &cSend, portMAX_DELAY);
+  taskEXIT_CRITICAL();
+}
+
+void SerialPutChar(__reg("d0") char data) {
+  TriggerSend(data);
+  if (data == '\n') {
+    data = '\r';
+    TriggerSend(data);
   }
 }
 
