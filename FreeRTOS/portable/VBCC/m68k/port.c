@@ -57,17 +57,11 @@ StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
   return (StackType_t *)sp;
 }
 
-/* Used to keep track of the number of nested calls to taskENTER_CRITICAL().
- * This will be set to 0 prior to the first task being started. */
-static uint32_t ulCriticalNesting = 0x9999UL;
-
 /* It's assumed that we enter here:
  *  - with all Amiga interrupts disabled, i.e. INTENAR = 0,
  *  - at highest priority level, i.e. SR = 0x2700. 
  */
 BaseType_t xPortStartScheduler(void) {
-  ulCriticalNesting = 0UL;
-
   /* Use TRAP #0 for Yield system call. */
   ExcVec[EV_TRAP(0)] = vPortYieldHandler;
 
@@ -82,15 +76,4 @@ BaseType_t xPortStartScheduler(void) {
 
 void vPortEndScheduler(void) {
   /* Not implemented as there is nothing to return to. */
-}
-
-void vPortEnterCritical(void) {
-  portDISABLE_INTERRUPTS();
-  ulCriticalNesting++;
-}
-
-void vPortExitCritical(void) {
-  ulCriticalNesting--;
-  if (ulCriticalNesting == 0)
-    portENABLE_INTERRUPTS();
 }

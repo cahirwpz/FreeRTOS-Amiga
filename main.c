@@ -38,7 +38,7 @@ static ISR(VertBlankHandler) {
 
 static void SystemTimerInit(void) {
   ExcVec[EV_INTLVL(3)] = VertBlankHandler;
-  custom->intena = INTF_SETCLR|INTF_VERTB;
+  custom->intena = INTF_SETCLR | INTF_VERTB;
 }
 
 static xTaskHandle red_handle;
@@ -62,5 +62,10 @@ void vApplicationIdleHook(void) { custom->color[0] = 0x00f; }
 
 void vApplicationMallocFailedHook(void) {
   dprintf("Memory exhausted!\n");
+  portHALT();
+}
+
+void vApplicationStackOverflowHook(void) {
+  dprintf("Stack overflow!\n");
   portHALT();
 }

@@ -38,27 +38,26 @@ typedef uint32_t TickType_t;
 #define portSTACK_GROWTH -1
 #define portTICK_PERIOD_MS ((TickType_t)1000 / configTICK_RATE_HZ)
 
-/* When code executes in task context, disabling and enabling interrupts is
- * trivial with use of INTENA register. Just clear / set master bit. */
-void portDISABLE_INTERRUPTS() = "\tmove.w\t#$4000,$dff09a\n";
-void portENABLE_INTERRUPTS() = "\tmove.w\t#$c000,$dff09a\n";
+/* When code executes in task context it's running with IPL set to 0. */
+void portDISABLE_INTERRUPTS() = "\tor.w\t#$0700,sr\n";
+void portENABLE_INTERRUPTS() = "\tand.w\t#$f8ff,sr\n";
 
 /* Functions that enter/exit critical section protecting against interrupts. */
-void vPortEnterCritical(void);
-void vPortExitCritical(void);
+void vTaskEnterCritical(void);
+void vTaskExitCritical(void);
 
-#define portENTER_CRITICAL() vPortEnterCritical()
-#define portEXIT_CRITICAL() vPortExitCritical()
+#define portENTER_CRITICAL() vTaskEnterCritical()
+#define portEXIT_CRITICAL() vTaskExitCritical()
 
-/* When code executes in ISR context it may be interrupted on M68000 by higher
- * priority level interrupt. To construct critical section we need to
- * use mask bits in SR register. */
-int ulPortSetInterruptMaskFromISR(void);
-void vPortClearInterruptMaskFromISR(__reg("d0") int uxSavedStatusRegister);
+/* When code executes in ISR context it may be interrupted on M68000
+ * by higher priority level interrupt. To construct critical section
+ * we need to use mask bits in SR register. */
+uint32_t ulPortSetIPL(__reg("d0") uint32_t);
 
-#define portSET_INTERRUPT_MASK_FROM_ISR(void) ulPortSetInterruptMaskFromISR()
+#define portSET_INTERRUPT_MASK_FROM_ISR() \
+  ulPortSetIPL(0x0700)
 #define portCLEAR_INTERRUPT_MASK_FROM_ISR(uxSavedStatusRegister)               \
-  vPortClearInterruptMaskFromISR(uxSavedStatusRegister)
+  ulPortSetIPL(uxSavedStatusRegister)
 
 /* When simulator is configured to enter debugger on illegal instructions,
  * this macro can be used to set breakpoints in your code. */
