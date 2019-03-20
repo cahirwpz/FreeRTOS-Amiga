@@ -17,12 +17,12 @@ uint16_t GetSR() = "\tmove.w\tsr,d0\n";
 /* Amiga Interrupt Vector */
 IntVec_t IntVec;
 
-extern ISR_t AmigaLvl1Handler;
-extern ISR_t AmigaLvl2Handler;
-extern ISR_t AmigaLvl3Handler;
-extern ISR_t AmigaLvl4Handler;
-extern ISR_t AmigaLvl5Handler;
-extern ISR_t AmigaLvl6Handler;
+extern void AmigaLvl1Handler(void);
+extern void AmigaLvl2Handler(void);
+extern void AmigaLvl3Handler(void);
+extern void AmigaLvl4Handler(void);
+extern void AmigaLvl5Handler(void);
+extern void AmigaLvl6Handler(void);
 
 /* Value of this variable is provided by the boot loader. */
 uint8_t CpuModel = 0;
