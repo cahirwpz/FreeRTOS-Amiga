@@ -35,7 +35,9 @@
  * Scaled down version of printf(3).
  */
 
-#include "libsa.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
 
 typedef long INTMAX_T;
 typedef unsigned long UINTMAX_T;

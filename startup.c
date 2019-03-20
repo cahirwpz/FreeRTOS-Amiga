@@ -3,7 +3,7 @@
 #include <exception.h>
 #include <interrupt.h>
 #include <cpu.h>
-#include <libsa.h>
+#include <stdio.h>
 
 volatile Custom_t custom = (Custom_t)0xdff000;
 volatile CIA_t ciaa = (CIA_t)0xbfe001;

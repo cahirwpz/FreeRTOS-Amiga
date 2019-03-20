@@ -4,15 +4,14 @@ RM = rm -f
 VASM = vasm1_8e
 VLINK = vlink0_16b
 VBCC = vbcc0_9fP1
-VCLIB = vbcc_target_m68k-amigaos
 NDK = NDK_3.9
 
 DESTDIR ?= $(PWD)/local
 TARGET = m68k-amigaos
 
-all: vasm-install vlink-install vbcc-install vclib-install ndk-install
+all: vasm-install vlink-install vbcc-install ndk-install
 
-clean: vasm-clean vlink-clean vbcc-clean vclib-clean ndk-clean
+clean: vasm-clean vlink-clean vbcc-clean ndk-clean
 	$(RM) *~
 
 ### recipes
@@ -108,25 +107,6 @@ ndk-install: ndk
 ndk-clean:
 	$(RM) -r ndk
 	$(RM) $(NDK).lha
-
-### VBCC standard library
-
-$(VCLIB).lha:
-	$(CURL) -o $@ "http://server.owl.de/~frank/vbcc/current/$(VCLIB).lha"
-
-vclib: $(VCLIB).lha
-	lha x $^
-	$(RM) $(VCLIB).info 
-	mv $(VCLIB) vclib
-	touch $@
-
-vclib-install: vclib
-	cp -a "vclib/targets/$(TARGET)/include" "$(DESTDIR)/$(TARGET)/"
-	cp -a "vclib/targets/$(TARGET)/lib" "$(DESTDIR)/$(TARGET)/"
-
-vclib-clean:
-	$(RM) -r vclib
-	$(RM) $(VCLIB).lha
 
 ### other stuff
 

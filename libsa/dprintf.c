@@ -1,4 +1,4 @@
-#include "libsa.h"
+#include <stdio.h>
 
 void dprintf(const char *fmt, ...) {
 	va_list ap;

@@ -12,6 +12,7 @@ SOURCES = \
 	dputchar.S \
 	kvprintf.c \
 	memcpy.S \
+	memset.S \
 	strlen.S
 
 all: build

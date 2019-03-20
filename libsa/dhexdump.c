@@ -1,4 +1,5 @@
-#include "libsa.h"
+#include <stdint.h>
+#include <stdio.h>
 
 void dhexdump(void *ptr, size_t length) {
   unsigned char *data = ptr;
