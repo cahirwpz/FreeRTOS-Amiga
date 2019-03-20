@@ -1,7 +1,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <hardware.h>
-#include <evec.h>
+#include <exception.h>
 #include <cpu.h>
 
 extern void vPortStartFirstTask(void);

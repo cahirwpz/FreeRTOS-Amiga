@@ -1,8 +1,12 @@
-#ifndef _EVEC_H_
-#define _EVEC_H_
+#ifndef _EXCEPTION_H_
+#define _EXCEPTION_H_
 
-typedef void (*ISR_t)(void);
+#ifndef ISR_t
+#define ISR_t _ISR_t
+typedef void (*_ISR_t)(void);
+#endif
 
+/* Interrupt Service Routine */
 #define ISR(name) __interrupt void name(void)
 
 #define EV_BUSERR 2             /* 2: bus error */
@@ -23,8 +27,7 @@ typedef void (*ISR_t)(void);
 #define EV_LAST 255
 
 typedef ISR_t ExcVec_t[EV_LAST + 1];
-
 extern ExcVec_t *ExcVecBase;
 #define ExcVec (*ExcVecBase)
 
-#endif /* !_EVEC_H_ */
+#endif /* !_EXCEPTION_H_ */

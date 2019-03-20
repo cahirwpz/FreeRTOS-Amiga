@@ -2,7 +2,8 @@
 #include <task.h>
 
 #include <hardware.h>
-#include <evec.h>
+#include <exception.h>
+#include <interrupt.h>
 #include <libsa.h>
 
 #define mainRED_TASK_PRIORITY 3
@@ -25,7 +26,7 @@ ISR(vDummyExceptionHandler) {
   portHALT();
 }
 
-static ISR(VertBlankHandler) {
+static void VertBlankHandler(void) {
   /* Clear the interrupt. */
   custom->intreq = INTF_VERTB;
 
@@ -37,7 +38,7 @@ static ISR(VertBlankHandler) {
 }
 
 static void SystemTimerInit(void) {
-  ExcVec[EV_INTLVL(3)] = VertBlankHandler;
+  IntVec[INTB_VERTB] = VertBlankHandler;
   custom->intena = INTF_SETCLR | INTF_VERTB;
 }
 
