@@ -19,10 +19,10 @@ all: build
 
 include $(TOPDIR)/build/build.vbcc.mk
 
-build-here: sa.lib
+build-here: c.lib
 
-sa.lib: $(OBJECTS)
+c.lib: $(OBJECTS)
 
-CLEAN-FILES += sa.lib
+CLEAN-FILES += c.lib
 
 # vim: ts=8 sw=8 noet
