@@ -14,16 +14,6 @@ ExcVec_t *ExcVecBase = (ExcVec_t *)0L;
 ExcVec_t *ReadVBR() = "\tmovec\tvbr,d0\n";
 uint16_t GetSR() = "\tmove.w\tsr,d0\n";
 
-/* Amiga Interrupt Vector */
-IntVec_t IntVec;
-
-extern void AmigaLvl1Handler(void);
-extern void AmigaLvl2Handler(void);
-extern void AmigaLvl3Handler(void);
-extern void AmigaLvl4Handler(void);
-extern void AmigaLvl5Handler(void);
-extern void AmigaLvl6Handler(void);
-
 /* Value of this variable is provided by the boot loader. */
 uint8_t CpuModel = 0;
 

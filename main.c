@@ -4,7 +4,7 @@
 #include <hardware.h>
 #include <exception.h>
 #include <interrupt.h>
-#include <stdint.h>
+#include <stdio.h>
 
 #define mainRED_TASK_PRIORITY 3
 #define mainGREEN_TASK_PRIORITY 3
@@ -26,7 +26,7 @@ ISR(vDummyExceptionHandler) {
   portHALT();
 }
 
-static void VertBlankHandler(void) {
+static ISR(VertBlankHandler) {
   /* Clear the interrupt. */
   custom->intreq = INTF_VERTB;
 
@@ -38,7 +38,7 @@ static void VertBlankHandler(void) {
 }
 
 static void SystemTimerInit(void) {
-  IntVec[INTB_VERTB] = VertBlankHandler;
+  SetIntVec(VERTB, VertBlankHandler);
   custom->intena = INTF_SETCLR | INTF_VERTB;
 }
 

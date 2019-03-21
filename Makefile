@@ -1,7 +1,7 @@
 TOPDIR = $(CURDIR)
 
 SUBDIR = libc drivers FreeRTOS
-SOURCES = startup.c amigaint.c main.c
+SOURCES = startup.c amigaint.S main.c
 
 all: build
 

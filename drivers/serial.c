@@ -19,7 +19,7 @@ static QueueHandle_t RecvQ;
 
 #define SendByte(byte) { custom->serdat = (uint16_t)(byte) | (uint16_t)0x100; }
 
-static void SendIntHandler(void) {
+static ISR(SendIntHandler) {
   /* Signal end of interrupt. */
   custom->intreq = INTF_TBE;
 
@@ -29,7 +29,7 @@ static void SendIntHandler(void) {
     SendByte(cSend);
 }
 
-static void RecvIntHandler(void) {
+static ISR(RecvIntHandler) {
   /* Signal end of interrupt. */
   custom->intreq = INTF_RBF;
 
@@ -37,9 +37,6 @@ static void RecvIntHandler(void) {
   char cRecv = custom->serdatr;
   (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, NULL);
 }
-
-static ISR_t oldTBE;
-static ISR_t oldRBF;
 
 void SerialInit(unsigned baud) {
   dprintf("[Init] Serial port driver!\n");
@@ -49,11 +46,8 @@ void SerialInit(unsigned baud) {
   RecvQ = xQueueCreate(QUEUELEN, sizeof(char));
   SendQ = xQueueCreate(QUEUELEN, sizeof(char));
 
-  oldTBE = IntVec[INTB_TBE];
-  IntVec[INTB_TBE] = SendIntHandler;
-
-  oldRBF = IntVec[INTB_RBF];
-  IntVec[INTB_RBF] = RecvIntHandler;
+  SetIntVec(TBE, SendIntHandler);
+  SetIntVec(RBF, RecvIntHandler);
 
   custom->intreq = INTF_TBE | INTF_RBF;
   custom->intena = INTF_SETCLR | INTF_TBE | INTF_RBF;
@@ -63,8 +57,8 @@ void SerialKill(void) {
   custom->intena = INTF_TBE | INTF_RBF;
   custom->intreq = INTF_TBE | INTF_RBF;
 
-  IntVec[INTB_TBE] = oldTBE;
-  IntVec[INTB_RBF] = oldRBF;
+  ResetIntVec(TBE);
+  ResetIntVec(RBF);
 
   vQueueDelete(RecvQ);
   vQueueDelete(SendQ);

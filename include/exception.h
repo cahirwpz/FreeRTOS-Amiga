@@ -3,11 +3,10 @@
 
 #ifndef ISR_t
 #define ISR_t _ISR_t
-typedef void (*_ISR_t)(void);
-#endif
-
 /* Interrupt Service Routine */
+typedef void (*_ISR_t)(void);
 #define ISR(name) __interrupt void name(void)
+#endif
 
 #define EV_BUSERR 2             /* 2: bus error */
 #define EV_ADDRERR 3            /* 3: address error */
