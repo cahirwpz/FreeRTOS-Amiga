@@ -10,6 +10,7 @@
 #define CB_FPU40 6
 #define CB_68060 7
 
+#define CF_68000 (0)
 #define CF_68010 (1 << CB_68010)
 #define CF_68020 (1 << CB_68020)
 #define CF_68020 (1 << CB_68020)

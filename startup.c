@@ -2,6 +2,7 @@
 #include <hardware.h>
 #include <exception.h>
 #include <interrupt.h>
+#include <trap.h>
 #include <cpu.h>
 #include <stdio.h>
 
@@ -30,7 +31,10 @@ __entry void _start(uint8_t aCpuModel, const HeapRegion_t *const xHeapRegions) {
 
   /* Initialize M68k interrupt vector. */
   for (int i = EV_BUSERR; i <= EV_LAST; i++)
-    ExcVec[i] = vDummyExceptionHandler;
+    ExcVec[i] = BadTrap;
+
+  ExcVec[EV_BUSERR] = BusErrTrap;
+  ExcVec[EV_ADDRERR] = AddrErrTrap;
 
   /* Initialize level 1-7 interrupt autovector in Amiga specific way. */
   ExcVec[EV_INTLVL(1)] = AmigaLvl1Handler;

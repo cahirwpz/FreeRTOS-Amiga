@@ -55,7 +55,6 @@ to exclude the API function. */
 #define portCRITICAL_NESTING_IN_TCB             1
 
 /* Amiga port specific definitions. */
-__interrupt void vDummyExceptionHandler(void);
 void *pvPortMallocChip(size_t size);
 
 #endif /* FREERTOS_CONFIG_H */
