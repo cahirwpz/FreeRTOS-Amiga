@@ -1,15 +1,15 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = \
-	dhexdump.c \
-	dprintf.c \
-	dputchar.S \
 	gen/divsi3.S \
 	gen/modsi3.S \
 	gen/mulsi3.S \
 	gen/udivsi3.S \
 	gen/umodsi3.S \
+	stdio/hexdump.c \
 	stdio/kvprintf.c \
+	stdio/printf.c \
+	stdio/putchar.S \
 	string/bzero.S \
 	string/ffs.S \
 	string/memcpy.S \

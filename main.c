@@ -62,11 +62,11 @@ int main(void) {
 void vApplicationIdleHook(void) { custom->color[0] = 0x00f; }
 
 void vApplicationMallocFailedHook(void) {
-  dprintf("Memory exhausted!\n");
+  printf("Memory exhausted!\n");
   portHALT();
 }
 
 void vApplicationStackOverflowHook(void) {
-  dprintf("Stack overflow!\n");
+  printf("Stack overflow!\n");
   portHALT();
 }

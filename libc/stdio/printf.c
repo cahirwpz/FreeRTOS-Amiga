@@ -1,9 +1,9 @@
 #include <stdio.h>
 
-void dprintf(const char *fmt, ...) {
+void printf(const char *fmt, ...) {
 	va_list ap;
 
 	va_start(ap, fmt);
-  kvprintf(dputchar, fmt, ap);
+  kvprintf(putchar, fmt, ap);
 	va_end(ap);
 }

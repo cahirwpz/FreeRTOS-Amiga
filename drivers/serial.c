@@ -39,7 +39,7 @@ static ISR(RecvIntHandler) {
 }
 
 void SerialInit(unsigned baud) {
-  dprintf("[Init] Serial port driver!\n");
+  printf("[Init] Serial port driver!\n");
 
   custom->serper = CLOCK / baud - 1;
 

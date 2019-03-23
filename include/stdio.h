@@ -6,12 +6,11 @@
 
 typedef void (*putchar_t)(__reg("d0") char);
 
-#pragma printflike dprintf
-void dputchar(__reg("d0") char);
-void dprintf(const char *fmt, ...);
+void putchar(__reg("d0") char);
+void printf(const char *fmt, ...);
 void kvprintf(putchar_t, const char *fmt, va_list ap);
 
-void dhexdump(void *ptr, size_t length);
-#define dhexdump_s(ptr) dhexdump(ptr, sizeof(*ptr))
+void hexdump(void *ptr, size_t length);
+#define hexdump_s(ptr) hexdump(ptr, sizeof(*ptr))
 
 #endif /* !_STDIO_H_ */
