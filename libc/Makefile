@@ -11,9 +11,17 @@ SOURCES = \
 	gen/umodsi3.S \
 	stdio/kvprintf.c \
 	string/bzero.S \
+	string/ffs.S \
 	string/memcpy.S \
 	string/memset.S \
-	string/strlen.S
+	string/strcat.S \
+	string/strchr.S \
+	string/strcmp.S \
+	string/strcpy.S \
+	string/strlen.S \
+	string/strncmp.S \
+	string/strncpy.S \
+	string/strrchr.S
 
 all: build
 
