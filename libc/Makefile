@@ -1,19 +1,19 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = \
-	__divsi3.S \
-	__modsi3.S \
-	__mulsi3.S \
-	__udivsi3.S \
-	__umodsi3.S \
-	bzero.S \
 	dhexdump.c \
 	dprintf.c \
 	dputchar.S \
-	kvprintf.c \
-	memcpy.S \
-	memset.S \
-	strlen.S
+	gen/divsi3.S \
+	gen/modsi3.S \
+	gen/mulsi3.S \
+	gen/udivsi3.S \
+	gen/umodsi3.S \
+	stdio/kvprintf.c \
+	string/bzero.S \
+	string/memcpy.S \
+	string/memset.S \
+	string/strlen.S
 
 all: build
 
