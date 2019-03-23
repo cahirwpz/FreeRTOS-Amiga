@@ -37,7 +37,7 @@ T_FMTERR    equ 9
         HANDLER _BadTrap,T_UNKNOWN
         HANDLER _BusErrTrap,T_BUSERR
         HANDLER _AddrErrTrap,T_ADDRERR
-        HANDLER _IllInstTrap,T_ILLINST
+        HANDLER _IllegalTrap,T_ILLINST
         HANDLER _ZeroDivTrap,T_ZERODIV
         HANDLER _ChkInstTrap,T_CHKINST
         HANDLER _TrapvInstTrap,T_TRAPVINST

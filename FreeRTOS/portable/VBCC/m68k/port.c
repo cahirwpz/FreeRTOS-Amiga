@@ -100,8 +100,18 @@ void vPortSetupExceptionVector(void) {
   for (int i = EV_BUSERR; i <= EV_LAST; i++)
     ExcVec[i] = BadTrap;
 
+  /* Initialize exception handlers. */
   ExcVec[EV_BUSERR] = BusErrTrap;
   ExcVec[EV_ADDRERR] = AddrErrTrap;
+  ExcVec[EV_ILLEGAL] = IllegalTrap;
+  ExcVec[EV_ZERODIV] = ZeroDivTrap;
+  ExcVec[EV_CHK] = ChkInstTrap;
+  ExcVec[EV_TRAPV] = TrapvInstTrap;
+  ExcVec[EV_PRIV] = PrivInstTrap;
+  ExcVec[EV_TRACE] = TraceTrap;
+  ExcVec[EV_LINEA] = IllegalTrap;
+  ExcVec[EV_LINEF] = IllegalTrap;
+  ExcVec[EV_FMTERR] = FmtErrTrap;
 
   /* Initialize level 1-7 interrupt autovector in Amiga specific way. */
   ExcVec[EV_INTLVL(1)] = AmigaLvl1Handler;
@@ -110,4 +120,8 @@ void vPortSetupExceptionVector(void) {
   ExcVec[EV_INTLVL(4)] = AmigaLvl4Handler;
   ExcVec[EV_INTLVL(5)] = AmigaLvl5Handler;
   ExcVec[EV_INTLVL(6)] = AmigaLvl6Handler;
+
+  /* Intialize TRAP instruction handlers. */
+  for (int i = EV_TRAP(0); i <= EV_TRAP(15); i++)
+    ExcVec[i] = IllegalTrap;
 }

@@ -78,7 +78,7 @@ typedef struct TrapFrame {
 void BadTrap(void);
 void BusErrTrap(void);
 void AddrErrTrap(void);
-void IllInstTrap(void);
+void IllegalTrap(void);
 void ZeroDivTrap(void);
 void ChkInstTrap(void);
 void TrapvInstTrap(void);
