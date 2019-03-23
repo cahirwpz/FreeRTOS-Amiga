@@ -10,6 +10,7 @@
         xdef _LineATrap
         xdef _LineFTrap
         xdef _FmtErrTrap
+        xref _vPortTrapHandler
 
 T_UNKNOWN   equ 0
 T_BUSERR    equ 1
@@ -46,7 +47,7 @@ T_FMTERR    equ 9
 
 _EnterTrap:
         move.l  sp,-(sp)
-        jsr     _TrapHandler
+        jsr     _vPortTrapHandler
         stop    #$2700
 
 ; vim: ft=asm68k ts=8 sw=8

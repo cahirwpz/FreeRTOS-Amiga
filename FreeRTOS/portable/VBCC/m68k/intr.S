@@ -25,7 +25,7 @@ RBF     equ 3
 DSKSYNC equ 4
 EXTER   equ 5
 
-        section "AmigaInt",text
+        section "AmigaIntr",text
 
         macro JMPVEC
         dc.w $4ef9
@@ -125,7 +125,7 @@ _exter
         beq     _rte
         JMPVEC  exter
 
-        section "AmigaInt",data
+        section "AmigaIntr",data
 
 _IntVec:
         dc.l    tbe

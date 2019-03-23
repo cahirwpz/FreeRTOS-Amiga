@@ -1,11 +1,25 @@
 #include <FreeRTOS.h>
 #include <task.h>
+
 #include <hardware.h>
 #include <exception.h>
+#include <interrupt.h>
+#include <trap.h>
 #include <cpu.h>
 
 extern void vPortStartFirstTask(void);
-extern __interrupt void vPortYieldHandler(void);
+extern ISR(vPortYieldHandler);
+
+/* Define custom chipset register bases uses throughout the code. */
+volatile Custom_t custom = (Custom_t)0xdff000;
+volatile CIA_t ciaa = (CIA_t)0xbfe001;
+volatile CIA_t ciab = (CIA_t)0xbfd000;
+
+/* Exception Vector Base: 0 for 68000, for 68010 and above read from VBR */
+ExcVec_t *ExcVecBase = (ExcVec_t *)0L;
+
+/* Value of this variable is provided by the boot loader. */
+uint8_t CpuModel = 0;
 
 /* When calling RTE the stack must look as follows:
  *
@@ -76,4 +90,24 @@ BaseType_t xPortStartScheduler(void) {
 
 void vPortEndScheduler(void) {
   /* Not implemented as there is nothing to return to. */
+}
+
+void vPortSetupExceptionVector(void) {
+  if (CpuModel & CF_68010)
+    ExcVecBase = portGetVBR();
+
+  /* Initialize M68k interrupt vector. */
+  for (int i = EV_BUSERR; i <= EV_LAST; i++)
+    ExcVec[i] = BadTrap;
+
+  ExcVec[EV_BUSERR] = BusErrTrap;
+  ExcVec[EV_ADDRERR] = AddrErrTrap;
+
+  /* Initialize level 1-7 interrupt autovector in Amiga specific way. */
+  ExcVec[EV_INTLVL(1)] = AmigaLvl1Handler;
+  ExcVec[EV_INTLVL(2)] = AmigaLvl2Handler;
+  ExcVec[EV_INTLVL(3)] = AmigaLvl3Handler;
+  ExcVec[EV_INTLVL(4)] = AmigaLvl4Handler;
+  ExcVec[EV_INTLVL(5)] = AmigaLvl5Handler;
+  ExcVec[EV_INTLVL(6)] = AmigaLvl6Handler;
 }

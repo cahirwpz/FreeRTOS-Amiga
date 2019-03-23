@@ -58,7 +58,7 @@ typedef struct {
 } trap_stk_010_memacc_t;
 
 #pragma pack(2)
-typedef struct {
+typedef struct TrapFrame {
   uint16_t trapnum;
   uint32_t d0, d1, d2, d3, d4, d5, d6, d7;
   uint32_t a0, a1, a2, a3, a4, a5, a6, sp;
@@ -68,7 +68,7 @@ typedef struct {
     trap_stk_010_t m68010;
     trap_stk_010_memacc_t m68010_memacc;
   } u;
-} trap_frame_t;
+} TrapFrame_t;
 
 #define m68000 u.m68000
 #define m68000_memacc u.m68000_memacc

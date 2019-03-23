@@ -3,7 +3,7 @@
         xdef _vPortStartFirstTask
         xref _pxCurrentTCB
 
-        section "portasm.S",text
+        section "portasm",text
 
         macro portSAVE_CONTEXT
         or.w    #$0700,sr               ; mask all interrupts

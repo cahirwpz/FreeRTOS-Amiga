@@ -12,6 +12,8 @@ SOURCES = \
 	  timers.c \
 	  $(PORT_DIR)/heap.c \
 	  $(PORT_DIR)/port.c \
+	  $(PORT_DIR)/intr.S \
+	  $(PORT_DIR)/trap.S \
 	  $(PORT_DIR)/portasm.S
 
 all: build

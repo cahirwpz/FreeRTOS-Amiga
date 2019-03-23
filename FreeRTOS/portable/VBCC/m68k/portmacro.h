@@ -69,6 +69,13 @@ void portWFI(void) = "\tstop\t#$2000\n";
 /* Halt the processor by masking all interrupts and waiting for NMI. */
 void portHALT(void) = "\tstop\t#$2700\n";
 
+/* Read Vector Base Register (68010 and above only) */
+void *portGetVBR() = "\tmovec\tvbr,d0\n";
+
+/* Read whole Status Register (privileged instruction on 68010 and above) */
+uint16_t portGetSR() = "\tmove.w\tsr,d0\n";
+
+/* What to do when assertion fails? */
 #define configASSERT(x)                                                        \
   {                                                                            \
     if (!(x))                                                                  \
