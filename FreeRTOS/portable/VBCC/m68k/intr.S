@@ -113,7 +113,7 @@ _rbf
         JMPVEC  rbf
 
 _dsksync
-        btst.b  #RBF,INTREQR_HI
+        btst.b  #DSKSYNC,INTREQR_HI
         beq     _rte
         JMPVEC  dsksync
 
@@ -121,7 +121,7 @@ _dsksync
 
 _AmigaLvl6Handler:
 _exter
-        btst.b  #RBF,INTREQR_HI
+        btst.b  #EXTER,INTREQR_HI
         beq     _rte
         JMPVEC  exter
 

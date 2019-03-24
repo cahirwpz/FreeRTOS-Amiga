@@ -20,7 +20,10 @@ all: build
 
 include $(TOPDIR)/build/build.vbcc.mk
 
-CPPFLAGS += -I$(TOPDIR)/FreeRTOS/include
+CPPFLAGS = -I$(TOPDIR)/FreeRTOS/include \
+	   -I$(TOPDIR)/FreeRTOS/portable/VBCC/m68k \
+	   -I$(TOPDIR)/include \
+	   -I$(TOPDIR)
 
 build-here: freertos.lib
 

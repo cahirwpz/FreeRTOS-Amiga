@@ -75,13 +75,6 @@ void *portGetVBR() = "\tmovec\tvbr,d0\n";
 /* Read whole Status Register (privileged instruction on 68010 and above) */
 uint16_t portGetSR() = "\tmove.w\tsr,d0\n";
 
-/* What to do when assertion fails? */
-#define configASSERT(x)                                                        \
-  {                                                                            \
-    if (!(x))                                                                  \
-      portHALT();                                                              \
-  }
-
 /* To yield we use system call that is invoked by TRAP instruction. */
 void vPortYield(void) = "\ttrap\t#0\n";
 

@@ -5,6 +5,8 @@
 
 typedef struct Custom *const Custom_t;
 
+#define CUSTOM ((volatile Custom_t)0xdff000)
+
 extern volatile Custom_t custom;
 
 #define EnableDMA(x) custom->dmacon_ = DMAF_SETCLR | DMAF(x)
