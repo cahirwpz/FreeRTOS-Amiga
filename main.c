@@ -1,11 +1,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-#include <hardware.h>
-#include <exception.h>
 #include <interrupt.h>
-#include <trap.h>
-#include <cpu.h>
 #include <stdio.h>
 
 #define mainRED_TASK_PRIORITY 3
@@ -28,7 +24,7 @@ static void vGreenTask(void *) {
 
 static ISR(VertBlankHandler) {
   /* Clear the interrupt. */
-  custom->intreq = INTF_VERTB;
+  ClearIRQ(VERTB);
 
   /* Increment the system timer value and possibly preempt. */
   uint32_t ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
@@ -39,7 +35,8 @@ static ISR(VertBlankHandler) {
 
 static void SystemTimerInit(void) {
   SetIntVec(VERTB, VertBlankHandler);
-  custom->intena = INTF_SETCLR | INTF_VERTB;
+  ClearIRQ(VERTB);
+  EnableINT(VERTB);
 }
 
 static xTaskHandle red_handle;

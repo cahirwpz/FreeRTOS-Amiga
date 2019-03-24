@@ -100,8 +100,6 @@ ndk: $(NDK).lha
 
 ndk-install: ndk
 	mkdir -p "$(DESTDIR)/$(TARGET)/include"
-	$(RM) -r "ndk/Include/include_h/proto"
-	cp -r "ndk/Include/include_h/" "$(DESTDIR)/$(TARGET)/include"
 	cp -r "ndk/Include/include_i/" "$(DESTDIR)/$(TARGET)/include"
 
 ndk-clean:

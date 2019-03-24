@@ -1,7 +1,10 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = \
-	serial.c
+	  cia-frame.c \
+	  cia-line.c \
+	  cia-timer.c \
+	  serial.c
 
 all: build
 

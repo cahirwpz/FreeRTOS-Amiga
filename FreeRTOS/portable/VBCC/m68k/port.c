@@ -1,7 +1,8 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-#include <hardware.h>
+#include <custom.h>
+#include <cia.h>
 #include <exception.h>
 #include <interrupt.h>
 #include <trap.h>
@@ -80,7 +81,7 @@ BaseType_t xPortStartScheduler(void) {
   ExcVec[EV_TRAP(0)] = vPortYieldHandler;
 
   /* Unmask all interrupts in INTENA. They're still masked by SR. */
-  custom->intena = INTF_SETCLR|INTF_INTEN;
+  EnableINT(INTEN);
 
   /* Start the first task executing. */
   vPortStartFirstTask();

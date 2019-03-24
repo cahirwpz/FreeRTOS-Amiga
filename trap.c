@@ -1,8 +1,5 @@
 #include <FreeRTOS.h>
 
-#include <hardware.h>
-#include <exception.h>
-#include <interrupt.h>
 #include <trap.h>
 #include <cpu.h>
 #include <stdio.h>

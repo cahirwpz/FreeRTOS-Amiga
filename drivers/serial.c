@@ -1,7 +1,7 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 
-#include <hardware.h>
+#include <custom.h>
 #include <interrupt.h>
 #include <stdio.h>
 
@@ -10,10 +10,6 @@
 #define CLOCK 3546895
 #define QUEUELEN 64
 
-#define SERDATF_RBF (1 << 14)
-#define SERDATF_TBE (1 << 13)
-#define SERDATF_TSRE (1 << 12)
-
 static QueueHandle_t SendQ;
 static QueueHandle_t RecvQ;
 
@@ -21,7 +17,7 @@ static QueueHandle_t RecvQ;
 
 static ISR(SendIntHandler) {
   /* Signal end of interrupt. */
-  custom->intreq = INTF_TBE;
+  ClearIRQ(TBE);
 
   /* Send one byte into the wire. */
   uint8_t cSend;
@@ -31,7 +27,7 @@ static ISR(SendIntHandler) {
 
 static ISR(RecvIntHandler) {
   /* Signal end of interrupt. */
-  custom->intreq = INTF_RBF;
+  ClearIRQ(RBF);
 
   /* Send one byte to waiting task. */
   char cRecv = custom->serdatr;
@@ -47,17 +43,21 @@ void SerialInit(unsigned baud) {
   SendQ = xQueueCreate(QUEUELEN, sizeof(char));
 
   SetIntVec(TBE, SendIntHandler);
-  SetIntVec(RBF, RecvIntHandler);
+  ClearIRQ(TBE);
+  EnableINT(TBE);
 
-  custom->intreq = INTF_TBE | INTF_RBF;
-  custom->intena = INTF_SETCLR | INTF_TBE | INTF_RBF;
+  SetIntVec(RBF, RecvIntHandler);
+  ClearIRQ(RBF);
+  EnableINT(RBF);
 }
 
 void SerialKill(void) {
-  custom->intena = INTF_TBE | INTF_RBF;
-  custom->intreq = INTF_TBE | INTF_RBF;
-
+  DisableINT(TBE);
+  ClearIRQ(TBE);
   ResetIntVec(TBE);
+
+  DisableINT(RBF);
+  ClearIRQ(RBF);
   ResetIntVec(RBF);
 
   vQueueDelete(RecvQ);
