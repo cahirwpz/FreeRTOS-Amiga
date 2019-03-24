@@ -5,6 +5,7 @@ SOURCES = \
 	  cia-line.c \
 	  cia-timer.c \
 	  floppy.c \
+	  floppy-mfm.c \
 	  serial.c
 
 all: build
