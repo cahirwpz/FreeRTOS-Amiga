@@ -78,7 +78,7 @@ StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
  */
 BaseType_t xPortStartScheduler(void) {
   /* Use TRAP #0 for Yield system call. */
-  ExcVec[EV_TRAP(0)] = vPortYieldHandler;
+  ExcVec[EXC_TRAP(0)] = vPortYieldHandler;
 
   /* Unmask all interrupts in INTENA. They're still masked by SR. */
   EnableINT(INTEN);
@@ -98,31 +98,31 @@ void vPortSetupExceptionVector(void) {
     ExcVecBase = portGetVBR();
 
   /* Initialize M68k interrupt vector. */
-  for (int i = EV_BUSERR; i <= EV_LAST; i++)
+  for (int i = EXC_BUSERR; i <= EXC_LAST; i++)
     ExcVec[i] = BadTrap;
 
   /* Initialize exception handlers. */
-  ExcVec[EV_BUSERR] = BusErrTrap;
-  ExcVec[EV_ADDRERR] = AddrErrTrap;
-  ExcVec[EV_ILLEGAL] = IllegalTrap;
-  ExcVec[EV_ZERODIV] = ZeroDivTrap;
-  ExcVec[EV_CHK] = ChkInstTrap;
-  ExcVec[EV_TRAPV] = TrapvInstTrap;
-  ExcVec[EV_PRIV] = PrivInstTrap;
-  ExcVec[EV_TRACE] = TraceTrap;
-  ExcVec[EV_LINEA] = IllegalTrap;
-  ExcVec[EV_LINEF] = IllegalTrap;
-  ExcVec[EV_FMTERR] = FmtErrTrap;
+  ExcVec[EXC_BUSERR] = BusErrTrap;
+  ExcVec[EXC_ADDRERR] = AddrErrTrap;
+  ExcVec[EXC_ILLEGAL] = IllegalTrap;
+  ExcVec[EXC_ZERODIV] = ZeroDivTrap;
+  ExcVec[EXC_CHK] = ChkInstTrap;
+  ExcVec[EXC_TRAPV] = TrapvInstTrap;
+  ExcVec[EXC_PRIV] = PrivInstTrap;
+  ExcVec[EXC_TRACE] = TraceTrap;
+  ExcVec[EXC_LINEA] = IllegalTrap;
+  ExcVec[EXC_LINEF] = IllegalTrap;
+  ExcVec[EXC_FMTERR] = FmtErrTrap;
 
   /* Initialize level 1-7 interrupt autovector in Amiga specific way. */
-  ExcVec[EV_INTLVL(1)] = AmigaLvl1Handler;
-  ExcVec[EV_INTLVL(2)] = AmigaLvl2Handler;
-  ExcVec[EV_INTLVL(3)] = AmigaLvl3Handler;
-  ExcVec[EV_INTLVL(4)] = AmigaLvl4Handler;
-  ExcVec[EV_INTLVL(5)] = AmigaLvl5Handler;
-  ExcVec[EV_INTLVL(6)] = AmigaLvl6Handler;
+  ExcVec[EXC_INTLVL(1)] = AmigaLvl1Handler;
+  ExcVec[EXC_INTLVL(2)] = AmigaLvl2Handler;
+  ExcVec[EXC_INTLVL(3)] = AmigaLvl3Handler;
+  ExcVec[EXC_INTLVL(4)] = AmigaLvl4Handler;
+  ExcVec[EXC_INTLVL(5)] = AmigaLvl5Handler;
+  ExcVec[EXC_INTLVL(6)] = AmigaLvl6Handler;
 
   /* Intialize TRAP instruction handlers. */
-  for (int i = EV_TRAP(0); i <= EV_TRAP(15); i++)
+  for (int i = EXC_TRAP(0); i <= EXC_TRAP(15); i++)
     ExcVec[i] = IllegalTrap;
 }
