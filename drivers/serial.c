@@ -1,5 +1,5 @@
-#include <FreeRTOS.h>
-#include <queue.h>
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/queue.h>
 
 #include <custom.h>
 #include <interrupt.h>

@@ -1,5 +1,5 @@
-#include <FreeRTOS.h>
-#include <task.h>
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/task.h>
 
 #include <interrupt.h>
 #include <stdio.h>

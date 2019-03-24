@@ -20,6 +20,8 @@ all: build
 
 include $(TOPDIR)/build/build.vbcc.mk
 
+CPPFLAGS += -I$(TOPDIR)/FreeRTOS/include
+
 build-here: freertos.lib
 
 freertos.lib: $(OBJECTS)

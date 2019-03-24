@@ -1,4 +1,4 @@
-#include <FreeRTOS.h>
+#include <FreeRTOS/FreeRTOS.h>
 
 #include <trap.h>
 #include <cpu.h>
