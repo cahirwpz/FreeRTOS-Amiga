@@ -25,16 +25,9 @@ void ReadFloppyTrack(void *aTrack, uint16_t aTrackNum);
 
 struct DiskSector;
 typedef struct DiskSector DiskSector_t;
+typedef DiskSector_t *DiskTrack_t[TRACK_NSECTORS];
 
-typedef struct {
-  DiskSector_t *sector;
-  uint8_t trackNum;
-  uint8_t sectorNum;
-} SectorInfo_t;
-
-typedef SectorInfo_t TrackInfo_t[TRACK_NSECTORS];
-
-void ParseTrack(void *track, TrackInfo_t trkinfo);
-void DecodeSector(SectorInfo_t *secinfo, void *buf);
+void ParseTrack(void *track, DiskTrack_t sectors);
+void DecodeSector(DiskSector_t *sector, void *data);
 
 #endif /* !_FLOPPY_H_ */

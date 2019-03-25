@@ -31,10 +31,9 @@ struct DiskSector {
 #define MASK 0x55555555
 #define DECODE(odd, even) (((odd) & MASK) << 1) | ((even) & MASK)
 
-void ParseTrack(void *track, TrackInfo_t trkinfo) {
+void ParseTrack(void *track, DiskTrack_t sectors) {
   int16_t secnum = TRACK_NSECTORS;
   DiskSector_t *maybeSector = track;
-  SectorInfo_t *secinfo = trkinfo;
 
   do {
     uint16_t *data = (uint16_t *)maybeSector;
@@ -61,19 +60,16 @@ void ParseTrack(void *track, TrackInfo_t trkinfo) {
     printf("[MFM] SectorInfo: sector=%x, #sector=%d, #track=%d\n",
            (intptr_t)sec, (int)info.sectorNum, (int)info.trackNum);
 #endif
-    secinfo->trackNum = info.trackNum;
-    secinfo->sectorNum = info.sectorNum;
-    secinfo->sector = sec;
-    secinfo++;
 
+    sectors[info.sectorNum] = sec;
     maybeSector = sec + 1;
   } while (--secnum);
 }
 
-void DecodeSector(SectorInfo_t *secinfo, void *buf) {
-  uint32_t *dst = buf;
-  uint32_t *odd = (uint32_t *)secinfo->sector->data[0];
-  uint32_t *even = (uint32_t *)secinfo->sector->data[1];
+void DecodeSector(DiskSector_t *sector, void *data) {
+  uint32_t *dst = data;
+  uint32_t *odd = (uint32_t *)sector->data[0];
+  uint32_t *even = (uint32_t *)sector->data[1];
   int16_t n = SECTOR_PAYLOAD / sizeof(uint32_t) / 2;
 
   do {
@@ -81,9 +77,7 @@ void DecodeSector(SectorInfo_t *secinfo, void *buf) {
     uint32_t odd1 = *odd++;
     uint32_t even0 = *even++;
     uint32_t even1 = *even++;
-    uint32_t res0 = DECODE(odd0, even0);
-    uint32_t res1 = DECODE(odd1, even1);
-    *dst++ = res0;
-    *dst++ = res1;
+    *dst++ = DECODE(odd0, even0);
+    *dst++ = DECODE(odd1, even1);
   } while (--n);
 }
