@@ -30,7 +30,7 @@ struct CIA {
   uint8_t pad_b[255];
   uint8_t ciasdr;
   uint8_t pad_c[255];
-  uint8_t ciaicr;
+  uint8_t _ciaicr; /* please use WriteICR / SampleICR procedures */
   uint8_t pad_d[255];
   uint8_t ciacra;
   uint8_t pad_e[255];

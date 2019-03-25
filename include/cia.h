@@ -39,4 +39,15 @@ void SetFrameCounter(uint32_t frame);
 uint32_t ReadLineCounter(void);
 void SetLineCounter(uint32_t line);
 
+/* You MUST use following procedures to access CIA Interrupt Control Register!
+ * On read ICR provides pending interrupts bitmask clearing them as well.
+ * On write ICR masks or unmasks interrupts. If writing 1 with CIAIRCF_SETCLR to
+ * a bit that is enabled causes an interrupt. */
+
+/* ICR: Enable, disable or cause interrupts. */
+uint8_t WriteICR(CIA_t cia, uint8_t mask);
+
+/* ICR: sample and clear pending interrupts. */
+uint8_t SampleICR(CIA_t cia, uint8_t mask);
+
 #endif

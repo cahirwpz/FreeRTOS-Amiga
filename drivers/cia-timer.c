@@ -15,53 +15,43 @@ static CIATimer_t timer[4];
 
 /* Interrupt handler for CIA-A timers. */
 static ISR(CIAATimerHandler) {
-  CIA_t cia = CIAA;
-
-  /* Interrupt Control Register gets zeroed out during a read! */
-  uint8_t icr = cia->ciaicr;
+  uint8_t pending = SampleICR(CIAA, CIAICRF_TA|CIAICRF_TB);
 
   ClearIRQ(PORTS);
 
-  if (icr & CIAICRF_TA) {
+  if (pending & CIAICRF_TA) {
     CIATimer_t *tmr = &timer[TIMER_CIAA_A];
     /* Wake up sleeping task and disable interrupt for Timer A. */
     vTaskNotifyGiveFromISR(tmr->waiter, NULL);
     tmr->waiter = NULL;
-    cia->ciaicr = CIAICRF_TA;
   }
 
-  if (icr & CIAICRF_TB) {
+  if (pending & CIAICRF_TB) {
     CIATimer_t *tmr = &timer[TIMER_CIAA_B];
     /* Wake up sleeping task and disable interrupt for Timer B. */
     vTaskNotifyGiveFromISR(tmr->waiter, NULL);
     tmr->waiter = NULL;
-    cia->ciaicr = CIAICRF_TB;
   }
 }
 
 /* Interrupt handler for CIA-B timers. */
 static ISR(CIABTimerHandler) {
-  CIA_t cia = CIAB;
-
-  /* Interrupt Control Register gets zeroed out during a read! */
-  uint8_t icr = cia->ciaicr;
+  uint8_t pending = SampleICR(CIAB, CIAICRF_TA|CIAICRF_TB);
 
   ClearIRQ(EXTER);
 
-  if (icr & CIAICRF_TA) {
+  if (pending & CIAICRF_TA) {
     CIATimer_t *tmr = &timer[TIMER_CIAB_A];
     /* Wake up sleeping task and disable interrupt for Timer A. */
     vTaskNotifyGiveFromISR(tmr->waiter, NULL);
     tmr->waiter = NULL;
-    cia->ciaicr = CIAICRF_TA;
   }
 
-  if (icr & CIAICRF_TB) {
+  if (pending & CIAICRF_TB) {
     CIATimer_t *tmr = &timer[TIMER_CIAB_B];
     /* Wake up sleeping task and disable interrupt for Timer B. */
     vTaskNotifyGiveFromISR(tmr->waiter, NULL);
     tmr->waiter = NULL;
-    cia->ciaicr = CIAICRF_TB;
   }
 }
 
@@ -72,9 +62,9 @@ void TimerInit(void) {
   CIAB->ciacra = 0;
   CIAB->ciacrb = 0;
 
-  /* CIA-A & CIA-B: Disable interrupts. */
-  CIAA->ciaicr = CIAICRF_TA|CIAICRF_TB;
-  CIAB->ciaicr = CIAICRF_TA|CIAICRF_TB;
+  /* CIA-A & CIA-B: Disable timer interrupts. */
+  WriteICR(CIAA, CIAICRF_TA|CIAICRF_TB);
+  WriteICR(CIAB, CIAICRF_TA|CIAICRF_TB);
 
   SetIntVec(PORTS, CIAATimerHandler);
   ClearIRQ(PORTS);
@@ -155,11 +145,11 @@ void WaitTimer(unsigned num, uint16_t delay) {
   if ((delay >= DELAY_SPIN) && 
       (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)) {
     /* If delay is long enough, then turn on the interrupt and go to sleep. */
-    cia->ciaicr = CIAICRF_SETCLR | timer;
+    WriteICR(cia, CIAICRF_SETCLR | timer);
     tmr->waiter = xTaskGetCurrentTaskHandle();
     (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
   } else {
     /* If delay is short, then just spin. */
-    while (!(REGB(cia->ciaicr) & timer));
+    while (!SampleICR(cia, timer));
   }
 }

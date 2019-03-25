@@ -2,6 +2,7 @@ TOPDIR = $(realpath ..)
 
 SOURCES = \
 	  cia-frame.c \
+	  cia-icr.c \
 	  cia-line.c \
 	  cia-timer.c \
 	  floppy.c \
