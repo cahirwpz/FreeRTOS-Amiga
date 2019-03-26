@@ -1,6 +1,7 @@
 #ifndef _CDEFS_H_
 #define _CDEFS_H_
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define BIT(x) (1L << (x))
