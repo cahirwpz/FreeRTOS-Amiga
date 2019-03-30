@@ -27,9 +27,8 @@ T_FMTERR    equ 9
 
         macro HANDLER
 \1:
-        movem.l d0-a7,-(sp)             ; save all registers
         move.w  #\2,-(sp)               ; save trap number
-        bra.b   _EnterTrap
+        bra     _EnterTrap
         endm
 
 ; List of trap handlers
@@ -46,7 +45,8 @@ T_FMTERR    equ 9
         HANDLER _FmtErrTrap,T_FMTERR
 
 _EnterTrap:
-        move.l  sp,-(sp)
+        movem.l d0-a7,-(sp)             ; save all registers
+        move.l  sp,-(sp)                ; pass trap frame as an argument
         jsr     _vPortTrapHandler
         stop    #$2700
 
