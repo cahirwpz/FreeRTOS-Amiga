@@ -26,7 +26,7 @@ static void FloppyIOThread(void *);
 
 static ISR(TrackTransferDone) {
   /* Signal end of interrupt. */
-  ClearIRQ(DSKBLK);
+  ClearIRQ(INTF_DSKBLK);
 
   /* Send notification to waiting task. */
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -62,8 +62,8 @@ void FloppyInit(unsigned aFloppyIOTaskPrio) {
 static void FloppyMotorOff(void);
 
 void FloppyKill(void) {
-  DisableINT(DSKBLK);
-  DisableDMA(DISK);
+  DisableINT(INTF_DSKBLK);
+  DisableDMA(DMAF_DISK);
   ResetIntVec(DSKBLK);
   FloppyMotorOff();
 
@@ -201,9 +201,9 @@ static void FloppyReader(void *) {
 #endif
 
       /* Prepare for transfer. */
-      ClearIRQ(DSKBLK);
-      EnableINT(DSKBLK);
-      EnableDMA(DISK);
+      ClearIRQ(INTF_DSKBLK);
+      EnableINT(INTF_DSKBLK);
+      EnableDMA(DMAF_DISK);
 
       /* Buffer in chip memory. */
       custom->dskpt = (void *)fio.track;
@@ -216,8 +216,8 @@ static void FloppyReader(void *) {
 
       /* Disable DMA & interrupts. */
       custom->dsklen = 0;
-      DisableINT(DSKBLK);
-      DisableDMA(DISK);
+      DisableINT(INTF_DSKBLK);
+      DisableDMA(DMAF_DISK);
 
       /* Wake up the task that requested transfer. */
       xTaskNotifyGive(fio.origin);

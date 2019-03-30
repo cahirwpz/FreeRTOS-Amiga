@@ -9,7 +9,8 @@ typedef struct Custom *const Custom_t;
 
 extern volatile Custom_t custom;
 
-#define EnableDMA(x) custom->dmacon_ = DMAF_SETCLR | DMAF(x)
-#define DisableDMA(x) custom->dmacon_ = DMAF(x)
+/* Macros below take or'ed DMAF_* flags. */
+#define EnableDMA(x) { custom->dmacon_ = DMAF_SETCLR | (x); }
+#define DisableDMA(x) { custom->dmacon_ = (x); }
 
 #endif /* !_CUSTOM_H_ */

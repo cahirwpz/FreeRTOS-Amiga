@@ -81,7 +81,7 @@ BaseType_t xPortStartScheduler(void) {
   ExcVec[EXC_TRAP(0)] = vPortYieldHandler;
 
   /* Unmask all interrupts in INTENA. They're still masked by SR. */
-  EnableINT(INTEN);
+  EnableINT(INTF_INTEN);
 
   /* Start the first task executing. */
   vPortStartFirstTask();
@@ -91,6 +91,13 @@ BaseType_t xPortStartScheduler(void) {
 
 void vPortEndScheduler(void) {
   /* Not implemented as there is nothing to return to. */
+}
+
+/* Predefined interrupt chains for Amiga port. */
+INTCHAIN(VertBlankChain);
+
+static ISR(VertBlankHandler) {
+  RunIntChain(VertBlankChain);
 }
 
 void vPortSetupExceptionVector(void) {
@@ -121,6 +128,10 @@ void vPortSetupExceptionVector(void) {
   ExcVec[EXC_INTLVL(4)] = AmigaLvl4Handler;
   ExcVec[EXC_INTLVL(5)] = AmigaLvl5Handler;
   ExcVec[EXC_INTLVL(6)] = AmigaLvl6Handler;
+
+  /* Initialize VERTB as interrupt server chain. */
+  InitIntChain(VertBlankChain, VERTB);
+  SetIntVec(VERTB, VertBlankHandler);
 
   /* Intialize TRAP instruction handlers. */
   for (int i = EXC_TRAP(0); i <= EXC_TRAP(15); i++)

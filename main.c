@@ -22,10 +22,7 @@ static void vGreenTask(void *) {
   }
 }
 
-static ISR(VertBlankHandler) {
-  /* Clear the interrupt. */
-  ClearIRQ(VERTB);
-
+static void SystemClockTickHandler(void *) {
   /* Increment the system timer value and possibly preempt. */
   uint32_t ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
   BaseType_t xSwitchRequired = xTaskIncrementTick();
@@ -33,17 +30,13 @@ static ISR(VertBlankHandler) {
   portCLEAR_INTERRUPT_MASK_FROM_ISR(ulSavedInterruptMask);
 }
 
-static void SystemTimerInit(void) {
-  SetIntVec(VERTB, VertBlankHandler);
-  ClearIRQ(VERTB);
-  EnableINT(VERTB);
-}
+static INTSERVER(SystemClockTick, 10, SystemClockTickHandler, NULL);
 
 static xTaskHandle red_handle;
 static xTaskHandle green_handle;
 
 int main(void) {
-  SystemTimerInit();
+  AddIntServer(VertBlankChain, SystemClockTick);
 
   xTaskCreate(vRedTask, "red", configMINIMAL_STACK_SIZE, NULL,
               mainRED_TASK_PRIORITY, &red_handle);

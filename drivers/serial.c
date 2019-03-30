@@ -17,7 +17,7 @@ static QueueHandle_t RecvQ;
 
 static ISR(SendIntHandler) {
   /* Signal end of interrupt. */
-  ClearIRQ(TBE);
+  ClearIRQ(INTF_TBE);
 
   /* Send one byte into the wire. */
   uint8_t cSend;
@@ -27,7 +27,7 @@ static ISR(SendIntHandler) {
 
 static ISR(RecvIntHandler) {
   /* Signal end of interrupt. */
-  ClearIRQ(RBF);
+  ClearIRQ(INTF_RBF);
 
   /* Send one byte to waiting task. */
   char cRecv = custom->serdatr;
@@ -43,21 +43,15 @@ void SerialInit(unsigned baud) {
   SendQ = xQueueCreate(QUEUELEN, sizeof(char));
 
   SetIntVec(TBE, SendIntHandler);
-  ClearIRQ(TBE);
-  EnableINT(TBE);
-
   SetIntVec(RBF, RecvIntHandler);
-  ClearIRQ(RBF);
-  EnableINT(RBF);
+
+  ClearIRQ(INTF_TBE|INTF_RBF);
+  EnableINT(INTF_TBE|INTF_RBF);
 }
 
 void SerialKill(void) {
-  DisableINT(TBE);
-  ClearIRQ(TBE);
+  DisableINT(INTF_TBE|INTF_RBF);
   ResetIntVec(TBE);
-
-  DisableINT(RBF);
-  ClearIRQ(RBF);
   ResetIntVec(RBF);
 
   vQueueDelete(RecvQ);

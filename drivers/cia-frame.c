@@ -6,13 +6,13 @@
 
 uint32_t ReadFrameCounter(void) {
   uint32_t res = 0;
-  DisableINT(INTEN);
+  DisableINT(INTF_INTEN);
   res |= ciaa->ciatodhi;
   res <<= 8;
   res |= ciaa->ciatodmid;
   res <<= 8;
   res |= ciaa->ciatodlow;
-  EnableINT(INTEN);
+  EnableINT(INTF_INTEN);
   return res;
 }
 
@@ -20,9 +20,9 @@ uint32_t ReadFrameCounter(void) {
  * clock will not start again until after a write to the LSB event register. */
 
 void SetFrameCounter(uint32_t frame) {
-  DisableINT(INTEN);
+  DisableINT(INTF_INTEN);
   ciaa->ciatodhi = frame >> 16;
   ciaa->ciatodmid = frame >> 8;
   ciaa->ciatodlow = frame;
-  EnableINT(INTEN);
+  EnableINT(INTF_INTEN);
 }

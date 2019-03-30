@@ -17,7 +17,7 @@ static CIATimer_t timer[4];
 static ISR(CIAATimerHandler) {
   uint8_t pending = SampleICR(CIAA, CIAICRF_TA|CIAICRF_TB);
 
-  ClearIRQ(PORTS);
+  ClearIRQ(INTF_PORTS);
 
   if (pending & CIAICRF_TA) {
     CIATimer_t *tmr = &timer[TIMER_CIAA_A];
@@ -38,7 +38,7 @@ static ISR(CIAATimerHandler) {
 static ISR(CIABTimerHandler) {
   uint8_t pending = SampleICR(CIAB, CIAICRF_TA|CIAICRF_TB);
 
-  ClearIRQ(EXTER);
+  ClearIRQ(INTF_EXTER);
 
   if (pending & CIAICRF_TA) {
     CIATimer_t *tmr = &timer[TIMER_CIAB_A];
@@ -67,12 +67,10 @@ void TimerInit(void) {
   WriteICR(CIAB, CIAICRF_TA|CIAICRF_TB);
 
   SetIntVec(PORTS, CIAATimerHandler);
-  ClearIRQ(PORTS);
-  EnableINT(PORTS);
-
   SetIntVec(EXTER, CIABTimerHandler);
-  ClearIRQ(EXTER);
-  EnableINT(EXTER);
+
+  ClearIRQ(INTF_PORTS|INTF_EXTER);
+  EnableINT(INTF_PORTS|INTF_EXTER);
 }
 
 int AcquireTimer(unsigned num) {

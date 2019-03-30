@@ -1,6 +1,9 @@
 #ifndef _INTERRUPT_H_
 #define _INTERRUPT_H_
 
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/list.h>
+
 #include <custom.h>
 
 #define INTB_SETCLR 15  /* Set/Clear control bit. Determines if bits */
@@ -41,10 +44,15 @@
 #define INTF_DSKBLK INTF(DSKBLK)
 #define INTF_TBE INTF(TBE)
 
-#define EnableINT(x) custom->intena_ = INTF_SETCLR | INTF(x)
-#define DisableINT(x) custom->intena_ = INTF(x)
-#define CauseIRQ(x) custom->intreq_ = INTF_SETCLR | INTF(x)
-#define ClearIRQ(x) custom->intreq_ = INTF(x)
+/* All macros below take or'ed INTF_* flags. */
+#define EnableINT(x)                                                           \
+  { custom->intena_ = INTF_SETCLR | (x); }
+#define DisableINT(x)                                                          \
+  { custom->intena_ = (x); }
+#define CauseIRQ(x)                                                            \
+  { custom->intreq_ = INTF_SETCLR | (x); }
+#define ClearIRQ(x)                                                            \
+  { custom->intreq_ = (x); }
 
 #ifndef ISR_t
 #define ISR_t _ISR_t
@@ -56,8 +64,10 @@ typedef void (*_ISR_t)(void);
 typedef ISR_t *IntVec_t[INTB_INTEN];
 extern IntVec_t IntVec;
 
+/* Only returns from interrupt, without clearing pending flags. */
 extern void DummyInterruptHandler(void);
 
+/* Macros for setting up ISR for given interrupt number. */
 #define SetIntVec(intbit, handler) *(IntVec[INTB_##intbit]) = handler
 #define ResetIntVec(intbit) SetIntVec(intbit, DummyInterruptHandler)
 
@@ -68,5 +78,58 @@ extern void AmigaLvl3Handler(void);
 extern void AmigaLvl4Handler(void);
 extern void AmigaLvl5Handler(void);
 extern void AmigaLvl6Handler(void);
+
+/* Use Interrupt Server to run more than one interrupt handler procedure
+ * for given Interrupt Vector routine (VERTB by default). */
+typedef void (*IntFunc_t)(void *);
+typedef struct IntServer IntServer_t;
+typedef struct IntChain IntChain_t;
+
+/* Reuses following fields of ListItem_t:
+ *  - (BaseType_t) pvOwner: data provided for IntSrvFunc_t,
+ *  - (TickType_t) xItemValue: priority of interrupt server. */
+struct IntServer {
+  ListItem_t node;
+  IntFunc_t code;
+};
+
+/* List of interrupt servers. */
+struct IntChain {
+  List_t list;
+  uint16_t flag; /* interrupt enable/disable flag (INTF_*) */
+};
+
+/* Define Interrupt Server to be used with (Add|Rem)IntServer.
+ * Priority is between -128 (lowest) to 127 (highest).
+ * Because servers are sorted by ascending number of priority,
+ * IntServer definition recalculates priority number accordingly.
+ */
+#define INTSERVER(NAME, PRI, CODE, DATA)                                       \
+  IntServer_t NAME[1] = {                                                      \
+      .node = {.pvOwner = DATA, .xItemValue = (127 - (PRI))}, .code = CODE}
+
+/* Defines Interrupt Chain of given name. */
+#define INTCHAIN(NAME)                                                         \
+  IntChain_t *NAME = &(IntChain_t) { 0 }
+
+/* Register Interrupt Server for given Interrupt Chain. */
+void AddIntServer(IntChain_t *, IntServer_t *);
+
+/* Unregister Interrupt Server for given Interrupt Chain. */
+void RemIntServer(IntServer_t *);
+
+/* Initialize Interrupt Chain structure. */
+#define InitIntChain(CHAIN, NUM)                                               \
+  {                                                                            \
+    vListInitialise(&(CHAIN)->list);                                           \
+    (CHAIN)->flag = INTF(NUM);                                                 \
+  }
+
+/* Run Interrupt Servers for given Interrupt Chain.
+ * Use only inside IntVec handler rountine. */
+void RunIntChain(IntChain_t *chain);
+
+/* Predefined interrupt chains defined by Amiga port. */
+extern IntChain_t *VertBlankChain;
 
 #endif /* !_INTERRUPT_H_ */

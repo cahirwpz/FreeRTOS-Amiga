@@ -6,13 +6,13 @@
 
 uint32_t ReadLineCounter(void) {
   uint32_t res = 0;
-  DisableINT(INTEN);
+  DisableINT(INTF_INTEN);
   res |= ciab->ciatodhi;
   res <<= 8;
   res |= ciab->ciatodmid;
   res <<= 8;
   res |= ciab->ciatodlow;
-  EnableINT(INTEN);
+  EnableINT(INTF_INTEN);
   return res;
 }
 
@@ -20,9 +20,9 @@ uint32_t ReadLineCounter(void) {
  * clock will not start again until after a write to the LSB event register. */
 
 void SetLineCounter(uint32_t frame) {
-  DisableINT(INTEN);
+  DisableINT(INTF_INTEN);
   ciab->ciatodhi = frame >> 16;
   ciab->ciatodmid = frame >> 8;
   ciab->ciatodlow = frame;
-  EnableINT(INTEN);
+  EnableINT(INTF_INTEN);
 }
