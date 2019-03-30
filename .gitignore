@@ -46,6 +46,11 @@
 *.idb
 *.pdb
 
+# Source index files
+tags
+etags
+cscope.out
+
 # Backup files
 *~
 
