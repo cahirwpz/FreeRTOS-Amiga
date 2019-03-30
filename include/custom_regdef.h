@@ -242,9 +242,19 @@ struct Custom {
 /* defines for dsksync register */
 #define DSK_SYNC 0x4489
 
-/* define for serdat register */
+/* defines for serdat register */
 #define SERDATF_RBF BIT(14)
 #define SERDATF_TBE BIT(13)
 #define SERDATF_TSRE BIT(12)
+
+/* defines for potgo register */
+#define OUTRY BIT(15) /* Output enable for bit 14 (1=output) */
+#define DATRY BIT(14) /* Data for port 2, pin 9 */
+#define OUTRX BIT(13) /* Output enable for bit 12 */
+#define DATRX BIT(12) /* Data for port 2, pin 5 */
+#define OUTLY BIT(11) /* Output enable for bit 10 */
+#define DATLY BIT(10) /* Data for port 1, pin 9 (right mouse button) */
+#define OUTLX BIT(9)  /* Output enable for bit 8 */
+#define DATLX BIT(8)  /* Data for port 1, pin 5 (middle mouse button) */
 
 #endif /* !_CUSTOM_REGDEF_H_ */

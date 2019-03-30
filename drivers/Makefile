@@ -5,8 +5,10 @@ SOURCES = \
 	  cia-icr.c \
 	  cia-line.c \
 	  cia-timer.c \
+	  event.c \
 	  floppy.c \
 	  floppy-mfm.c \
+	  mouse.c \
 	  serial.c
 
 all: build
