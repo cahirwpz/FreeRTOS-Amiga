@@ -24,7 +24,7 @@ static xTaskHandle FloppyIOTask;
 static QueueHandle_t FloppyIOQueue;
 static void FloppyIOThread(void *);
 
-static void TrackTransferDone(void) {
+static void TrackTransferDone(void *) {
   /* Signal end of interrupt. */
   ClearIRQ(INTF_DSKBLK);
 
@@ -49,7 +49,7 @@ void FloppyInit(unsigned aFloppyIOTaskPrio) {
   custom->adkcon = ADKF_SETCLR | ADKF_MFMPREC | ADKF_WORDSYNC | ADKF_FAST;
 
   /* Handler that will wake up track reader task. */
-  SetIntVec(DSKBLK, TrackTransferDone);
+  SetIntVec(DSKBLK, TrackTransferDone, NULL);
 
   FloppyIOQueue = xQueueCreate(FLOPPYIO_MAXNUM, sizeof(FloppyIO_t));
   configASSERT(FloppyIOQueue != NULL);

@@ -28,7 +28,7 @@ EXTER   equ 13
 
         macro ENTER
         movem.l d0-d1/a0-a1,-(sp)
-        lea     _IntVec+4*\1,a0
+        lea     _IntVec+8*\1,a0
         endm
 
 ; Level 1 Interrupt Autovector
@@ -42,12 +42,12 @@ _tbe
         bne     _handle
 
 _dskblk
-        addq.l  #4,a0
+        addq.l  #8,a0
         btst    #DSKBLK,d0
         bne     _handle
 
 _softint
-        addq.l  #4,a0
+        addq.l  #8,a0
         bra     _handle
 
 ; Level 2 Interrupt Autovector
@@ -67,12 +67,12 @@ _coper
         bne     _handle
 
 _vertb  
-        addq.l  #4,a0
+        addq.l  #8,a0
         btst    #VERTB,d0
         bne     _handle
 
 _blit
-        addq.l  #4,a0
+        addq.l  #8,a0
         bra     _handle
 
 ; Level 4 Interrupt Autovector
@@ -86,17 +86,17 @@ _aud2
         bne     _handle
 
 _aud0
-        addq.l  #4,a0
+        addq.l  #8,a0
         btst    #AUD0,d0
         bne     _handle
 
 _aud3
-        addq.l  #4,a0
+        addq.l  #8,a0
         btst    #AUD3,d0
         bne     _handle
 
 _aud1
-        addq.l  #4,a0
+        addq.l  #8,a0
         bra     _handle
 
 ; Level 5 Interrupt Autovector
@@ -110,14 +110,16 @@ _rbf
         bne     _handle
 
 _dsksync
-        addq.l  #4,a0
+        addq.l  #8,a0
         bra     _handle
 
 ; Main part of interrupt handler
 
 _handle:
-        move.l  (a0),a0
-        jsr     (a0)
+        move.l  (a0)+,a1        ; IntVecEntry_t.code
+        move.l  (a0)+,-(sp)     ; IntVecEntry_t.data
+        jsr     (a1)
+        addq.l  #4,sp
         movem.l (sp)+,d0-d1/a0-a1
         rte
 

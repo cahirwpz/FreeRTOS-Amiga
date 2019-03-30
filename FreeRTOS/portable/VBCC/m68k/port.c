@@ -20,7 +20,7 @@ volatile CIA_t ciab = CIAB;
 ExcVec_t *ExcVecBase = (ExcVec_t *)0L;
 
 /* Amiga autovector interrupts table. */
-ISR_t IntVec[INTB_INTEN];
+IntVec_t IntVec;
 
 /* Value of this variable is provided by the boot loader. */
 uint8_t CpuModel = 0;
@@ -133,11 +133,11 @@ void vPortSetupExceptionVector(void) {
   ExcVec[EXC_INTLVL(6)] = AmigaLvl6Handler;
 
   for (int i = INTB_TBE; i <= INTB_EXTER; i++)
-    IntVec[i] = DummyInterruptHandler;
+    IntVec[i].code = DummyInterruptHandler;
 
   /* Initialize VERTB as interrupt server chain. */
   InitIntChain(VertBlankChain, VERTB);
-  SetIntVec(VERTB, VertBlankHandler);
+  SetIntVec(VERTB, (ISR_t)RunIntChain, VertBlankChain);
 
   /* Intialize TRAP instruction handlers. */
   for (int i = EXC_TRAP(0); i <= EXC_TRAP(15); i++)

@@ -1,11 +1,8 @@
 #ifndef _EXCEPTION_H_
 #define _EXCEPTION_H_
 
-#ifndef ISR_t
-#define ISR_t _ISR_t
-/* Interrupt Service Routine */
-typedef void (*_ISR_t)(void);
-#endif
+/* Exception Service Routine */
+typedef void (*ESR_t)(void);
 
 #define EXC_BUSERR 2             /* 2: bus error */
 #define EXC_ADDRERR 3            /* 3: address error */
@@ -24,7 +21,7 @@ typedef void (*_ISR_t)(void);
 #define EXC_TRAP(i) ((i) + 32)   /* 32-47: TRAP 0-15 instruction vector */
 #define EXC_LAST 255
 
-typedef ISR_t ExcVec_t[EXC_LAST + 1];
+typedef ESR_t ExcVec_t[EXC_LAST + 1];
 extern ExcVec_t *ExcVecBase;
 #define ExcVec (*ExcVecBase)
 

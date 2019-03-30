@@ -54,20 +54,26 @@
 #define ClearIRQ(x)                                                            \
   { custom->intreq_ = (x); }
 
-#ifndef ISR_t
-#define ISR_t _ISR_t
 /* Interrupt Service Routine */
-typedef void (*_ISR_t)(void);
-#endif
+typedef void (*ISR_t)(void *);
 
-extern ISR_t IntVec[INTB_INTEN];
+/* Interrupt Vector Entry */
+typedef struct IntVecEntry {
+  ISR_t code;
+  void *data;
+} IntVecEntry_t;
+
+typedef IntVecEntry_t IntVec_t[INTB_INTEN];
+
+extern IntVec_t IntVec;
 
 /* Only returns from interrupt, without clearing pending flags. */
-extern void DummyInterruptHandler(void);
+extern void DummyInterruptHandler(void *);
 
 /* Macros for setting up ISR for given interrupt number. */
-#define SetIntVec(intbit, handler) IntVec[INTB_##intbit] = handler
-#define ResetIntVec(intbit) SetIntVec(intbit, DummyInterruptHandler)
+#define SetIntVec(INTR, CODE, DATA)                                            \
+  IntVec[INTB_##INTR] = (IntVecEntry_t){.code = (CODE), .data = (DATA)}
+#define ResetIntVec(INTR) SetIntVec(INTR, DummyInterruptHandler, NULL)
 
 /* Amiga Interrupt Autovector handlers */
 extern void AmigaLvl1Handler(void);

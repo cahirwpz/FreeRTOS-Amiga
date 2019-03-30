@@ -14,7 +14,7 @@ typedef struct CIATimer {
 static CIATimer_t timer[4];
 
 /* Interrupt handler for CIA-A timers. */
-static void CIAATimerHandler(void) {
+static void CIAATimerHandler(void *) {
   uint8_t pending = SampleICR(CIAA, CIAICRF_TA|CIAICRF_TB);
 
   ClearIRQ(INTF_PORTS);
@@ -35,7 +35,7 @@ static void CIAATimerHandler(void) {
 }
 
 /* Interrupt handler for CIA-B timers. */
-static void CIABTimerHandler(void) {
+static void CIABTimerHandler(void *) {
   uint8_t pending = SampleICR(CIAB, CIAICRF_TA|CIAICRF_TB);
 
   ClearIRQ(INTF_EXTER);
@@ -66,8 +66,8 @@ void TimerInit(void) {
   WriteICR(CIAA, CIAICRF_TA|CIAICRF_TB);
   WriteICR(CIAB, CIAICRF_TA|CIAICRF_TB);
 
-  SetIntVec(PORTS, CIAATimerHandler);
-  SetIntVec(EXTER, CIABTimerHandler);
+  SetIntVec(PORTS, CIAATimerHandler, NULL);
+  SetIntVec(EXTER, CIABTimerHandler, NULL);
 
   ClearIRQ(INTF_PORTS|INTF_EXTER);
   EnableINT(INTF_PORTS|INTF_EXTER);

@@ -15,7 +15,7 @@ static QueueHandle_t RecvQ;
 
 #define SendByte(byte) { custom->serdat = (uint16_t)(byte) | (uint16_t)0x100; }
 
-static void SendIntHandler(void) {
+static void SendIntHandler(void *) {
   /* Signal end of interrupt. */
   ClearIRQ(INTF_TBE);
 
@@ -25,7 +25,7 @@ static void SendIntHandler(void) {
     SendByte(cSend);
 }
 
-static void RecvIntHandler(void) {
+static void RecvIntHandler(void *) {
   /* Signal end of interrupt. */
   ClearIRQ(INTF_RBF);
 
@@ -42,8 +42,8 @@ void SerialInit(unsigned baud) {
   RecvQ = xQueueCreate(QUEUELEN, sizeof(char));
   SendQ = xQueueCreate(QUEUELEN, sizeof(char));
 
-  SetIntVec(TBE, SendIntHandler);
-  SetIntVec(RBF, RecvIntHandler);
+  SetIntVec(TBE, SendIntHandler, NULL);
+  SetIntVec(RBF, RecvIntHandler, NULL);
 
   ClearIRQ(INTF_TBE|INTF_RBF);
   EnableINT(INTF_TBE|INTF_RBF);
