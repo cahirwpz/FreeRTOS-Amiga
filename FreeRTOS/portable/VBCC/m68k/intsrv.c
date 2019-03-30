@@ -29,8 +29,6 @@ void RemIntServer(IntServer_t *is) {
 }
 
 void RunIntChain(IntChain_t *ic) {
-  /* Clear the interrupt and run servers. */
-  ClearIRQ(ic->flag);
   /* Call each server in turn. */
   for (ListItem_t *node = listGET_HEAD_ENTRY(&ic->list);
        node != listGET_END_MARKER(&ic->list);

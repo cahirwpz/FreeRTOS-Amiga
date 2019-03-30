@@ -17,8 +17,6 @@ static CIATimer_t timer[4];
 static void CIAATimerHandler(void *) {
   uint8_t pending = SampleICR(CIAA, CIAICRF_TA|CIAICRF_TB);
 
-  ClearIRQ(INTF_PORTS);
-
   if (pending & CIAICRF_TA) {
     CIATimer_t *tmr = &timer[TIMER_CIAA_A];
     /* Wake up sleeping task and disable interrupt for Timer A. */
@@ -37,8 +35,6 @@ static void CIAATimerHandler(void *) {
 /* Interrupt handler for CIA-B timers. */
 static void CIABTimerHandler(void *) {
   uint8_t pending = SampleICR(CIAB, CIAICRF_TA|CIAICRF_TB);
-
-  ClearIRQ(INTF_EXTER);
 
   if (pending & CIAICRF_TA) {
     CIATimer_t *tmr = &timer[TIMER_CIAB_A];

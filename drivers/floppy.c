@@ -25,9 +25,6 @@ static QueueHandle_t FloppyIOQueue;
 static void FloppyIOThread(void *);
 
 static void TrackTransferDone(void *) {
-  /* Signal end of interrupt. */
-  ClearIRQ(INTF_DSKBLK);
-
   /* Send notification to waiting task. */
   vTaskNotifyGiveFromISR(FloppyIOTask, &xNeedRescheduleTask);
 }

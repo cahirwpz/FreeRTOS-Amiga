@@ -11,6 +11,7 @@
         xref _xNeedRescheduleTask
 
 INTREQR equ $dff01e
+INTREQ  equ $dff09c
 
 TBE     equ 0
 DSKBLK  equ 1
@@ -32,6 +33,18 @@ EXTER   equ 13
         macro ENTER
         movem.l d0-d1/a0-a1,-(sp)
         lea     _IntVec+8*\1,a0
+        moveq   #\1,d1
+        endm
+
+        macro HANDLE
+        btst    d1,d0
+        bne     _handle
+        addq.l  #8,a0
+        addq.w  #1,d1
+        endm
+
+        macro FINISH
+        bra     _handle
         endm
 
 ; Level 1 Interrupt Autovector
@@ -40,24 +53,15 @@ _AmigaLvl1Handler:
         ENTER   TBE
         move.w  INTREQR,d0
 
-_tbe    
-        btst    #TBE,d0
-        bne     _handle
-
-_dskblk
-        addq.l  #8,a0
-        btst    #DSKBLK,d0
-        bne     _handle
-
-_softint
-        addq.l  #8,a0
-        bra     _handle
+        HANDLE  TBE
+        HANDLE  DSKBLK
+        FINISH  ; SOFTINT
 
 ; Level 2 Interrupt Autovector
 
 _AmigaLvl2Handler:
         ENTER   PORTS
-        bra     _handle
+        FINISH
 
 ; Level 3 Interrupt Autovector
 
@@ -65,18 +69,9 @@ _AmigaLvl3Handler:
         ENTER   COPER
         move.w  INTREQR,d0
 
-_coper  
-        btst    #COPER,d0
-        bne     _handle
-
-_vertb  
-        addq.l  #8,a0
-        btst    #VERTB,d0
-        bne     _handle
-
-_blit
-        addq.l  #8,a0
-        bra     _handle
+        HANDLE  COPER
+        HANDLE  VERTB
+        FINISH  ; BLIT
 
 ; Level 4 Interrupt Autovector
 
@@ -84,43 +79,22 @@ _AmigaLvl4Handler:
         ENTER   AUD2
         move.w  INTREQR,d0
 
-_aud2
-        btst    #AUD2,d0
-        bne     _handle
-
-_aud0
-        addq.l  #8,a0
-        btst    #AUD0,d0
-        bne     _handle
-
-_aud3
-        addq.l  #8,a0
-        btst    #AUD3,d0
-        bne     _handle
-
-_aud1
-        addq.l  #8,a0
-        bra     _handle
-
-; Level 5 Interrupt Autovector
-
-_AmigaLvl5Handler:
-        ENTER   RBF
-        move.w  INTREQR,d0
-
-_rbf
-        btst    #RBF,d0
-        bne     _handle
-
-_dsksync
-        addq.l  #8,a0
-        bra     _handle
+        HANDLE  AUD2
+        HANDLE  AUD0
+        HANDLE  AUD3
+        FINISH  ; AUD1
 
 ; Main part of interrupt handler
 
 _handle:
-        move.l  (a0)+,a1        ; IntVecEntry_t.code
-        move.l  (a0)+,-(sp)     ; IntVecEntry_t.data
+        ; Make INTF_* mask, and clear pending interrupt.
+        clr.w   d0
+        bset    d1,d0
+        move.w  d0,INTREQ
+
+        ; Enter interrupt service routine.
+        move.l  (a0)+,a1                ; IntVecEntry_t.code
+        move.l  (a0)+,-(sp)             ; IntVecEntry_t.data
         jsr     (a1)
         addq.l  #4,sp
 
@@ -143,11 +117,20 @@ _noswitch:
         movem.l (sp)+,d0-d1/a0-a1
         rte
 
+; Level 5 Interrupt Autovector
+
+_AmigaLvl5Handler:
+        ENTER   RBF
+        move.w  INTREQR,d0
+
+        HANDLE  RBF
+        FINISH  ; DSKSYNC
+
 ; Level 6 Interrupt Autovector
 
 _AmigaLvl6Handler:
         ENTER   EXTER
-        bra     _handle
+        FINISH  ; EXTER
 
 ; Dummy handler
 

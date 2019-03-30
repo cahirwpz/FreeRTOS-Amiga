@@ -16,9 +16,6 @@ static QueueHandle_t RecvQ;
 #define SendByte(byte) { custom->serdat = (uint16_t)(byte) | (uint16_t)0x100; }
 
 static void SendIntHandler(void *) {
-  /* Signal end of interrupt. */
-  ClearIRQ(INTF_TBE);
-
   /* Send one byte into the wire. */
   uint8_t cSend;
   if (xQueueReceiveFromISR(SendQ, &cSend, &xNeedRescheduleTask))
@@ -26,9 +23,6 @@ static void SendIntHandler(void *) {
 }
 
 static void RecvIntHandler(void *) {
-  /* Signal end of interrupt. */
-  ClearIRQ(INTF_RBF);
-
   /* Send one byte to waiting task. */
   char cRecv = custom->serdatr;
   (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, &xNeedRescheduleTask);
