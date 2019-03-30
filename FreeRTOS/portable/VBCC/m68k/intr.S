@@ -5,7 +5,10 @@
         xdef _AmigaLvl5Handler
         xdef _AmigaLvl6Handler
         xdef _DummyInterruptHandler
+
         xref _IntVec
+        xref _vPortYieldHandler
+        xref _xNeedRescheduleTask
 
 INTREQR equ $dff01e
 
@@ -120,6 +123,23 @@ _handle:
         move.l  (a0)+,-(sp)     ; IntVecEntry_t.data
         jsr     (a1)
         addq.l  #4,sp
+
+        ; Check if we need to reschedule a task - usually as a result waking
+        ; up a higher priorty task while running interrupt service routine.
+        ; Do it only when returning from interrupt context to task context.
+        ; Let's not do the switch while returning from nested interrupt.
+        move.w  16(sp),d0               ; SR from interrupted context
+        and.w   #$0700,d0               ; was IPL set to 0 (task context) ?
+        bne     _noswitch
+
+        tst.w   _xNeedRescheduleTask+2  ; check reschedule flag
+        beq     _noswitch
+
+        clr.w   _xNeedRescheduleTask+2  ; clear reschedule flag
+        movem.l (sp)+,d0-d1/a0-a1       ; restore registers
+        jmp     _vPortYieldHandler      ; and force a task switch
+
+_noswitch:
         movem.l (sp)+,d0-d1/a0-a1
         rte
 

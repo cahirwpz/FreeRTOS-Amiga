@@ -25,8 +25,7 @@ static void vGreenTask(void *) {
 static void SystemClockTickHandler(void *) {
   /* Increment the system timer value and possibly preempt. */
   uint32_t ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
-  BaseType_t xSwitchRequired = xTaskIncrementTick();
-  portYIELD_FROM_ISR(xSwitchRequired);
+  xNeedRescheduleTask = xTaskIncrementTick();
   portCLEAR_INTERRUPT_MASK_FROM_ISR(ulSavedInterruptMask);
 }
 

@@ -29,9 +29,7 @@ static void TrackTransferDone(void *) {
   ClearIRQ(INTF_DSKBLK);
 
   /* Send notification to waiting task. */
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  vTaskNotifyGiveFromISR(FloppyIOTask, &xHigherPriorityTaskWoken);
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  vTaskNotifyGiveFromISR(FloppyIOTask, &xNeedRescheduleTask);
 }
 
 static void FloppyReader(void *);

@@ -21,7 +21,7 @@ static void SendIntHandler(void *) {
 
   /* Send one byte into the wire. */
   uint8_t cSend;
-  if (xQueueReceiveFromISR(SendQ, &cSend, NULL))
+  if (xQueueReceiveFromISR(SendQ, &cSend, &xNeedRescheduleTask))
     SendByte(cSend);
 }
 
@@ -31,7 +31,7 @@ static void RecvIntHandler(void *) {
 
   /* Send one byte to waiting task. */
   char cRecv = custom->serdatr;
-  (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, NULL);
+  (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, &xNeedRescheduleTask);
 }
 
 void SerialInit(unsigned baud) {

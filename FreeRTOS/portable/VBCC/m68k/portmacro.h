@@ -79,13 +79,10 @@ uint16_t portGetSR() = "\tmove.w\tsr,d0\n";
 void vPortYield(void) = "\ttrap\t#0\n";
 
 #define portYIELD() vPortYield()
-#define portEND_SWITCHING_ISR(xSwitchRequired)                                 \
-  {                                                                            \
-    if (xSwitchRequired) {                                                     \
-      portYIELD();                                                             \
-    }                                                                          \
-  }
-#define portYIELD_FROM_ISR(x) portEND_SWITCHING_ISR(x)
+
+/* Set to non-zero value inside interrupt service routine
+ * whenever you woke up a higher priority task. */
+extern BaseType_t xNeedRescheduleTask;
 
 /* Task function macros as described on the FreeRTOS.org WEB site. */
 #define portTASK_FUNCTION_PROTO(vFunction, pvParameters)                       \

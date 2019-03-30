@@ -25,6 +25,9 @@ IntVec_t IntVec;
 /* Value of this variable is provided by the boot loader. */
 uint8_t CpuModel = 0;
 
+/* Used by interrupt handler to check if it should force task switch. */
+BaseType_t xNeedRescheduleTask;
+
 /* When calling RTE the stack must look as follows:
  *
  *   +--------+---------------+
