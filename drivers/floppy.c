@@ -24,7 +24,7 @@ static xTaskHandle FloppyIOTask;
 static QueueHandle_t FloppyIOQueue;
 static void FloppyIOThread(void *);
 
-static ISR(TrackTransferDone) {
+static void TrackTransferDone(void) {
   /* Signal end of interrupt. */
   ClearIRQ(INTF_DSKBLK);
 

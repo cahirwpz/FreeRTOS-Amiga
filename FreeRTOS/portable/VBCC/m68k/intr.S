@@ -5,10 +5,9 @@
         xdef _AmigaLvl5Handler
         xdef _AmigaLvl6Handler
         xdef _DummyInterruptHandler
-        xdef _IntVec
+        xref _IntVec
 
-INTREQR_HI equ $dff01e
-INTREQR_LO equ $dff01f
+INTREQR equ $dff01e
 
 TBE     equ 0
 DSKBLK  equ 1
@@ -18,129 +17,119 @@ COPER   equ 4
 VERTB   equ 5
 BLIT    equ 6
 AUD2    equ 7
-AUD0    equ 0
-AUD3    equ 1
-AUD1    equ 2
-RBF     equ 3
-DSKSYNC equ 4
-EXTER   equ 5
+AUD0    equ 8
+AUD3    equ 9
+AUD1    equ 10
+RBF     equ 11
+DSKSYNC equ 12
+EXTER   equ 13
 
         section "AmigaIntr",text
 
-        macro JMPVEC
-        dc.w $4ef9
-\1      dc.l _rte
-	endm
+        macro ENTER
+        movem.l d0-d1/a0-a1,-(sp)
+        lea     _IntVec+4*\1,a0
+        endm
 
 ; Level 1 Interrupt Autovector
 
 _AmigaLvl1Handler:
+        ENTER   TBE
+        move.w  INTREQR,d0
+
 _tbe    
-        btst.b  #TBE,INTREQR_LO
-        beq     _dskblk
-        JMPVEC  tbe
+        btst    #TBE,d0
+        bne     _handle
 
 _dskblk
-        btst.b  #DSKBLK,INTREQR_LO
-        beq     _softint
-        JMPVEC  dskblk
+        addq.l  #4,a0
+        btst    #DSKBLK,d0
+        bne     _handle
 
 _softint
-        btst.b  #SOFTINT,INTREQR_LO
-        beq     _rte
-        JMPVEC  softint
+        addq.l  #4,a0
+        bra     _handle
 
 ; Level 2 Interrupt Autovector
 
 _AmigaLvl2Handler:
-_ports  
-        btst.b  #PORTS,INTREQR_LO
-        beq     _rte
-        JMPVEC  ports
+        ENTER   PORTS
+        bra     _handle
 
 ; Level 3 Interrupt Autovector
 
 _AmigaLvl3Handler:
-_coper
-        btst.b  #COPER,INTREQR_LO
-        beq     _vertb
-        JMPVEC  coper
+        ENTER   COPER
+        move.w  INTREQR,d0
 
-_vertb
-        btst.b  #VERTB,INTREQR_LO
-        beq     _blit
-        JMPVEC  vertb
+_coper  
+        btst    #COPER,d0
+        bne     _handle
 
-_blit   btst.b  #BLIT,INTREQR_LO
-        beq     _rte
-        JMPVEC  blit
+_vertb  
+        addq.l  #4,a0
+        btst    #VERTB,d0
+        bne     _handle
 
-; Dummy handler
-
-_DummyInterruptHandler:
-_rte:
-        rte
+_blit
+        addq.l  #4,a0
+        bra     _handle
 
 ; Level 4 Interrupt Autovector
 
 _AmigaLvl4Handler:
+        ENTER   AUD2
+        move.w  INTREQR,d0
+
 _aud2
-        btst.b  #AUD2,INTREQR_LO
-        beq     _aud0
-        JMPVEC  aud2
+        btst    #AUD2,d0
+        bne     _handle
 
 _aud0
-        btst.b  #AUD0,INTREQR_HI
-        beq     _aud3
-        JMPVEC  aud0
+        addq.l  #4,a0
+        btst    #AUD0,d0
+        bne     _handle
 
 _aud3
-        btst.b  #AUD3,INTREQR_HI
-        beq     _aud1
-        JMPVEC  aud3
+        addq.l  #4,a0
+        btst    #AUD3,d0
+        bne     _handle
 
 _aud1
-        btst.b  #AUD1,INTREQR_HI
-        beq     _rte
-        JMPVEC  aud1
+        addq.l  #4,a0
+        bra     _handle
 
 ; Level 5 Interrupt Autovector
 
 _AmigaLvl5Handler:
+        ENTER   RBF
+        move.w  INTREQR,d0
+
 _rbf
-        btst.b  #RBF,INTREQR_HI
-        beq     _dsksync
-        JMPVEC  rbf
+        btst    #RBF,d0
+        bne     _handle
 
 _dsksync
-        btst.b  #DSKSYNC,INTREQR_HI
-        beq     _rte
-        JMPVEC  dsksync
+        addq.l  #4,a0
+        bra     _handle
+
+; Main part of interrupt handler
+
+_handle:
+        move.l  (a0),a0
+        jsr     (a0)
+        movem.l (sp)+,d0-d1/a0-a1
+        rte
 
 ; Level 6 Interrupt Autovector
 
 _AmigaLvl6Handler:
-_exter
-        btst.b  #EXTER,INTREQR_HI
-        beq     _rte
-        JMPVEC  exter
+        ENTER   EXTER
+        bra     _handle
 
-        section "AmigaIntr",data
+; Dummy handler
 
-_IntVec:
-        dc.l    tbe
-        dc.l    dskblk
-        dc.l    softint
-        dc.l    ports
-        dc.l    coper
-        dc.l    vertb
-        dc.l    blit
-        dc.l    aud2
-        dc.l    aud0
-        dc.l    aud3
-        dc.l    aud1
-        dc.l    rbf
-        dc.l    dsksync
-        dc.l    exter
+_DummyInterruptHandler:
+        rts
 
 ; vim: ft=asm68k ts=8 sw=8

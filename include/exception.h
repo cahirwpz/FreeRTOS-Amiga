@@ -5,7 +5,6 @@
 #define ISR_t _ISR_t
 /* Interrupt Service Routine */
 typedef void (*_ISR_t)(void);
-#define ISR(name) __interrupt void name(void)
 #endif
 
 #define EXC_BUSERR 2             /* 2: bus error */

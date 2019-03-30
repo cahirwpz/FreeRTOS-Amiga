@@ -9,7 +9,7 @@
 #include <cpu.h>
 
 extern void vPortStartFirstTask(void);
-extern ISR(vPortYieldHandler);
+extern __interrupt void vPortYieldHandler(void);
 
 /* Define custom chipset register bases uses throughout the code. */
 volatile Custom_t custom = CUSTOM;
@@ -18,6 +18,9 @@ volatile CIA_t ciab = CIAB;
 
 /* Exception Vector Base: 0 for 68000, for 68010 and above read from VBR */
 ExcVec_t *ExcVecBase = (ExcVec_t *)0L;
+
+/* Amiga autovector interrupts table. */
+ISR_t IntVec[INTB_INTEN];
 
 /* Value of this variable is provided by the boot loader. */
 uint8_t CpuModel = 0;
@@ -96,7 +99,7 @@ void vPortEndScheduler(void) {
 /* Predefined interrupt chains for Amiga port. */
 INTCHAIN(VertBlankChain);
 
-static ISR(VertBlankHandler) {
+static void VertBlankHandler(void) {
   RunIntChain(VertBlankChain);
 }
 
@@ -128,6 +131,9 @@ void vPortSetupExceptionVector(void) {
   ExcVec[EXC_INTLVL(4)] = AmigaLvl4Handler;
   ExcVec[EXC_INTLVL(5)] = AmigaLvl5Handler;
   ExcVec[EXC_INTLVL(6)] = AmigaLvl6Handler;
+
+  for (int i = INTB_TBE; i <= INTB_EXTER; i++)
+    IntVec[i] = DummyInterruptHandler;
 
   /* Initialize VERTB as interrupt server chain. */
   InitIntChain(VertBlankChain, VERTB);
