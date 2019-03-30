@@ -1,6 +1,8 @@
 # Common tools used by actions
 RM = rm -v -f
 FSUTIL = $(TOPDIR)/tools/fsutil.py
+CSCOPE = cscope -b
+CTAGS = ctags
 
 # Current directory without common prefix
 DIR = $(patsubst $(TOPDIR)/%,%,$(CURDIR)/)
@@ -58,7 +60,7 @@ build-recursive: $(SUBDIR:%=%-build)
 clean-recursive: $(SUBDIR:%=%-clean)
 
 # Define main rules of the build system
-build: build-dependencies build-recursive $(BUILD-FILES) build-here
+build: build-dependencies build-before build-recursive $(BUILD-FILES) build-here
 
 clean: clean-recursive clean-here
 	$(RM) $(CLEAN-FILES)
@@ -66,7 +68,7 @@ clean: clean-recursive clean-here
 	$(RM) *~
 
 PHONY-TARGETS += all
-PHONY-TARGETS += build build-dependencies build-here
+PHONY-TARGETS += build build-before build-dependencies build-here
 PHONY-TARGETS += clean clean-here
 
 .PHONY: $(PHONY-TARGETS)
