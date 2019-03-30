@@ -8,48 +8,31 @@
 
 typedef struct CIATimer {
   volatile TaskHandle_t waiter;
+  CIA_t cia;
+  uint8_t icr;
   uint8_t flags;
 } CIATimer_t;
 
-static CIATimer_t timer[4];
+static CIATimer_t timer[4] = {
+  [TIMER_CIAA_A] = {.cia = CIAA, .icr = CIAICRF_TA},
+  [TIMER_CIAA_B] = {.cia = CIAA, .icr = CIAICRF_TB},
+  [TIMER_CIAB_A] = {.cia = CIAB, .icr = CIAICRF_TA},
+  [TIMER_CIAB_B] = {.cia = CIAB, .icr = CIAICRF_TB}
+};
 
 /* Interrupt handler for CIA-A timers. */
-static void CIAATimerHandler(void *) {
-  uint8_t pending = SampleICR(CIAA, CIAICRF_TA|CIAICRF_TB);
-
-  if (pending & CIAICRF_TA) {
-    CIATimer_t *tmr = &timer[TIMER_CIAA_A];
-    /* Wake up sleeping task and disable interrupt for Timer A. */
-    vTaskNotifyGiveFromISR(tmr->waiter, NULL);
-    tmr->waiter = NULL;
-  }
-
-  if (pending & CIAICRF_TB) {
-    CIATimer_t *tmr = &timer[TIMER_CIAA_B];
-    /* Wake up sleeping task and disable interrupt for Timer B. */
+static void CIATimerHandler(CIATimer_t *tmr) {
+  if (SampleICR(tmr->cia, tmr->icr)) {
+    /* Wake up sleeping task and disable interrupt the timer. */
     vTaskNotifyGiveFromISR(tmr->waiter, NULL);
     tmr->waiter = NULL;
   }
 }
 
-/* Interrupt handler for CIA-B timers. */
-static void CIABTimerHandler(void *) {
-  uint8_t pending = SampleICR(CIAB, CIAICRF_TA|CIAICRF_TB);
-
-  if (pending & CIAICRF_TA) {
-    CIATimer_t *tmr = &timer[TIMER_CIAB_A];
-    /* Wake up sleeping task and disable interrupt for Timer A. */
-    vTaskNotifyGiveFromISR(tmr->waiter, NULL);
-    tmr->waiter = NULL;
-  }
-
-  if (pending & CIAICRF_TB) {
-    CIATimer_t *tmr = &timer[TIMER_CIAB_B];
-    /* Wake up sleeping task and disable interrupt for Timer B. */
-    vTaskNotifyGiveFromISR(tmr->waiter, NULL);
-    tmr->waiter = NULL;
-  }
-}
+static INTSERVER(CIAATimerA, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAA_A]);
+static INTSERVER(CIAATimerB, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAA_B]);
+static INTSERVER(CIABTimerA, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_A]);
+static INTSERVER(CIABTimerB, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_B]);
 
 void TimerInit(void) {
   /* CIA-A & CIA-B: Stop timers! */
@@ -62,8 +45,10 @@ void TimerInit(void) {
   WriteICR(CIAA, CIAICRF_TA|CIAICRF_TB);
   WriteICR(CIAB, CIAICRF_TA|CIAICRF_TB);
 
-  SetIntVec(PORTS, CIAATimerHandler, NULL);
-  SetIntVec(EXTER, CIABTimerHandler, NULL);
+  AddIntServer(PortsChain, CIAATimerA);
+  AddIntServer(PortsChain, CIAATimerB);
+  AddIntServer(ExterChain, CIABTimerA);
+  AddIntServer(ExterChain, CIABTimerB);
 
   ClearIRQ(INTF_PORTS|INTF_EXTER);
   EnableINT(INTF_PORTS|INTF_EXTER);

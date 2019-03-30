@@ -102,6 +102,7 @@ void vPortEndScheduler(void) {
 /* Predefined interrupt chains for Amiga port. */
 INTCHAIN(PortsChain);
 INTCHAIN(VertBlankChain);
+INTCHAIN(ExterChain);
 
 void vPortSetupExceptionVector(void) {
   if (CpuModel & CF_68010)
@@ -135,12 +136,15 @@ void vPortSetupExceptionVector(void) {
   for (int i = INTB_TBE; i <= INTB_EXTER; i++)
     IntVec[i].code = DummyInterruptHandler;
 
-  /* Initialize PORTS & VERTB as interrupt server chain. */
+  /* Initialize PORTS & VERTB & EXTER as interrupt server chain. */
   InitIntChain(PortsChain, PORTS);
   SetIntVec(PORTS, (ISR_t)RunIntChain, PortsChain);
 
   InitIntChain(VertBlankChain, VERTB);
   SetIntVec(VERTB, (ISR_t)RunIntChain, VertBlankChain);
+
+  InitIntChain(ExterChain, EXTER);
+  SetIntVec(EXTER, (ISR_t)RunIntChain, ExterChain);
 
   /* Intialize TRAP instruction handlers. */
   for (int i = EXC_TRAP(0); i <= EXC_TRAP(15); i++)

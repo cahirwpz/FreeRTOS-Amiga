@@ -134,7 +134,8 @@ void RemIntServer(IntServer_t *);
 void RunIntChain(IntChain_t *chain);
 
 /* Predefined interrupt chains defined by Amiga port. */
-extern IntChain_t *VertBlankChain;
 extern IntChain_t *PortsChain;
+extern IntChain_t *VertBlankChain;
+extern IntChain_t *ExterChain;
 
 #endif /* !_INTERRUPT_H_ */
