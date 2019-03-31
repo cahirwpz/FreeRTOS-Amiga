@@ -35,23 +35,10 @@ static INTSERVER(CIABTimerA, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_A]);
 static INTSERVER(CIABTimerB, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_B]);
 
 void TimerInit(void) {
-  /* CIA-A & CIA-B: Stop timers! */
-  CIAA->ciacra = 0;
-  CIAA->ciacrb = 0;
-  CIAB->ciacra = 0;
-  CIAB->ciacrb = 0;
-
-  /* CIA-A & CIA-B: Disable timer interrupts. */
-  WriteICR(CIAA, CIAICRF_TA|CIAICRF_TB);
-  WriteICR(CIAB, CIAICRF_TA|CIAICRF_TB);
-
   AddIntServer(PortsChain, CIAATimerA);
   AddIntServer(PortsChain, CIAATimerB);
   AddIntServer(ExterChain, CIABTimerA);
   AddIntServer(ExterChain, CIABTimerB);
-
-  ClearIRQ(INTF_PORTS|INTF_EXTER);
-  EnableINT(INTF_PORTS|INTF_EXTER);
 }
 
 int AcquireTimer(unsigned num) {

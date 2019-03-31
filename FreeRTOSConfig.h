@@ -55,18 +55,27 @@ to exclude the API function. */
 /* m68k port specific definitions and options. */
 #define portCRITICAL_NESTING_IN_TCB             1
 
-/* Amiga port specific definitions. */
-struct TrapFrame;
-
-void vPortTrapHandler(struct TrapFrame *);
-void vPortSetupExceptionVector(void);
-void *pvPortMallocChip(size_t size);
-
 /* What to do when assertion fails? */
 #define configASSERT(x)                                                        \
   {                                                                            \
     if (!(x))                                                                  \
       portHALT();                                                              \
   }
+
+/*---------------------------------------------------------------------------*
+ * Amiga port specific definitions.                                          *
+ *---------------------------------------------------------------------------*/
+
+struct TrapFrame;
+
+/* Called when a synchronous exception or trap happens. */
+void vPortTrapHandler(struct TrapFrame *);
+
+/* For use by startup code. */
+void vPortSetupHardware(void);
+void vPortSetupExceptionVector(void);
+
+/* Allocate chip memory, should be freed with vPortFree. */
+void *pvPortMallocChip(size_t size);
 
 #endif /* FREERTOS_CONFIG_H */

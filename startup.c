@@ -11,6 +11,7 @@ __entry void _start(uint8_t aCpuModel, const HeapRegion_t *const xHeapRegions) {
 
   CpuModel = aCpuModel;
 
+  vPortSetupHardware();
   vPortSetupExceptionVector();
   vPortDefineHeapRegions(xHeapRegions);
 

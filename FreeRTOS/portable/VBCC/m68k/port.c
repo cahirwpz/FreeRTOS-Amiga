@@ -150,3 +150,15 @@ void vPortSetupExceptionVector(void) {
   for (int i = EXC_TRAP(0); i <= EXC_TRAP(15); i++)
     ExcVec[i] = IllegalTrap;
 }
+
+void vPortSetupHardware(void) {
+  /* CIA-A & CIA-B: Stop timers and return to default settings. */
+  CIAA->ciacra = 0;
+  CIAA->ciacrb = 0;
+  CIAB->ciacra = 0;
+  CIAB->ciacrb = 0;
+
+  /* CIA-A & CIA-B: Disable all interrupts. */
+  WriteICR(CIAA, CIAICRF_ALL);
+  WriteICR(CIAB, CIAICRF_ALL);
+}
