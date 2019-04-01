@@ -20,6 +20,7 @@ typedef struct FloppyIO {
   uint16_t trackNum;   /* track number to transfer */
 } FloppyIO_t;
 
+static CIATimer_t *FloppyTimer;
 static xTaskHandle FloppyIOTask;
 static QueueHandle_t FloppyIOQueue;
 static void FloppyIOThread(void *);
@@ -34,8 +35,8 @@ static void FloppyReader(void *);
 void FloppyInit(unsigned aFloppyIOTaskPrio) {
   printf("[Init] Floppy drive driver!\n");
 
-  int timer = AcquireTimer(TIMER_CIAA_A);
-  configASSERT(timer != -1);
+  FloppyTimer = AcquireTimer(TIMER_CIAA_A);
+  configASSERT(FloppyTimer != NULL);
 
   /* Set standard synchronization marker. */
   custom->dsksync = DSK_SYNC;
@@ -62,6 +63,7 @@ void FloppyKill(void) {
   ResetIntVec(DSKBLK);
   FloppyMotorOff();
 
+  ReleaseTimer(FloppyTimer);
   vTaskDelete(FloppyIOTask);
   vQueueDelete(FloppyIOQueue);
 }
@@ -81,12 +83,12 @@ static int16_t TrackNum;
 #define STEP_SETTLE TIMER_MS(3)
 
 static void StepHeads(void) {
-  uint8_t *ciaprb = (uint8_t *)&ciab->ciaprb;
+  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
 
-  BCLR(ciaprb, CIAB_DSKSTEP);
-  BSET(ciaprb, CIAB_DSKSTEP);
+  BCLR(*ciaprb, CIAB_DSKSTEP);
+  BSET(*ciaprb, CIAB_DSKSTEP);
 
-  WaitTimer(TIMER_CIAA_A, STEP_SETTLE);
+  WaitTimerSleep(FloppyTimer, STEP_SETTLE);
 
   TrackNum += HeadDir;
 }
@@ -94,27 +96,27 @@ static void StepHeads(void) {
 #define DIRECTION_REVERSE_SETTLE TIMER_MS(18)
 
 static inline void HeadsStepDirection(int16_t inwards) {
-  uint8_t *ciaprb = (uint8_t *)&ciab->ciaprb;
+  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
 
   if (inwards) {
-    BCLR(ciaprb, CIAB_DSKDIREC);
+    BCLR(*ciaprb, CIAB_DSKDIREC);
     HeadDir = 2;
   } else {
-    BSET(ciaprb, CIAB_DSKDIREC);
+    BSET(*ciaprb, CIAB_DSKDIREC);
     HeadDir = -2;
   }
 
-  WaitTimer(TIMER_CIAA_A, DIRECTION_REVERSE_SETTLE);
+  WaitTimerSleep(FloppyTimer, DIRECTION_REVERSE_SETTLE);
 }
 
 static inline void ChangeDiskSide(int16_t upper) {
-  uint8_t *ciaprb = (uint8_t *)&ciab->ciaprb;
+  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
 
   if (upper) {
-    BCLR(ciaprb, CIAB_DSKSIDE);
+    BCLR(*ciaprb, CIAB_DSKSIDE);
     TrackNum++;
   } else {
-    BSET(ciaprb, CIAB_DSKSIDE);
+    BSET(*ciaprb, CIAB_DSKSIDE);
     TrackNum--;
   }
 }
@@ -131,11 +133,11 @@ static void FloppyMotorOn(void) {
   if (MotorOn)
     return;
 
-  uint8_t *ciaprb = (uint8_t *)&ciab->ciaprb;
+  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
 
-  BSET(ciaprb, CIAB_DSKSEL0);
-  BCLR(ciaprb, CIAB_DSKMOTOR);
-  BCLR(ciaprb, CIAB_DSKSEL0);
+  BSET(*ciaprb, CIAB_DSKSEL0);
+  BCLR(*ciaprb, CIAB_DSKMOTOR);
+  BCLR(*ciaprb, CIAB_DSKSEL0);
 
   WaitDiskReady();
 
@@ -146,11 +148,11 @@ static void FloppyMotorOff(void) {
   if (!MotorOn)
     return;
 
-  uint8_t *ciaprb = (uint8_t *)&ciab->ciaprb;
+  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
 
-  BSET(ciaprb, CIAB_DSKSEL0);
-  BSET(ciaprb, CIAB_DSKMOTOR);
-  BCLR(ciaprb, CIAB_DSKSEL0);
+  BSET(*ciaprb, CIAB_DSKSEL0);
+  BSET(*ciaprb, CIAB_DSKMOTOR);
+  BCLR(*ciaprb, CIAB_DSKSEL0);
 
   MotorOn = 0;
 }
@@ -186,7 +188,7 @@ static void FloppyReader(void *) {
       }
 
       /* Wait for the head to stabilize over the track. */
-      WaitTimer(TIMER_CIAA_A, DISK_SETTLE);
+      WaitTimerSleep(FloppyTimer, DISK_SETTLE);
 
       /* Make sure the DMA for the disk is turned off. */
       custom->dsklen = 0;

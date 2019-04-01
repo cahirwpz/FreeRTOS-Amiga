@@ -18,6 +18,8 @@ extern volatile CIA_t ciab;
 #define TIMER_CIAB_A 2
 #define TIMER_CIAB_B 3
 
+typedef struct CIATimer CIATimer_t;
+
 /* CIA timers resolution is E_CLOCK (in ticks per seconds). */
 #define E_CLOCK 709379
 
@@ -26,10 +28,22 @@ extern volatile CIA_t ciab;
 #define TIMER_US(us) ((us) * E_CLOCK / (1000 * 1000))
 
 /* Procedures for handling one-shot delays with high resolution timers. */
-void TimerInit(void);
-int AcquireTimer(unsigned num);
-void ReleaseTimer(unsigned num);
-void WaitTimer(unsigned num, uint16_t delay);
+struct CIATimer *AcquireTimer(unsigned num);
+void ReleaseTimer(CIATimer_t *timer);
+
+/* Consider using wrapper macros below instead of this procedure. */
+void WaitTimerGeneric(CIATimer_t *timer, uint16_t ticks, bool spin);
+
+/* Busy wait while waiting for timer to underflow.
+ * Should wait no more than couple handred microseconds.
+ * Interrupts are not disabled while spinning.
+ * Use TIMER_MS/TIMER_US to convert time unit to timer ticks. */
+#define WaitTimerSpin(TIMER, TICKS) WaitTimer(TIMER, TICKS, true)
+
+/* Sleep while waiting for timer to underflow.
+ * Use it if you want to wait for couple miliseconds or more.
+ * Use TIMER_MS/TIMER_US to convert time unit to timer ticks. */
+#define WaitTimerSleep(TIMER, TICKS) WaitTimerGeneric(TIMER, TICKS, false)
 
 /* 24-bit frame counter offered by CIA A */
 uint32_t ReadFrameCounter(void);

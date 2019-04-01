@@ -4,103 +4,99 @@
 #include <interrupt.h>
 #include <cia.h>
 
-#define TMRF_ACQUIRED BIT(0)
+/* Bitmask marking TIMER_* timers being in use. */
+static uint8_t InUse;
 
-typedef struct CIATimer {
+/* Defines timer state after it has been acquired. */
+struct CIATimer {
+  IntServer_t server;
   volatile TaskHandle_t waiter;
   CIA_t cia;
   uint8_t icr;
-  uint8_t flags;
-} CIATimer_t;
-
-static CIATimer_t timer[4] = {
-  [TIMER_CIAA_A] = {.cia = CIAA, .icr = CIAICRF_TA},
-  [TIMER_CIAA_B] = {.cia = CIAA, .icr = CIAICRF_TB},
-  [TIMER_CIAB_A] = {.cia = CIAB, .icr = CIAICRF_TA},
-  [TIMER_CIAB_B] = {.cia = CIAB, .icr = CIAICRF_TB}
+  uint8_t num;
 };
 
-/* Interrupt handler for CIA-A timers. */
-static void CIATimerHandler(CIATimer_t *tmr) {
-  if (SampleICR(tmr->cia, tmr->icr)) {
-    /* Wake up sleeping task and disable interrupt the timer. */
-    vTaskNotifyGiveFromISR(tmr->waiter, NULL);
-    tmr->waiter = NULL;
+/* Interrupt handler for CIA timers. */
+static void CIATimerHandler(CIATimer_t *timer) {
+  CIA_t cia = timer->cia;
+  uint8_t icr = timer->icr;
+
+  if (SampleICR(cia, icr)) {
+    /* Wake up sleeping task and disable interrupt for the timer. */
+    vTaskNotifyGiveFromISR(timer->waiter, &xNeedRescheduleTask);
+    timer->waiter = NULL;
+    WriteICR(cia, icr);
   }
 }
 
-INTSERVER_DEFINE(CIAATimerA, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAA_A]);
-INTSERVER_DEFINE(CIAATimerB, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAA_B]);
-INTSERVER_DEFINE(CIABTimerA, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_A]);
-INTSERVER_DEFINE(CIABTimerB, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_B]);
+/* Statically allocated CIA timers. */
+#define TIMER(CIA, TIMER)                                                      \
+  [TIMER_##CIA##_##TIMER] = {                                                  \
+    .num = TIMER_##CIA##_##TIMER, .cia = CIA, .icr = CIAICRF_T##TIMER,         \
+    .server = INTSERVER(0, (ISR_t)CIATimerHandler,                             \
+                        &Timers[TIMER_##CIA##_##TIMER])}
 
-void TimerInit(void) {
-  AddIntServer(PortsChain, CIAATimerA);
-  AddIntServer(PortsChain, CIAATimerB);
-  AddIntServer(ExterChain, CIABTimerA);
-  AddIntServer(ExterChain, CIABTimerB);
-}
+CIATimer_t Timers[4] = {
+  TIMER(CIAA, A),
+  TIMER(CIAA, B),
+  TIMER(CIAB, A),
+  TIMER(CIAB, B)
+};
 
-int AcquireTimer(unsigned num) {
-  int result = -1;
+/* Implementation of procedures declared in header file. */
+
+CIATimer_t *AcquireTimer(unsigned num) {
+  CIATimer_t *timer = NULL;
 
   configASSERT(num <= TIMER_CIAB_B || num == TIMER_ANY);
 
   vTaskSuspendAll();
   {
-    /* Determine timer number. */
-    if (num == TIMER_ANY) {
-      for (num = TIMER_CIAA_A; num <= TIMER_CIAB_B; num++)
-        if (!(timer[num].flags & TMRF_ACQUIRED))
-          break;
-    }
-
-    /* Check if selected timer is not busy. */
-    if (num <= TIMER_CIAB_B) {
-      CIATimer_t *tmr = &timer[num];
-      if (!(tmr->flags & TMRF_ACQUIRED)) {
-        tmr->flags |= TMRF_ACQUIRED;
-        result = num;
+    /* Allocate a timer that is not in use and its' number matches
+     * (if specified instead of wildcard). */
+    for (int i = TIMER_CIAA_A; i <= TIMER_CIAB_B; i++) {
+      if (!BTST(InUse, i) && (num == TIMER_ANY || num == i)) {
+        BSET(InUse, i);
+        timer = &Timers[i];
+        num = i;
+        break;
       }
     }
   }
   xTaskResumeAll();
 
-  return result;
+  if (timer) {
+    IntChain_t *chain = (num & 2) ? ExterChain : PortsChain;
+    timer->server.node.pvOwner = timer;
+    AddIntServer(chain, &timer->server);
+  }
+
+  return timer;
 }
 
-void ReleaseTimer(unsigned num) {
+void ReleaseTimer(CIATimer_t *timer) {
   vTaskSuspendAll();
   {
-    configASSERT(num <= TIMER_CIAB_B);
-    CIATimer_t *tmr = &timer[num];
-    configASSERT(tmr->flags & TMRF_ACQUIRED);
-    tmr->flags &= ~TMRF_ACQUIRED;
+    RemIntServer(&timer->server);
+    BCLR(InUse, timer->num);
   }
   xTaskResumeAll();
 }
 
-/* Timer uses interrupts when waiting for events that happen in more than
- * 4 raster lines (each takes 64us). Otherwise it spins. */
-#define DELAY_SPIN TIMER_US(64*4)
-
-void WaitTimer(unsigned num, uint16_t delay) {
-  configASSERT(num <= TIMER_CIAB_B);
-  CIATimer_t *tmr = &timer[num];
-  configASSERT(tmr->flags & TMRF_ACQUIRED);
-  CIA_t cia = (num & 2) ? CIAB : CIAA;
-  uint8_t timer = (num & 1) ? CIAICRF_TB : CIAICRF_TA;
+void WaitTimerGeneric(CIATimer_t *timer, uint16_t delay, bool spin) {
+  CIA_t cia = timer->cia;
+  uint8_t icr = timer->icr;
 
   taskENTER_CRITICAL();
   {
     /* Load counter and start timer in one-shot mode. */
-    if (num & 1) {
+    if (icr == CIAICRF_TB) {
       cia->ciacrb  = CIACRBF_LOAD;
       cia->ciatblo = delay;
       cia->ciatbhi = delay >> 8;
       cia->ciacrb  = CIACRBF_RUNMODE | CIACRBF_START;
     } else {
-      cia->ciacra  = CIACRBF_LOAD;
+      cia->ciacra  = CIACRAF_LOAD;
       cia->ciatalo = delay;
       cia->ciatahi = delay >> 8;
       cia->ciacra  = CIACRAF_RUNMODE | CIACRAF_START;
@@ -108,14 +104,14 @@ void WaitTimer(unsigned num, uint16_t delay) {
   }
   taskEXIT_CRITICAL();
 
-  if ((delay >= DELAY_SPIN) && 
-      (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)) {
-    /* If delay is long enough, then turn on the interrupt and go to sleep. */
-    WriteICR(cia, CIAICRF_SETCLR | timer);
-    tmr->waiter = xTaskGetCurrentTaskHandle();
-    (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+  if (spin || (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED)) {
+    /* The scheduler is not active or we were requested to busy wait. */
+    WriteICR(cia, icr);
+    while (!SampleICR(cia, icr));
   } else {
-    /* If delay is short, then just spin. */
-    while (!SampleICR(cia, timer));
+    /* Turn on the interrupt and go to sleep. */
+    timer->waiter = xTaskGetCurrentTaskHandle();
+    WriteICR(cia, CIAICRF_SETCLR | icr);
+    (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
   }
 }

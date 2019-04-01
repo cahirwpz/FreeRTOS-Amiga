@@ -29,9 +29,9 @@ static void SetCounter(uint32_t line) {
 
 static void SetAlarm(uint32_t line) {
   volatile uint8_t *ciacrb = &CIAB->ciacrb;
-  BSET(ciacrb, CIACRAB_TODIN);
+  BSET(*ciacrb, CIACRAB_TODIN);
   SetCounter(line);
-  BCLR(ciacrb, CIACRAB_TODIN);
+  BCLR(*ciacrb, CIACRAB_TODIN);
 }
 
 static void LineCounterHandler(List_t *tasks) {
