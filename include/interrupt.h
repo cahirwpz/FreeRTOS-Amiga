@@ -86,31 +86,30 @@ extern void AmigaLvl6Handler(void);
 /* Use Interrupt Server to run more than one interrupt handler procedure
  * for given Interrupt Vector routine (VERTB by default). */
 typedef void (*IntFunc_t)(void *);
-typedef struct IntServer IntServer_t;
-typedef struct IntChain IntChain_t;
 
 /* Reuses following fields of ListItem_t:
  *  - (BaseType_t) pvOwner: data provided for IntSrvFunc_t,
  *  - (TickType_t) xItemValue: priority of interrupt server. */
-struct IntServer {
+typedef struct IntServer {
   ListItem_t node;
   IntFunc_t code;
-};
+} IntServer_t;
 
 /* List of interrupt servers. */
-struct IntChain {
+typedef struct IntChain {
   List_t list;
   uint16_t flag; /* interrupt enable/disable flag (INTF_*) */
-};
+} IntChain_t;
 
 /* Define Interrupt Server to be used with (Add|Rem)IntServer.
  * Priority is between -128 (lowest) to 127 (highest).
  * Because servers are sorted by ascending number of priority,
  * IntServer definition recalculates priority number accordingly.
  */
-#define INTSERVER(NAME, PRI, CODE, DATA)                                       \
-  IntServer_t NAME[1] = {                                                      \
-      .node = {.pvOwner = DATA, .xItemValue = (127 - (PRI))}, .code = CODE}
+#define INTSERVER(PRI, CODE, DATA)                                             \
+  {.node = {.pvOwner = DATA, .xItemValue = (127 - (PRI))}, .code = CODE} 
+#define INTSERVER_DEFINE(NAME, PRI, CODE, DATA)                                \
+  static IntServer_t *NAME = &(IntServer_t)INTSERVER(PRI, CODE, DATA)
 
 /* Defines Interrupt Chain of given name. */
 #define INTCHAIN(NAME)                                                         \

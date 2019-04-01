@@ -29,10 +29,10 @@ static void CIATimerHandler(CIATimer_t *tmr) {
   }
 }
 
-static INTSERVER(CIAATimerA, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAA_A]);
-static INTSERVER(CIAATimerB, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAA_B]);
-static INTSERVER(CIABTimerA, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_A]);
-static INTSERVER(CIABTimerB, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_B]);
+INTSERVER_DEFINE(CIAATimerA, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAA_A]);
+INTSERVER_DEFINE(CIAATimerB, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAA_B]);
+INTSERVER_DEFINE(CIABTimerA, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_A]);
+INTSERVER_DEFINE(CIABTimerB, 0, (ISR_t)CIATimerHandler, &timer[TIMER_CIAB_B]);
 
 void TimerInit(void) {
   AddIntServer(PortsChain, CIAATimerA);

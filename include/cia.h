@@ -35,9 +35,10 @@ void WaitTimer(unsigned num, uint16_t delay);
 uint32_t ReadFrameCounter(void);
 void SetFrameCounter(uint32_t frame);
 
-/* 24-bit frame counter offered by CIA B */
-uint32_t ReadLineCounter(void);
-void SetLineCounter(uint32_t line);
+/* 24-bit line counter offered by CIA B */
+void LineCounterInit(void);
+void LineCounterKill(void);
+void LineCounterWait(uint32_t lines);
 
 /* You MUST use following procedures to access CIA Interrupt Control Register!
  * On read ICR provides pending interrupts bitmask clearing them as well.

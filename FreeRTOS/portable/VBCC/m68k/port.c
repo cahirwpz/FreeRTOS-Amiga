@@ -158,6 +158,10 @@ void vPortSetupHardware(void) {
   CIAB->ciacra = 0;
   CIAB->ciacrb = 0;
 
+  /* CIA-A & CIA-B: Clear pending interrupts. */
+  SampleICR(CIAA, CIAICRF_ALL);
+  SampleICR(CIAB, CIAICRF_ALL);
+
   /* CIA-A & CIA-B: Disable all interrupts. */
   WriteICR(CIAA, CIAICRF_ALL);
   WriteICR(CIAB, CIAICRF_ALL);

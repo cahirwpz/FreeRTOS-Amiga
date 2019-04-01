@@ -123,7 +123,7 @@ static void MouseIntHandler(void *data) {
   }
 }
 
-static INTSERVER(MouseInterrupt, -5, MouseIntHandler, (void *)mouseData);
+INTSERVER_DEFINE(MouseInterrupt, -5, MouseIntHandler, (void *)mouseData);
 
 void MouseInit(int16_t minX, int16_t minY, int16_t maxX, int16_t maxY) {
   MouseData_t *mouse = mouseData;
