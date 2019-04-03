@@ -4,6 +4,7 @@
 #include <mouse.h>
 #include <event.h>
 #include <strings.h>
+#include <stdio.h>
 
 typedef struct {
   int8_t xctr, yctr;
@@ -126,6 +127,8 @@ static void MouseIntHandler(void *data) {
 INTSERVER_DEFINE(MouseInterrupt, -5, MouseIntHandler, (void *)mouseData);
 
 void MouseInit(int16_t minX, int16_t minY, int16_t maxX, int16_t maxY) {
+  printf("[Init] Mouse driver!\n");
+
   MouseData_t *mouse = mouseData;
 
   *mouse = (MouseData_t){

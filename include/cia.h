@@ -38,7 +38,7 @@ void WaitTimerGeneric(CIATimer_t *timer, uint16_t ticks, bool spin);
  * Should wait no more than couple handred microseconds.
  * Interrupts are not disabled while spinning.
  * Use TIMER_MS/TIMER_US to convert time unit to timer ticks. */
-#define WaitTimerSpin(TIMER, TICKS) WaitTimer(TIMER, TICKS, true)
+#define WaitTimerSpin(TIMER, TICKS) WaitTimerGeneric(TIMER, TICKS, true)
 
 /* Sleep while waiting for timer to underflow.
  * Use it if you want to wait for couple miliseconds or more.

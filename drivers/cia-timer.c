@@ -25,7 +25,6 @@ static void CIATimerHandler(CIATimer_t *timer) {
     /* Wake up sleeping task and disable interrupt for the timer. */
     vTaskNotifyGiveFromISR(timer->waiter, &xNeedRescheduleTask);
     timer->waiter = NULL;
-    WriteICR(cia, icr);
   }
 }
 
@@ -67,7 +66,6 @@ CIATimer_t *AcquireTimer(unsigned num) {
 
   if (timer) {
     IntChain_t *chain = (num & 2) ? ExterChain : PortsChain;
-    timer->server.node.pvOwner = timer;
     AddIntServer(chain, &timer->server);
   }
 
@@ -87,28 +85,28 @@ void WaitTimerGeneric(CIATimer_t *timer, uint16_t delay, bool spin) {
   CIA_t cia = timer->cia;
   uint8_t icr = timer->icr;
 
-  taskENTER_CRITICAL();
-  {
-    /* Load counter and start timer in one-shot mode. */
-    if (icr == CIAICRF_TB) {
-      cia->ciacrb  = CIACRBF_LOAD;
-      cia->ciatblo = delay;
-      cia->ciatbhi = delay >> 8;
-      cia->ciacrb  = CIACRBF_RUNMODE | CIACRBF_START;
-    } else {
-      cia->ciacra  = CIACRAF_LOAD;
-      cia->ciatalo = delay;
-      cia->ciatahi = delay >> 8;
-      cia->ciacra  = CIACRAF_RUNMODE | CIACRAF_START;
-    }
+  /* Turn off interrupt while the timer is being set up. */
+  WriteICR(cia, icr);
+
+  /* Load counter and start timer in one-shot mode. */
+  if (icr == CIAICRF_TB) {
+    cia->ciacrb |= CIACRBF_LOAD;
+    cia->ciatblo = delay;
+    cia->ciatbhi = delay >> 8;
+    cia->ciacrb |= CIACRBF_RUNMODE | CIACRBF_START;
+  } else {
+    cia->ciacra |= CIACRAF_LOAD;
+    cia->ciatalo = delay;
+    cia->ciatahi = delay >> 8;
+    cia->ciacra |= CIACRAF_RUNMODE | CIACRAF_START;
   }
-  taskEXIT_CRITICAL();
 
   if (spin || (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED)) {
     /* The scheduler is not active or we were requested to busy wait. */
-    WriteICR(cia, icr);
     while (!SampleICR(cia, icr));
   } else {
+    /* Must not sleep while in interrupt context! */
+    configASSERT((portGetSR() & 0x0700) == 0);
     /* Turn on the interrupt and go to sleep. */
     timer->waiter = xTaskGetCurrentTaskHandle();
     WriteICR(cia, CIAICRF_SETCLR | icr);

@@ -80,6 +80,9 @@ void vPortYield(void) = "\ttrap\t#0\n";
 
 #define portYIELD() vPortYield()
 
+/* Fail if caller is NOT running in ISR context. */
+#define portASSERT_IF_IN_ISR() configASSERT(portGetSR() & 0x0700)
+
 /* Set to non-zero value inside interrupt service routine
  * whenever you woke up a higher priority task. */
 extern BaseType_t xNeedRescheduleTask;

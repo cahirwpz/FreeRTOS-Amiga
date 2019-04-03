@@ -106,12 +106,15 @@ _handle:
         and.w   #$0700,d0               ; was IPL set to 0 (task context) ?
         bne     _noswitch
 
+        ; Turn off interrupts to prevent data races on xNeedRescheduleTask.
+        or.w    #$0700,sr
+
         tst.w   _xNeedRescheduleTask+2  ; check reschedule flag
         beq     _noswitch
 
         clr.w   _xNeedRescheduleTask+2  ; clear reschedule flag
         movem.l (sp)+,d0-d1/a0-a1       ; restore registers
-        jmp     _vPortYieldHandler      ; and force a task switch
+        jmp     _vPortYieldHandler+4    ; force a task switch (skip or.w to sr)
 
 _noswitch:
         movem.l (sp)+,d0-d1/a0-a1

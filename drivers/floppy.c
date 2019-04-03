@@ -35,7 +35,7 @@ static void FloppyReader(void *);
 void FloppyInit(unsigned aFloppyIOTaskPrio) {
   printf("[Init] Floppy drive driver!\n");
 
-  FloppyTimer = AcquireTimer(TIMER_CIAA_A);
+  FloppyTimer = AcquireTimer(TIMER_ANY);
   configASSERT(FloppyTimer != NULL);
 
   /* Set standard synchronization marker. */

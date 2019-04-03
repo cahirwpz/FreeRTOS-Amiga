@@ -8,6 +8,7 @@ SOURCES = \
 	  event.c \
 	  floppy.c \
 	  floppy-mfm.c \
+	  keyboard.c \
 	  mouse.c \
 	  serial.c
 
