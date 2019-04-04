@@ -37,65 +37,36 @@ _LVOAvailMem    EQU     -216
 
 	dc.l	BBNAME_DOS
 	dc.l	0
-DirLen: dc.l	0               ; sector aligned
+ExecInfo:
+        dc.w    0, 0    ; length / start (sector aligned)
 
         ; Boot block entry:
         ;  [a1] IOStdReq (trackdisk.device)
         ;  [a6] ExecBase
 Entry:
-        lea     TDIOReq(pc),a0
-        move.l  a1,(a0)
+        move.l  a1,a3                   ; [a3] trackdisk.device IORequest
 
-        ; allocate memory for directory entries
-        move.l  DirLen(pc),d0
-        move.l  #MEMF_CHIP,d1
-        JSRLIB  AllocMem
-
-        ; [a2] directory entires
-        move.l  d0,a2
-
-        ; read directory entries into memory
-        move.l  DirLen(pc),d0
-        moveq.l #4,d1
-        lsl.l   #8,d1
-        move.l  a2,a0
-        bsr     ReadSectors
-
-        ; scan for executable files
-        move.l  (a2)+,d7
-        swap    d7
-
-        ; [d2] file offset 
-        ; [d3] file size (executable)
-        subq.w  #1,d7
-.loop   movem.l (a2)+,d2-d3     ; offset, size
-        add.l   #TD_SECTOR-1,d3
-        and.l   #-TD_SECTOR,d3
-        tst.l   d2              ; executable ?
-        bmi     .exec
-        dbra    d7,.loop
-        bra     .exit
-
-.exec   neg.l   d2
+        movem.w ExecInfo(pc),d2/d4
+        lsl.l   #8,d2                   ; [d2] executable length in bytes
+        lsl.l   #8,d4                   ; [d4] executable start in bytes
 
         ; allocate memory for executable file
-        move.l  d3,d0
+        move.l  d2,d0
         move.l  #MEMF_CHIP,d1
         JSRLIB  AllocMem
-        move.l  d0,a2           ; [a2] block pointer (executable file)
+        move.l  d0,d3                   ; [d3] block pointer (executable file)
 
-        ; read directory entries into memory
-        move.l  d2,d1
-        move.l  d3,d0
-        move.l  a2,a0
-        bsr     ReadSectors
+        ; read executable file into memory
+        move.l  a3,a1                   ; trackdisk.device IORequest
+        movem.l d2-d4,IO_LENGTH(a1)     ; length / data / start 
+        JSRLIB  DoIO
 
         ; move hunks around and relocate them
-        move.l  a2,a0
+        move.l  d3,a0
         bsr     SetupHunkFile
         tst.l   d0
-        beq     .exit           ; oops... it failed
-        move.l  d0,a2           ; [a2] first hunk of executable file
+        beq     .exit                   ; oops... it failed
+        move.l  d0,a4                   ; [a4] first hunk of executable file
 
         ; allocate all available memory for the kernel
         clr.l   -(sp)                           ; array terminator
@@ -130,7 +101,7 @@ Entry:
         JSRLIB  SuperState              ; enter supervisor mode
         or.w    #$0700,sr               ; set highest priority level
         bsr     FloppyMotorOff
-        jsr     SEG_START(a2)           ; enter the kernel
+        jsr     SEG_START(a4)           ; enter the kernel
 
 .exit   bra     .exit
 
@@ -140,19 +111,6 @@ FloppyMotorOff:
         bset.b  #CIAB_DSKMOTOR,(a0)
         bclr.b  #CIAB_DSKSEL0,(a0)
         rts
-
-; [d0] length in bytes (multiple of 512)
-; [d1] offset from beginning of disk
-; [a0] destination buffer (must be in chip memory)
-ReadSectors:
-        move.l  TDIOReq(pc),a1
-        move.w  #CMD_READ,IO_COMMAND(a1)
-        exg.l   d1,a0
-        movem.l d0/d1/a0,IO_LENGTH(a1)  ; length / data / offset
-        JSRLIB  DoIO
-        rts
-
-TDIOReq dc.l    0
 
 SetupHunkFile:
         ; executable amiga hunk file?

@@ -14,33 +14,36 @@ from io import BytesIO
 # sector 0..1: bootblock
 #  [LONG] 'DOS\0'
 #  [LONG] checksum
-#  [LONG] size of directory entries (aligned to sector size)
+#  [LONG] size of executable file aligned to sector size (takes m sectors)
 #  ...    boot code
 #
-# sector 2..(n-1): directory entries
+# sector 2..(n+1): directory entries (take n sectors)
+#  [WORD] #dirlen  : directory size in bytes
 #  [WORD] #files   : number of file entries
-#  [WORD] #names   : filenames blob length in bytes
 #  repeated #files times:
-#   [LONG] #start  : byte position where file begins
+#   [WORD] #name   : offset of file name determined from start of string table
+#   [WORD] #start  : sector position where the file begins
 #   [LONG] #length : size of the file
+#  [STRTAB] file names corresponding to file entries
+#           stored consecutively as strings with trailing '\0'
 #
-#  If #start is negative then the file is executable. One needs to take its
-#  negative to recover original value.
+# sector (n+2)..(n+m+1): executable file in AmigaHunk format
+#  the file is assumed to be first in the directory
 #
-# sector n..(m-1): filenames blob
-#  stores consecutively #files strings with trailing '\0'
-#
-# sector m..1759: data
+# sector (m+n+2)..1759: data
 #
 
 SECTOR = 512
 FLOPPY = SECTOR * 80 * 11 * 2
-ALIGNMENT = 512
+
+
+def sectors(size):
+    return align(size, SECTOR) // SECTOR
 
 
 def align(size, alignment=None):
     if alignment is None:
-        alignment = ALIGNMENT
+        alignment = SECTOR
     return (size + alignment - 1) // alignment * alignment
 
 
@@ -71,10 +74,13 @@ class FileEntry(object):
         self.exe = exe
 
     def __str__(self):
-        s = '%-32s %6d' % (self.name, len(self.data))
+        s = '%-32s %6d' % (self.name, len(self))
         if self.exe:
             s += ' (executable)'
         return s
+
+    def __len__(self):
+        return len(self.data)
 
 
 def collect(paths):
@@ -133,6 +139,7 @@ def load(archive):
 
 
 def save(archive, entries, bootcode=None):
+    # Collect boot code if there's any...
     if bootcode is not None:
         if os.path.isfile(bootcode):
             with open(bootcode, 'rb') as fh:
@@ -141,48 +148,65 @@ def save(archive, entries, bootcode=None):
                 raise SystemExit('Boot code is larger than 1024 bytes!')
         else:
             raise SystemExit('Boot code file does not exists!')
+        if not len(entries) or not entries[0].exe:
+            raise SystemExit('First file must be AmigaHunk executable!')
     else:
         bootcode = ''
 
-    offsets = []
-    dirent_len = 4 + 8 * len(entries)
+    dir_len = 4 + 8 * len(entries)
     names_len = 0
+    names_off = []
     files_len = 0
+    files_off = []
 
     for entry in entries:
-        offsets.append(files_len)
+        # Determine file names position
+        names_off.append(names_len)
         names_len += len(entry.name) + 1
+        # Determine file position
+        files_off.append(files_len)
         files_len += align(len(entry.data))
 
-    files_pos = align(dirent_len) + align(names_len) + 2 * SECTOR
+    # Add file names to directory
+    dir_len += names_len
+
+    # Calculate starting position of files in the file system image
+    files_pos = align(dir_len) + 2 * SECTOR
 
     with open(archive, 'wb') as fh:
         boot = BytesIO(bootcode)
-        boot.write(pack('>4s4xI', b'DOS\0', align(dirent_len)))
-        boot.seek(0, 2)
+        # Overwrite boot block header
+        exe_start = sectors(files_pos)
+        exe_length = sectors(len(entries[0])) if bootcode else 0
+        boot.write(pack('>4s4xHH', b'DOS\0', exe_length * 2, exe_start * 2))
+        # Move to the end and pad it so it takes 2 sectors
+        boot.seek(0, os.SEEK_END)
         write_pad(boot, 2 * SECTOR)
+        # Calculate checksum and fill missing field in boot block
         val = checksum(boot.getvalue())
-        boot.seek(4, 0)
+        boot.seek(4, os.SEEK_SET)
         boot.write(pack('>I', val))
+        # Write fixed boot block to file system image
         fh.write(boot.getvalue())
 
-        fh.write(pack('>HH', len(entries), names_len))
-        for entry, file_pos in zip(entries, offsets):
-            file_pos += files_pos
-            if entry.exe:
-                file_pos = -file_pos
-            fh.write(pack('>iI', file_pos, len(entry.data)))
-        write_pad(fh)
-
+        # Write directory header
+        fh.write(pack('>HH', dir_len, len(entries)))
+        # Write directory entries
+        for entry, name_off, file_off in zip(entries, names_off, files_off):
+            file_off += files_pos
+            fh.write(pack('>HHI', name_off, sectors(file_off), len(entry)))
+        # Write file names
         for entry in entries:
-            fh.write(entry.name.encode())
-            fh.write(b'\0')
+            fh.write(entry.name.encode() + b'\0')
+        # Finish off directory by aligning it to sector boundary
         write_pad(fh)
 
+        # Write file entries
         for entry in entries:
             fh.write(entry.data)
             write_pad(fh)
 
+        # Complete floppy disk image
         write_pad(fh, FLOPPY)
 
 
@@ -215,7 +239,7 @@ if __name__ == '__main__':
         help='Boot code to be embedded into floppy disk representation.')
     parser.add_argument(
         'image', metavar='IMAGE', type=str,
-        help='FileSystem image file.')
+        help='File system image file.')
     parser.add_argument(
         'files', metavar='FILES', type=str, nargs='*',
         help='Files to add to / extract from filesystem image.')
