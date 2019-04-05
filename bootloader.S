@@ -2,12 +2,10 @@
         include 'exec/io.i'
         include 'exec/execbase.i'
         include 'exec/memory.i'
-        include 'exec/tasks.i'
+        include 'exec/libraries.i'
         include 'dos/dosextens.i'
         include 'dos/doshunks.i'
-        include 'devices/bootblock.i'
         include 'devices/trackdisk.i'
-        include 'hardware/cia.i'
         include 'hardware/custom.i'
 
 ; custom chips addresses
@@ -16,12 +14,13 @@ CIAA            EQU     $bfe001
 CIAB            EQU     $bfd000
 
 ; include 'lvo/exec_lib.i'
-_LVOSuperState  EQU     -150
-_LVOAllocMem    EQU     -198
-_LVOFreeMem     EQU     -210
-_LVODoIO        EQU     -456
-_LVOCopyMem     EQU     -624
-_LVOAvailMem    EQU     -216
+_LVOSuperState          EQU     -150
+_LVOAllocMem            EQU     -198
+_LVOFreeMem             EQU     -210
+_LVODoIO                EQU     -456
+_LVOCopyMem             EQU     -624
+_LVOAvailMem            EQU     -216
+_LVOCacheControl        EQU     -648
 
  STRUCTURE SEG,0
 	LONG	SEG_LEN
@@ -35,7 +34,7 @@ _LVOAvailMem    EQU     -216
 ; memory, or at any specific address, so all code must be completely PC
 ; relative, and all chip data must be explicitly copied to chip memory.
 
-	dc.l	BBNAME_DOS
+	dc.b    'DOS',0
 	dc.l	0
 ExecInfo:
         dc.w    0, 0    ; length / start (sector aligned)
@@ -60,6 +59,19 @@ Entry:
         move.l  a3,a1                   ; trackdisk.device IORequest
         movem.l d2-d4,IO_LENGTH(a1)     ; length / data / start 
         JSRLIB  DoIO
+
+        ; turn off the motor
+        clr.l   IO_LENGTH(a1)
+        move.w  #TD_MOTOR,IO_COMMAND(a1)
+        JSRLIB  DoIO
+
+        ; disable caches if kickstart 2.0 or above
+        cmp.w   #36,LIB_VERSION(a6)
+        blt     .kick13
+        moveq.l #0,d0
+        moveq.l #-1,d1
+        JSRLIB  CacheControl
+.kick13
 
         ; move hunks around and relocate them
         move.l  d3,a0
@@ -100,17 +112,9 @@ Entry:
         move.w  #$7fff,intena+CUSTOM    ; disable all interrupts
         JSRLIB  SuperState              ; enter supervisor mode
         or.w    #$0700,sr               ; set highest priority level
-        bsr     FloppyMotorOff
         jsr     SEG_START(a4)           ; enter the kernel
 
 .exit   bra     .exit
-
-FloppyMotorOff:
-        lea     ciaprb+CIAB,a0
-        bset.b  #CIAB_DSKSEL0,(a0)
-        bset.b  #CIAB_DSKMOTOR,(a0)
-        bclr.b  #CIAB_DSKSEL0,(a0)
-        rts
 
 SetupHunkFile:
         ; executable amiga hunk file?
