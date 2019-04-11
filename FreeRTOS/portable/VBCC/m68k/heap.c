@@ -1,5 +1,6 @@
 #include <FreeRTOS.h>
 #include <task.h>
+#include <boot.h>
 
 #if (configSUPPORT_DYNAMIC_ALLOCATION == 0)
 #error This file must not be used if configSUPPORT_DYNAMIC_ALLOCATION is 0
@@ -145,13 +146,13 @@ static void _vPortFree(void *p, memory_t m) {
   xTaskResumeAll();
 }
 
-const HeapRegion_t *HeapRegions;
+const MemRegion_t *MemRegions;
 
 void *_pvPortMallocBelow(size_t xSize, uintptr_t xUpperAddr) {
   void *ptr;
 
-  for (const HeapRegion_t *hr = HeapRegions; hr->xSizeInBytes; hr++) {
-    memory_t m = (memory_t)hr->pucStartAddress;
+  for (const MemRegion_t *mr = MemRegions; mr->mr_upper; mr++) {
+    memory_t m = (memory_t)mr->mr_lower;
     if (((uintptr_t)m < xUpperAddr) && (ptr = _pvPortMalloc(xSize, m)))
       return ptr;
   }
@@ -176,11 +177,11 @@ void *pvPortMallocChip(size_t xSize) {
 }
 
 void vPortFree(void *p) {
-  for (const HeapRegion_t *hr = HeapRegions; hr->xSizeInBytes; hr++) {
-    uintptr_t start = (uintptr_t)hr->pucStartAddress;
-    uintptr_t end = start + hr->xSizeInBytes;
+  for (const MemRegion_t *mr = MemRegions; mr->mr_upper; mr++) {
+    uintptr_t start = mr->mr_lower;
+    uintptr_t end = mr->mr_upper;
     if ((uintptr_t)p > start && (uintptr_t)p < end) {
-      _vPortFree(p, (memory_t)hr->pucStartAddress);
+      _vPortFree(p, (memory_t)mr->mr_lower);
       return;
     }
   }
@@ -190,8 +191,8 @@ void vPortFree(void *p) {
 
 size_t xPortGetFreeHeapSize(void) {
   size_t sum = 0;
-  for (const HeapRegion_t *hr = HeapRegions; hr->xSizeInBytes; hr++) {
-    memory_t m = (memory_t)hr->pucStartAddress;
+  for (const MemRegion_t *mr = MemRegions; mr->mr_upper; mr++) {
+    memory_t m = (memory_t)mr->mr_lower;
     sum += m->totalFree;
   }
   return sum;
@@ -199,30 +200,28 @@ size_t xPortGetFreeHeapSize(void) {
 
 size_t xPortGetMinimumEverFreeHeapSize(void) {
   size_t sum = 0;
-  for (const HeapRegion_t *hr = HeapRegions; hr->xSizeInBytes; hr++) {
-    memory_t m = (memory_t)hr->pucStartAddress;
+  for (const MemRegion_t *mr = MemRegions; mr->mr_upper; mr++) {
+    memory_t m = (memory_t)mr->mr_lower;
     sum += m->minFree;
   }
   return sum;
 }
 
-void vPortDefineHeapRegions(const HeapRegion_t *const pxHeapRegions) {
-  HeapRegions = pxHeapRegions;
+void vPortDefineMemoryRegions(MemRegion_t *aMemRegions) {
+  MemRegions = aMemRegions;
 
-  for (const HeapRegion_t *hr = pxHeapRegions; hr->xSizeInBytes; hr++) {
-    uintptr_t start = (uintptr_t)hr->pucStartAddress;
-    uintptr_t end = (uintptr_t)hr->pucStartAddress + hr->xSizeInBytes;
+  for (const MemRegion_t *mr = aMemRegions; mr->mr_upper; mr++) {
+    /* align upper and lower addresses to BLOCK_SIZE boundary */
+    mr->mr_lower = (mr->mr_lower + (BLOCK_SIZE - 1)) & -BLOCK_SIZE;
+    mr->mr_upper = mr->mr_upper & -BLOCK_SIZE;
 
-    configASSERT((start & (BLOCK_SIZE - 1)) == 0);
-    configASSERT((end & (BLOCK_SIZE - 1)) == 0);
+    memory_t m = (memory_t)mr->mr_lower;
 
-    memory_t m = (memory_t)start;
-
-    size_t real_size = (char *)end - (char *)m->first->data;
+    size_t real_size = (char *)mr->mr_upper - (char *)m->first->data;
 
     m->totalFree = real_size;
     m->minFree = real_size;
-    m->final = end;
+    m->final = mr->mr_upper;
     m->firstFree = m->first;
     m->first->next = NULL;
     m->first->size = real_size;

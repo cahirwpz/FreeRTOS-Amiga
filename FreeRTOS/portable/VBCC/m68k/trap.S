@@ -7,8 +7,6 @@
         xdef _TrapvInstTrap
         xdef _PrivInstTrap
         xdef _TraceTrap
-        xdef _LineATrap
-        xdef _LineFTrap
         xdef _FmtErrTrap
         xref _vPortTrapHandler
 

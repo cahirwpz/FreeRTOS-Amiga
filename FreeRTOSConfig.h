@@ -67,11 +67,13 @@ to exclude the API function. */
  *---------------------------------------------------------------------------*/
 
 struct TrapFrame;
+struct MemRegion;
 
 /* Called when a synchronous exception or trap happens. */
 void vPortTrapHandler(struct TrapFrame *);
 
 /* For use by startup code. */
+void vPortDefineMemoryRegions(struct MemRegion *);
 void vPortSetupHardware(void);
 void vPortSetupExceptionVector(void);
 

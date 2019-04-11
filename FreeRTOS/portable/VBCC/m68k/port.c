@@ -165,4 +165,7 @@ void vPortSetupHardware(void) {
   /* CIA-A & CIA-B: Disable all interrupts. */
   WriteICR(CIAA, CIAICRF_ALL);
   WriteICR(CIAB, CIAICRF_ALL);
+
+  /* Enable master bit in DMACON */
+  EnableDMA(DMAF_MASTER);
 }

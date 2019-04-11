@@ -1,20 +1,23 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <custom.h>
 #include <cpu.h>
+#include <boot.h>
 #include <stdio.h>
 
-__entry void _start(uint8_t aCpuModel, const HeapRegion_t *const xHeapRegions) {
+extern int main(void);
+
+__entry void _start(const BootData_t *aBootData) {
   printf("FreeRTOS running on Amiga!\n");
 
   configASSERT(custom->intenar == 0);
+  configASSERT((custom->dmaconr & DMAF_ALL) == 0);
   configASSERT((portGetSR() & 0x2700) == 0x2700);
 
-  CpuModel = aCpuModel;
+  CpuModel = aBootData->bd_cpumodel;
 
   vPortSetupHardware();
   vPortSetupExceptionVector();
-  vPortDefineHeapRegions(xHeapRegions);
+  vPortDefineMemoryRegions(aBootData->bd_region);
 
-  extern int main(void);
   main();
 }

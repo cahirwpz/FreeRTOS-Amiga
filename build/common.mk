@@ -26,7 +26,8 @@ endif
 
 %.o: %.S
 	@echo "[AS] $(DIR)$< -> $(DIR)$@"
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $(realpath $<)
+	#$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $(realpath $<)
+	$(AS) -Fhunk $(CPPFLAGS) $(ASFLAGS) -o $@ $(realpath $<)
 
 %.lib:
 	@echo "[LD] $(addprefix $(DIR),$^) -> $(DIR)$@"
