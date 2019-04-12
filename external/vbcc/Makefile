@@ -6,7 +6,7 @@ VLINK = vlink0_16b
 VBCC = vbcc0_9fP1
 NDK = NDK_3.9
 
-DESTDIR ?= $(PWD)/local
+PREFIX ?= $(PWD)/local
 TARGET = m68k-amigaos
 
 all: vasm-install vlink-install vbcc-install ndk-install
@@ -30,16 +30,16 @@ vasm/vasmm68k_mot vasm/vobjdump: vasm
 	make -C vasm CPU=m68k SYNTAX=mot
 
 vasm-install: vasm-build
-	mkdir -p "$(DESTDIR)/$(TARGET)/bin"
-	mkdir -p "$(DESTDIR)/bin"
-	cp "vasm/vasmm68k_mot" "$(DESTDIR)/$(TARGET)/bin"
-	cp "vasm/vobjdump" "$(DESTDIR)/bin"
-	$(RM) "$(DESTDIR)/bin/vasm"
-	echo "#!/bin/sh" >> "$(DESTDIR)/bin/vasm"
-	echo "$(DESTDIR)/$(TARGET)/bin/vasmm68k_mot " \
-	     "-I$(DESTDIR)/$(TARGET)/ndk/include \"\$$@\"" \
-		>> "$(DESTDIR)/bin/vasm"
-	chmod a+x $(DESTDIR)/bin/vasm
+	mkdir -p "$(PREFIX)/$(TARGET)/bin"
+	mkdir -p "$(PREFIX)/bin"
+	cp "vasm/vasmm68k_mot" "$(PREFIX)/$(TARGET)/bin"
+	cp "vasm/vobjdump" "$(PREFIX)/bin"
+	$(RM) "$(PREFIX)/bin/vasm"
+	echo "#!/bin/sh" >> "$(PREFIX)/bin/vasm"
+	echo "$(PREFIX)/$(TARGET)/bin/vasmm68k_mot " \
+	     "-I$(PREFIX)/$(TARGET)/ndk/include \"\$$@\"" \
+		>> "$(PREFIX)/bin/vasm"
+	chmod a+x $(PREFIX)/bin/vasm
 
 vasm-clean:
 	$(RM) -r vasm
@@ -55,7 +55,7 @@ vlink/vlink: vlink
 	make -C vlink
 
 vlink-install: vlink-build
-	cp "vlink/vlink" "$(DESTDIR)/bin/vlink"
+	cp "vlink/vlink" "$(PREFIX)/bin/vlink"
 
 vlink-clean:
 	$(RM) -r vlink
@@ -73,15 +73,15 @@ vbcc: vbcc.tar.gz
 
 vbcc-build: vbcc
 	mkdir -p vbcc/bin
-	yes '' | make -C vbcc TARGET=m68k ETCDIR='\"$(DESTDIR)/etc/\"'
+	yes '' | make -C vbcc TARGET=m68k ETCDIR='\"$(PREFIX)/etc/\"'
 
 vbcc-install: vbcc-build
-	cp "vbcc/bin/vbccm68k" "$(DESTDIR)/$(TARGET)/bin"
-	cp "vbcc/bin/vc" "$(DESTDIR)/bin"
-	cp "vbcc/bin/vprof" "$(DESTDIR)/bin"
-	mkdir -p "$(DESTDIR)/etc"
-	sed -e 's#%TARGET%#$(TARGET)#g;s#%DESTDIR%#$(DESTDIR)#g' vc.config.in \
-		> "$(DESTDIR)/etc/vc.config"
+	cp "vbcc/bin/vbccm68k" "$(PREFIX)/$(TARGET)/bin"
+	cp "vbcc/bin/vc" "$(PREFIX)/bin"
+	cp "vbcc/bin/vprof" "$(PREFIX)/bin"
+	mkdir -p "$(PREFIX)/etc"
+	sed -e 's#%TARGET%#$(TARGET)#g;s#%PREFIX%#$(PREFIX)#g' vc.config.in \
+		> "$(PREFIX)/etc/vc.config"
 
 vbcc-clean:
 	$(RM) -r vbcc
@@ -99,8 +99,8 @@ ndk: $(NDK).lha
 	touch $@
 
 ndk-install: ndk
-	mkdir -p "$(DESTDIR)/$(TARGET)/include"
-	cp -r "ndk/Include/include_i/" "$(DESTDIR)/$(TARGET)/include"
+	mkdir -p "$(PREFIX)/$(TARGET)/include"
+	cp -r "ndk/Include/include_i/" "$(PREFIX)/$(TARGET)/include"
 
 ndk-clean:
 	$(RM) -r ndk

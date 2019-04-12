@@ -31,8 +31,10 @@ tags:
 	$(CTAGS) --language-force=asm -a $(SRCFILES_ASM)
 	$(CTAGS) --language-force=asm -aef etags $(SRCFILES_ASM)
 
-vbcc:
-	make -C external/vbcc DESTDIR=$(PWD)/toolchain
+toolchain:
+	make -C external/vbcc PREFIX=$(PWD)/toolchain
+	make -C external/gnu PREFIX=$(PWD)/toolchain
+	make -C external/elf2hunk PREFIX=$(PWD)/toolchain
 
 run: freertos.adf
 	./launch $^
@@ -42,4 +44,4 @@ clean-here:
 	$(RM) *.adf *.exe *~
 	$(RM) cscope.out etags tags
 
-.PHONY: vbcc run cscope tags
+.PHONY: toolchain run cscope tags
