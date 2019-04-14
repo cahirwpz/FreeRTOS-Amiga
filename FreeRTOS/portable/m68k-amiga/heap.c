@@ -210,7 +210,7 @@ size_t xPortGetMinimumEverFreeHeapSize(void) {
 void vPortDefineMemoryRegions(MemRegion_t *aMemRegions) {
   MemRegions = aMemRegions;
 
-  for (const MemRegion_t *mr = aMemRegions; mr->mr_upper; mr++) {
+  for (MemRegion_t *mr = aMemRegions; mr->mr_upper; mr++) {
     /* align upper and lower addresses to BLOCK_SIZE boundary */
     mr->mr_lower = (mr->mr_lower + (BLOCK_SIZE - 1)) & -BLOCK_SIZE;
     mr->mr_upper = mr->mr_upper & -BLOCK_SIZE;

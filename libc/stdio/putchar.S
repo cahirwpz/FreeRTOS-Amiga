@@ -1,13 +1,14 @@
         include 'hardware/cia.i'
 
-        xdef    _putchar
+        xdef    putchar
 
-        section "putchar",code
+        section '.text',code
 
 ; Reliable transfers may only happen 3 or more E-cycles basis.
 ; http://lallafa.de/blog/2015/09/amiga-parallel-port-how-fast-can-you-go/
 
-_putchar:
+putchar:
+        move.l  4(sp),d0
         lea     $bfd000,a0              ; [a0] ciab, ciaa = ciab + $1001
 
 .loop   btst    #CIAB_PRTRBUSY,(a0)     ; is printer buffer empty ?

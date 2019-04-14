@@ -15,14 +15,14 @@ static QueueHandle_t RecvQ;
 
 #define SendByte(byte) { custom->serdat = (uint16_t)(byte) | (uint16_t)0x100; }
 
-static void SendIntHandler(void *) {
+static void SendIntHandler(__unused void *ptr) {
   /* Send one byte into the wire. */
   uint8_t cSend;
   if (xQueueReceiveFromISR(SendQ, &cSend, &xNeedRescheduleTask))
     SendByte(cSend);
 }
 
-static void RecvIntHandler(void *) {
+static void RecvIntHandler(__unused void *ptr) {
   /* Send one byte to waiting task. */
   char cRecv = custom->serdatr;
   (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, &xNeedRescheduleTask);
@@ -63,7 +63,7 @@ static void TriggerSend(uint8_t cSend) {
   taskEXIT_CRITICAL();
 }
 
-void SerialPutChar(__reg("d0") char data) {
+void SerialPutChar(char data) {
   TriggerSend(data);
   if (data == '\n') {
     data = '\r';

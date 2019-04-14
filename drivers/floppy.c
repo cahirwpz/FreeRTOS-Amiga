@@ -23,9 +23,8 @@ typedef struct FloppyIO {
 static CIATimer_t *FloppyTimer;
 static xTaskHandle FloppyIOTask;
 static QueueHandle_t FloppyIOQueue;
-static void FloppyIOThread(void *);
 
-static void TrackTransferDone(void *) {
+static void TrackTransferDone(__unused void *ptr) {
   /* Send notification to waiting task. */
   vTaskNotifyGiveFromISR(FloppyIOTask, &xNeedRescheduleTask);
 }
@@ -83,7 +82,7 @@ static int16_t TrackNum;
 #define STEP_SETTLE TIMER_MS(3)
 
 static void StepHeads(void) {
-  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
+  volatile uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
 
   BCLR(*ciaprb, CIAB_DSKSTEP);
   BSET(*ciaprb, CIAB_DSKSTEP);
@@ -122,18 +121,22 @@ static inline void ChangeDiskSide(int16_t upper) {
 }
 
 static inline void WaitDiskReady(void) {
-  while (ciaa->ciapra & CIAF_DSKRDY);
+  volatile uint8_t *ciapra = (uint8_t *)&CIAA->ciapra;
+
+  while (*ciapra & CIAF_DSKRDY);
 }
 
 static inline int HeadsAtTrack0() {
-  return !(ciaa->ciapra & CIAF_DSKTRACK0);
+  volatile uint8_t *ciapra = (uint8_t *)&CIAA->ciapra;
+
+  return !(*ciapra & CIAF_DSKTRACK0);
 }
 
 static void FloppyMotorOn(void) {
   if (MotorOn)
     return;
 
-  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
+  volatile uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
 
   BSET(*ciaprb, CIAB_DSKSEL0);
   BCLR(*ciaprb, CIAB_DSKMOTOR);
@@ -148,7 +151,7 @@ static void FloppyMotorOff(void) {
   if (!MotorOn)
     return;
 
-  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
+  volatile uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
 
   BSET(*ciaprb, CIAB_DSKSEL0);
   BSET(*ciaprb, CIAB_DSKMOTOR);
@@ -159,7 +162,7 @@ static void FloppyMotorOff(void) {
 
 #define DISK_SETTLE TIMER_MS(15)
 
-static void FloppyReader(void *) {
+static void FloppyReader(__unused void *ptr) {
   /* Move head to track 0 */
   FloppyMotorOn();
   HeadsStepDirection(OUTWARDS);

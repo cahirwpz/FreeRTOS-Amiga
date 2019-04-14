@@ -1,13 +1,13 @@
 ; This code is covered by BSD license. It was taken from NetBSD
 ; common/lib/libc/arch/m68k/string/strrchr.S and converted to Motorola syntax.
 
-        XDEF    _rindex
-        XDEF    _strrchr
+        xdef    rindex
+        xdef    strrchr
 
-        SECTION "strrchr",CODE
+        section '.text',code
 
-_rindex:
-_strrchr:
+rindex:
+strrchr:
 	move.l	4(sp),a1		; string
 	move.b	11(sp),d0		; char to look for
 	sub.l	a0,a0			; clear rindex pointer

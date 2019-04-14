@@ -14,7 +14,7 @@ SOURCES = \
 
 all: build
 
-include $(TOPDIR)/build/build.vbcc.mk
+include $(TOPDIR)/build/build.gcc.mk
 
 build-here: drivers.lib
 

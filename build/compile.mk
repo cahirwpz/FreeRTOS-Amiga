@@ -8,14 +8,12 @@ OBJECTS += $(SOURCES_C:%.c=%.o) $(SOURCES_ASM:%.S=%.o)
 DEPFILES = $(foreach f,$(SOURCES_C) $(SOURCES_ASM), \
 	    $(dir $(f))$(patsubst %.c,.%.D,$(patsubst %.S,.%.D,$(notdir $(f)))))
 
-HOSTCC = gcc -nostdinc
-
 define emit_dep_rule
 CFILE = $(1)
 DFILE = $(dir $(1))$(patsubst %.c,.%.D,$(patsubst %.S,.%.D,$(notdir $(1))))
 $$(DFILE): $$(CFILE)
 	@echo "[DEP] $$(DIR)$$@"
-	$$(HOSTCC) $$(CPPFLAGS) -MM -MG $$^ -o $$@
+	$$(CC) $$(CPPFLAGS) -MM -MG $$^ -o $$@
 endef
 
 $(foreach file,$(SOURCES),$(eval $(call emit_dep_rule,$(file))))

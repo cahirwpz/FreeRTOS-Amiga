@@ -1,0 +1,6 @@
+--ignore-dir=toolchain
+--ignore-dir=external
+--asm
+--cc
+--python
+--make

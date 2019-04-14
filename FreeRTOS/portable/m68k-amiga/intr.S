@@ -1,14 +1,14 @@
-        xdef _AmigaLvl1Handler
-        xdef _AmigaLvl2Handler
-        xdef _AmigaLvl3Handler
-        xdef _AmigaLvl4Handler
-        xdef _AmigaLvl5Handler
-        xdef _AmigaLvl6Handler
-        xdef _DummyInterruptHandler
+        xdef AmigaLvl1Handler
+        xdef AmigaLvl2Handler
+        xdef AmigaLvl3Handler
+        xdef AmigaLvl4Handler
+        xdef AmigaLvl5Handler
+        xdef AmigaLvl6Handler
+        xdef DummyInterruptHandler
 
-        xref _IntVec
-        xref _vPortYieldHandler
-        xref _xNeedRescheduleTask
+        xref IntVec
+        xref vPortYieldHandler
+        xref xNeedRescheduleTask
 
 INTREQR equ $dff01e
 INTREQ  equ $dff09c
@@ -28,11 +28,11 @@ RBF     equ 11
 DSKSYNC equ 12
 EXTER   equ 13
 
-        section "AmigaIntr",text
+        section '.text',code
 
         macro ENTER
         movem.l d0-d1/a0-a1,-(sp)
-        lea     _IntVec+8*\1,a0
+        lea     IntVec+8*\1,a0
         moveq   #\1,d1
         endm
 
@@ -49,7 +49,7 @@ EXTER   equ 13
 
 ; Level 1 Interrupt Autovector
 
-_AmigaLvl1Handler:
+AmigaLvl1Handler:
         ENTER   TBE
         move.w  INTREQR,d0
 
@@ -59,13 +59,13 @@ _AmigaLvl1Handler:
 
 ; Level 2 Interrupt Autovector
 
-_AmigaLvl2Handler:
+AmigaLvl2Handler:
         ENTER   PORTS
         FINISH
 
 ; Level 3 Interrupt Autovector
 
-_AmigaLvl3Handler:
+AmigaLvl3Handler:
         ENTER   COPER
         move.w  INTREQR,d0
 
@@ -75,7 +75,7 @@ _AmigaLvl3Handler:
 
 ; Level 4 Interrupt Autovector
 
-_AmigaLvl4Handler:
+AmigaLvl4Handler:
         ENTER   AUD2
         move.w  INTREQR,d0
 
@@ -109,12 +109,12 @@ _handle:
         ; Turn off interrupts to prevent data races on xNeedRescheduleTask.
         or.w    #$0700,sr
 
-        tst.w   _xNeedRescheduleTask+2  ; check reschedule flag
+        tst.w   xNeedRescheduleTask+2   ; check reschedule flag
         beq     _noswitch
 
-        clr.w   _xNeedRescheduleTask+2  ; clear reschedule flag
+        clr.w   xNeedRescheduleTask+2   ; clear reschedule flag
         movem.l (sp)+,d0-d1/a0-a1       ; restore registers
-        jmp     _vPortYieldHandler+4    ; force a task switch (skip or.w to sr)
+        jmp     vPortYieldHandler+4     ; force a task switch (skip or.w to sr)
 
 _noswitch:
         movem.l (sp)+,d0-d1/a0-a1
@@ -122,7 +122,7 @@ _noswitch:
 
 ; Level 5 Interrupt Autovector
 
-_AmigaLvl5Handler:
+AmigaLvl5Handler:
         ENTER   RBF
         move.w  INTREQR,d0
 
@@ -131,13 +131,13 @@ _AmigaLvl5Handler:
 
 ; Level 6 Interrupt Autovector
 
-_AmigaLvl6Handler:
+AmigaLvl6Handler:
         ENTER   EXTER
         FINISH  ; EXTER
 
 ; Dummy handler
 
-_DummyInterruptHandler:
+DummyInterruptHandler:
         rts
 
 ; vim: ft=asm68k ts=8 sw=8

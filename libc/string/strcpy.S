@@ -1,11 +1,11 @@
 ; This code is covered by BSD license. It was taken from NetBSD
 ; common/lib/libc/arch/m68k/string/strlen.S and converted to Motorola syntax.
 
-        XDEF    _strcpy
+        xdef    strcpy
 
-        SECTION 'strcpy',CODE
+        section '.text',code
 
-_strcpy:
+strcpy:
 	move.l	8(sp),a0		; a0 = fromaddr
 	move.l	4(sp),d0		; return value is toaddr
 	move.l	d0,a1			; a1 = toaddr

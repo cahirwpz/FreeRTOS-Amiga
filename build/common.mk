@@ -24,22 +24,9 @@ endif
 	@echo "[CC] $(DIR)$< -> $(DIR)$@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $(realpath $<)
 
-%.o: %.S
-	@echo "[AS] $(DIR)$< -> $(DIR)$@"
-	#$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $(realpath $<)
-	$(AS) -Fhunk $(CPPFLAGS) $(ASFLAGS) -o $@ $(realpath $<)
-
-%.lib:
-	@echo "[LD] $(addprefix $(DIR),$^) -> $(DIR)$@"
-	$(LD) -r -o $@ $^
-
 %.bin: %.S
 	@echo "[AS] $(DIR)$< -> $(DIR)$@"
 	$(AS) -Fbin $(CPPFLAGS) $(ASFLAGS) -o $@ $(realpath $<)
-
-%.exe:
-	@echo "[LD] $(addprefix $(DIR),$^) -> $(DIR)$@"
-	$(LD) $(LDFLAGS) -gc-all -mtype -o $@ $^
 
 %.adf: $(TOPDIR)/bootloader.bin
 	@echo "[ADF] $(filter-out %bootloader.bin,$^) -> $(DIR)$@"

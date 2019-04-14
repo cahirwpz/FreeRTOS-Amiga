@@ -1,8 +1,8 @@
-        xdef    ___mulsi3
+        xdef    __mulsi3
 
-        section "__mulsi3",code
+        section '.text',code
 
-___mulsi3:
+__mulsi3:
         move.w  4(sp),d0      ; x0 -> d0
         mulu.w  10(sp),d0     ; x0 * y1
         move.w  6(sp),d1      ; x1 -> d1

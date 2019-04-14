@@ -2,16 +2,14 @@ CURL = curl -L
 RM = rm -f
 
 VASM = vasm1_8e
-VLINK = vlink0_16b
-VBCC = vbcc0_9fP1
 NDK = NDK_3.9
 
 PREFIX ?= $(PWD)/local
 TARGET = m68k-amigaos
 
-all: vasm-install vlink-install vbcc-install ndk-install
+all: vasm-install ndk-install
 
-clean: vasm-clean vlink-clean vbcc-clean ndk-clean
+clean: vasm-clean ndk-clean
 	$(RM) *~
 
 ### recipes
@@ -45,48 +43,6 @@ vasm-clean:
 	$(RM) -r vasm
 	$(RM) vasm.tar.gz
 
-### VLINK
-
-vlink.tar.gz:
-	$(CURL) -o $@ "http://server.owl.de/~frank/tags/$(VLINK).tar.gz"
-
-vlink-build: vlink/vlink
-vlink/vlink: vlink
-	make -C vlink
-
-vlink-install: vlink-build
-	cp "vlink/vlink" "$(PREFIX)/bin/vlink"
-
-vlink-clean:
-	$(RM) -r vlink
-	$(RM) vlink.tar.gz
-
-### VBCC
-
-vbcc.tar.gz:
-	$(CURL) -o $@ "http://server.owl.de/~frank/tags/$(VBCC).tar.gz"
-
-vbcc: vbcc.tar.gz
-	tar xvzf $^
-	patch -p0 < vbcc-etc.patch
-	touch $@
-
-vbcc-build: vbcc
-	mkdir -p vbcc/bin
-	yes '' | make -C vbcc TARGET=m68k ETCDIR='\"$(PREFIX)/etc/\"'
-
-vbcc-install: vbcc-build
-	cp "vbcc/bin/vbccm68k" "$(PREFIX)/$(TARGET)/bin"
-	cp "vbcc/bin/vc" "$(PREFIX)/bin"
-	cp "vbcc/bin/vprof" "$(PREFIX)/bin"
-	mkdir -p "$(PREFIX)/etc"
-	sed -e 's#%TARGET%#$(TARGET)#g;s#%PREFIX%#$(PREFIX)#g' vc.config.in \
-		> "$(PREFIX)/etc/vc.config"
-
-vbcc-clean:
-	$(RM) -r vbcc
-	$(RM) vbcc.tar.gz
-
 ### NDK
 
 $(NDK).lha:
@@ -108,6 +64,4 @@ ndk-clean:
 
 ### other stuff
 
-.PHONY: vasm-build vlink-build vbcc-build \
-	vasm-install vlink-install vbcc-install vclib-install ndk-install \
-	vasm-clean vlink-clean vbcc-clean vclib-clean ndk-clean
+.PHONY: vasm-build vasm-install ndk-install vasm-clean ndk-clean

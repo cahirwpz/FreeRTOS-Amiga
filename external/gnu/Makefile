@@ -16,6 +16,7 @@ TARGET = m68k-elf
 all: gcc-install
 
 clean: gmp-clean mpfr-clean mpc-clean isl-clean binutils-clean gcc-clean
+	$(RM) -r host
 	$(RM) *~
 
 ### The GNU Multiple Precision Arithmetic Library

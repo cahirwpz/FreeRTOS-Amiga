@@ -1,11 +1,11 @@
 ; This code is covered by BSD license. It was taken from NetBSD
 ; common/lib/libc/arch/m68k/string/strcmp.S and converted to Motorola syntax.
 
-        XDEF    _strcmp
+        xdef    strcmp
 
-        SECTION "strcmp",CODE
+        section '.text',code
 
-_strcmp:
+strcmp:
 	move.l	4(sp),a0
 	move.l	8(sp),a1
 .L1:				; unrolled by 4 for 680[23]0's

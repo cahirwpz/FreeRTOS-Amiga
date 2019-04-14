@@ -1,11 +1,11 @@
 ; This code is covered by BSD license. It was taken from NetBSD
 ; common/lib/libc/arch/m68k/string/memset.S and converted to Motorola syntax.
 
-        XDEF    _memset
+        xdef    memset
 
-        SECTION "memset",CODE
+        section '.text',code
 
-_memset:
+memset:
 	move.l	d2,-(sp)
 	move.l	8(sp),a0		; destination
 	move.l	16(sp),d1		; count

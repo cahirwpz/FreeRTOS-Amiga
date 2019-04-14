@@ -1,11 +1,11 @@
 ; This code is covered by BSD license. It was taken from NetBSD
 ; common/lib/libc/arch/m68k/string/ffs.S and converted to Motorola syntax.
 
-        XDEF    _ffs
+        xdef    ffs
 
-        SECTION "ffs",CODE
+        section '.text',code
 
-_ffs:
+ffs:
 	move.l	4(sp),d0
 	beq	.L2
 	moveq.l	#31,d1

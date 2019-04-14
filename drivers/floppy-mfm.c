@@ -42,7 +42,7 @@ void ParseTrack(void *track, DiskTrack_t sectors) {
       uint8_t trackNum;
       uint8_t sectorNum;
       uint8_t sectors;
-    } info;
+    } info = {0};
 
     /* Find synchronization marker and move to first location after it. */
     while (*data != DSK_SYNC)

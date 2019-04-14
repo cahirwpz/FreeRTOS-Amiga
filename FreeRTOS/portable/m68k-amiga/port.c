@@ -9,7 +9,7 @@
 #include <cpu.h>
 
 extern void vPortStartFirstTask(void);
-extern __interrupt void vPortYieldHandler(void);
+extern void vPortYieldHandler(void);
 
 /* Define custom chipset register bases uses throughout the code. */
 volatile Custom_t custom = CUSTOM;
@@ -52,12 +52,16 @@ BaseType_t xNeedRescheduleTask;
 #define MOVEL(v) *(uint32_t *)sp = (uint32_t)(v)
 
 #define PUSHL(v)                                                               \
-  sp -= sizeof(uint32_t);                                                      \
-  *(uint32_t *)sp = (uint32_t)(v);
+  {                                                                            \
+    sp -= sizeof(uint32_t);                                                    \
+    *(uint32_t *)sp = (uint32_t)(v);                                           \
+  }
 
 #define PUSHW(v)                                                               \
-  sp -= sizeof(uint16_t);                                                      \
-  *(uint16_t *)sp = (uint16_t)(v);
+  {                                                                            \
+    sp -= sizeof(uint16_t);                                                    \
+    *(uint16_t *)sp = (uint16_t)(v);                                           \
+  }
 
 StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
                                    TaskFunction_t pxCode, void *pvParameters) {
@@ -80,7 +84,7 @@ StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
 
 /* It's assumed that we enter here:
  *  - with all Amiga interrupts disabled, i.e. INTENAR = 0,
- *  - at highest priority level, i.e. SR = 0x2700. 
+ *  - at highest priority level, i.e. SR = 0x2700.
  */
 BaseType_t xPortStartScheduler(void) {
   /* Use TRAP #0 for Yield system call. */

@@ -14,4 +14,6 @@
 #define BSET(x, b) ((x) |= BIT(b))
 #define BCLR(x, b) ((x) &= ~BIT(b))
 
+#define __unused __attribute__((unused))
+
 #endif /* !_CDEFS_H_ */

@@ -5,12 +5,12 @@ SOURCES = startup.c trap.c main.c
 
 all: build
 
-include $(TOPDIR)/build/build.vbcc.mk
+include $(TOPDIR)/build/build.gcc.mk
 
 build-before: cscope tags 
 build-here: bootloader.bin freertos.adf
 
-freertos.exe: $(OBJECTS) drivers/drivers.lib libc/c.lib FreeRTOS/freertos.lib
+freertos.elf: $(OBJECTS) drivers/drivers.lib FreeRTOS/freertos.lib libc/c.lib 
 
 freertos.adf: freertos.exe
 

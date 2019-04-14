@@ -7,13 +7,13 @@
 #define mainRED_TASK_PRIORITY 3
 #define mainGREEN_TASK_PRIORITY 3
 
-static void vRedTask(void *) {
+static void vRedTask(__unused void *data) {
   for (;;) {
     custom->color[0] = 0xf00;
   }
 }
 
-static void vGreenTask(void *) {
+static void vGreenTask(__unused void *data) {
   for (;;) {
     custom->color[0] = 0x0f0;
   }
@@ -22,14 +22,14 @@ static void vGreenTask(void *) {
   }
 }
 
-static void SystemClockTickHandler(void *) {
+static void SystemClockTickHandler(__unused void *data) {
   /* Increment the system timer value and possibly preempt. */
   uint32_t ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
   xNeedRescheduleTask = xTaskIncrementTick();
   portCLEAR_INTERRUPT_MASK_FROM_ISR(ulSavedInterruptMask);
 }
 
-static INTSERVER(SystemClockTick, 10, SystemClockTickHandler, NULL);
+INTSERVER_DEFINE(SystemClockTick, 10, SystemClockTickHandler, NULL);
 
 static xTaskHandle red_handle;
 static xTaskHandle green_handle;

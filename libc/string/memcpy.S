@@ -1,13 +1,13 @@
 ; This code is covered by BSD license. It was taken from NetBSD
 ; common/lib/libc/arch/m68k/string/bcopy.S and converted to Motorola syntax.
 
-        XDEF    _memcpy
-        XDEF    _memmove
+        xdef    memcpy
+        xdef    memmove
 
-        SECTION "memcpy",CODE
+        section '.text',code
 
-_memcpy:
-_memmove:
+memcpy:
+memmove:
 	move.l	4(sp),a1		; dest address
 	move.l	8(sp),a0		; src address
 	move.l	12(sp),d1		; count

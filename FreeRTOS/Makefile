@@ -1,6 +1,6 @@
 TOPDIR = $(realpath ..)
 
-PORT_DIR = portable/VBCC/m68k
+PORT_DIR = portable/m68k-amiga
 
 SOURCES = \
 	  croutine.c \
@@ -19,12 +19,14 @@ SOURCES = \
 
 all: build
 
-include $(TOPDIR)/build/build.vbcc.mk
+include $(TOPDIR)/build/build.gcc.mk
 
 CPPFLAGS = -I$(TOPDIR)/FreeRTOS/include \
-	   -I$(TOPDIR)/FreeRTOS/portable/VBCC/m68k \
+	   -I$(TOPDIR)/FreeRTOS/portable/m68k-amiga \
 	   -I$(TOPDIR)/include \
 	   -I$(TOPDIR)
+
+event_groups.o: CFLAGS += -Wno-unused-but-set-variable
 
 build-here: freertos.lib
 

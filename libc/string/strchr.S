@@ -1,13 +1,13 @@
 ; This code is covered by BSD license. It was taken from NetBSD
 ; common/lib/libc/arch/m68k/string/strchr.S and converted to Motorola syntax.
 
-        XDEF    _index
-        XDEF    _strchr
+        xdef    index
+        xdef    strchr
 
-        SECTION "strchr",CODE
+        section '.text',code
 
-_index:
-_strchr:
+index:
+strchr:
 	move.l	4(sp),a0		; string
 	move.b	11(sp),d0		; char to look for
 .Lixloop:

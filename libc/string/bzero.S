@@ -1,11 +1,11 @@
 ; This code is covered by BSD license. It was taken from NetBSD
 ; common/lib/libc/arch/m68k/string/bzero.S and converted to Motorola syntax.
 
-        XDEF    _bzero
+        xdef    bzero
 
-        SECTION "bzero",CODE
+        section '.text',code
 
-_bzero:
+bzero:
 	move.l	d2,-(sp)
 	move.l	8(sp),a0		; destination
 	move.l	12(sp),d1		; count

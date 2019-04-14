@@ -1,0 +1,135 @@
+Index: elf2hunk/elf2hunk.c
+===================================================================
+--- elf2hunk.orig/elf2hunk.c
++++ elf2hunk/elf2hunk.c
+@@ -25,6 +25,10 @@
+ 
+ #define F_VERBOSE       (1 << 0)
+ #define F_NOCONVERT     (1 << 1)
++#define F_DEBUG         (1 << 2)
++#define F_SYMBOLS       (1 << 3)
++
++static int cmdline_flags = 0;
+ 
+ #if defined(__GNUC__)&&defined(WIN32)
+ #include <winsock2.h>
+@@ -272,14 +276,8 @@ static void set_error(int err)
+     errno = err;
+ }
+ 
+-#if defined(DEBUG) && DEBUG
+-#define D(x)	x
+-#define DB2(x)	x
+-#else
+-#define D(x)
+-#define DB2(x)
+-#endif
+ #define bug(fmt,args...)	fprintf(stderr, fmt ,##args )
++#define D(x) { if (cmdline_flags & F_DEBUG) { x; } }
+ 
+ static int must_swap = -1;
+ 
+@@ -906,7 +904,7 @@ int elf2hunk(int file, int hunk_fd, cons
+ 
+     /* Write all hunks */
+     for (i = hunks = 0; i < int_shnum; i++) {
+-    	D(int s;)
++    	int s;
+ 
+     	if (hh[i]==NULL || hh[i]->hunk < 0)
+     	    continue;
+@@ -916,13 +914,13 @@ int elf2hunk(int file, int hunk_fd, cons
+ 
+     	switch (hh[i]->type) {
+     	case HUNK_BSS:
+-    	    D(
+-                bug("HUNK_BSS: %d longs\n", (int)((hh[i]->size + 4) / 4));
+-                for (s = 0; s < int_shnum; s++) {
+-                    if (hh[s] && hh[s]->type == HUNK_SYMBOL)
+-                        sym_dump(hunk_fd, sh, hh, i, s);
+-                }
+-            )
++          D(bug("HUNK_BSS: %d longs\n", (int)((hh[i]->size + 4) / 4)));
++          if (cmdline_flags & F_SYMBOLS) {
++              for (s = 0; s < int_shnum; s++) {
++                  if (hh[s] && hh[s]->type == HUNK_SYMBOL)
++                      sym_dump(hunk_fd, sh, hh, i, s);
++              }
++          }
+ 
+     	    wlong(hunk_fd, HUNK_END);
+     	    hunks++;
+@@ -933,12 +931,12 @@ int elf2hunk(int file, int hunk_fd, cons
+     	    err = write(hunk_fd, hh[i]->data, ((hh[i]->size + 4)/4)*4);
+     	    if (err < 0)
+     	    	return EXIT_FAILURE;
+-            D(
+-                for (s = 0; s < int_shnum; s++) {
+-                    if (hh[s] && hh[s]->type == HUNK_SYMBOL)
+-                        sym_dump(hunk_fd, sh, hh, i, s);
+-                }
+-            )
++          if (cmdline_flags & F_SYMBOLS) {
++              for (s = 0; s < int_shnum; s++) {
++                  if (hh[s] && hh[s]->type == HUNK_SYMBOL)
++                      sym_dump(hunk_fd, sh, hh, i, s);
++              }
++          }
+     	    reloc_dump(hunk_fd, hh, i);
+     	    wlong(hunk_fd, HUNK_END);
+     	    D(bug("\tHUNK_END\n"));
+@@ -1039,7 +1037,7 @@ static int copy(const char *src, const c
+     int mode, ret;
+ 
+     if (flags & F_VERBOSE)
+-       printf("%s ->\n  %s\n", src, dst);
++       printf("%s -> %s\n", src, dst);
+ 
+     if (stat(src, &st) >= 0) {
+         mode = st.st_mode;
+@@ -1081,23 +1079,34 @@ static int copy(const char *src, const c
+     return ret;
+ }
+ 
++static void usage(const char *prog) {
++    fprintf(stderr, "Usage:\n%s file.elf file.hunk\n", prog);
++    fprintf(stderr, "%s src-dir dest-dir\n", prog);
++    exit(EXIT_FAILURE);
++}
++
+ int main(int argc, char **argv)
+ {
+-    int flags = 0;
++    int ch;
+ 
+-    if (argc == 4 && strcmp(argv[1],"-v") == 0) {
+-        flags |= F_VERBOSE;
+-        argc--;
+-        argv++;
++    while ((ch = getopt(argc, argv, "vds")) != -1) {
++        if (ch == 'v')
++            cmdline_flags |= F_VERBOSE;
++        else if (ch == 'd')
++            cmdline_flags |= F_DEBUG;
++        else if (ch == 's')
++            cmdline_flags |= F_SYMBOLS;
++        else
++            usage(argv[0]);
+     }
+ 
+-    if (argc != 3) {
+-    	fprintf(stderr, "Usage:\n%s file.elf file.hunk\n", argv[0]);
+-    	fprintf(stderr, "%s src-dir dest-dir\n", argv[0]);
+-    	return EXIT_FAILURE;
+-    }
++    argc -= optind;
++    argv += optind;
++
++    if (argc != 3)
++      usage(argv[0]);
+ 
+-    return copy(argv[1], argv[2], flags);
++    return copy(argv[1], argv[2], cmdline_flags);
+ }
+ 
+ /* vim: set ts=8 sw=8: */

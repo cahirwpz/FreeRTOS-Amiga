@@ -52,7 +52,11 @@ etags
 cscope.out
 
 # Backup files
+*.orig
 *~
+
+# Quilt files
+.pc
 
 # directories with binaries
 external/vbcc

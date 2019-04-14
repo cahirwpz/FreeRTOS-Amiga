@@ -1,11 +1,11 @@
 ; This code is covered by BSD license. It was taken from NetBSD
 ; common/lib/libc/arch/m68k/string/strlen.S and converted to Motorola syntax.
 
-        XDEF    _strlen
+        xdef    strlen
 
-        SECTION 'strlen',CODE
+        section '.text',code
 
-_strlen:
+strlen:
         move.l  4(sp),a0                ; string
         move.l  a0,d0
         not.l   d0

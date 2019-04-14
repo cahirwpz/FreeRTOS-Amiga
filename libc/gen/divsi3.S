@@ -1,11 +1,11 @@
-        xdef    ___divsi3
+        xdef    __divsi3
         xdef    __ldivs
-        xref    ___udivsi3
+        xref    __udivsi3
 
-        section "__divsi3",code
+        section '.text',code
 
 __ldivs:
-___divsi3:
+__divsi3:
         move.l  d2,-(sp)
 
         moveq.l #1,d2           ; sign of result stored in d2 (=1 or =-1)
@@ -20,7 +20,7 @@ L1:     move.l  8(sp),d0        ; d0 = dividend
 
 L2:     move.l  d1,-(sp)
         move.l  d0,-(sp)
-        jsr     ___udivsi3      ; divide abs(dividend) by abs(divisor)
+        jsr     __udivsi3       ; divide abs(dividend) by abs(divisor)
         addq.l  #8,sp
 
         tst.b   d2

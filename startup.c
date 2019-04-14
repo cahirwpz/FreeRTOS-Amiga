@@ -6,7 +6,7 @@
 
 extern int main(void);
 
-__entry void _start(const BootData_t *aBootData) {
+void _start(BootData_t *aBootData) {
   printf("FreeRTOS running on Amiga!\n");
 
   configASSERT(custom->intenar == 0);
