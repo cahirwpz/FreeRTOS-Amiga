@@ -1,5 +1,6 @@
 binutils-*
 gcc-*
+gdb-*
 isl-*
 gmp-*
 mpfr-*

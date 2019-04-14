@@ -7,13 +7,14 @@ GMP = gmp-6.1.2
 MPC = mpc-1.1.0
 BINUTILS = binutils-2.32
 GCC = gcc-8.3.0
+GDB = gdb-8.2.1
 
 ROOTDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 HOSTDIR := $(ROOTDIR)/host
 PREFIX ?= $(ROOTDIR)/local
 TARGET = m68k-elf
 
-all: gcc-install
+all: gcc-install gdb-install
 
 clean: gmp-clean mpfr-clean mpc-clean isl-clean binutils-clean gcc-clean
 	$(RM) -r host
@@ -161,7 +162,7 @@ $(BINUTILS)/.unpack: $(BINUTILS).tar.xz
 binutils-configure: $(BINUTILS)/.configure
 $(BINUTILS)/.configure: $(BINUTILS)/.unpack $(ISL)/.install $(MPC)/.install
 	cd $(BINUTILS) && ./configure \
-		--target=m68k-elf \
+		--target=$(TARGET) \
 		--disable-nls \
 		--prefix=$(PREFIX) \
 		--with-gmp=$(HOSTDIR) \
@@ -198,15 +199,20 @@ $(GCC)/.unpack: $(GCC).tar.xz
 gcc-configure: $(GCC)/.configure
 $(GCC)/.configure: $(GCC)/.unpack $(BINUTILS)/.install
 	cd $(GCC) && PATH=$(PREFIX)/bin:$$PATH ./configure \
-		--target=m68k-elf \
-		--disable-nls \
-		--enable-languages=c \
-		--without-headers \
+		--target=$(TARGET) \
 		--prefix=$(PREFIX) \
+		--datarootdir=$(PREFIX)/$(TARGET)/share \
 		--with-gmp=$(HOSTDIR) \
 		--with-mpfr=$(HOSTDIR) \
 		--with-mpc=$(HOSTDIR) \
-		--with-isl=$(HOSTDIR)
+		--with-isl=$(HOSTDIR) \
+		--enable-languages=c \
+		--enable-lto \
+		--without-headers \
+		--disable-multilib \
+		--disable-nls \
+		--disable-shared \
+            	--disable-werror
 	touch $@
 
 gcc-build: $(GCC)/.build
@@ -223,3 +229,46 @@ gcc-clean:
 	$(RM) -r $(GCC)
 
 .PHONY: gcc-unpack gcc-configure gcc-build gcc-install gcc-clean
+
+### GNU Debugger
+
+$(GDB).tar.xz:
+	$(CURL) -o $@ "https://ftp.gnu.org/gnu/gdb/$(GDB).tar.xz"
+
+gdb-unpack: $(GDB)/.unpack
+$(GDB)/.unpack: $(GDB).tar.xz
+	tar xvJf $^
+	touch $@
+
+gdb-configure: $(GDB)/.configure
+$(GDB)/.configure: $(GDB)/.unpack $(ISL)/.install
+	cd $(GDB) && PATH=$(PREFIX)/bin:$$PATH ./configure \
+		--target=$(TARGET)\
+		--with-isl=$(HOSTDIR) \
+		--prefix=$(PREFIX) \
+	        --datarootdir=$(PREFIX)/$(TARGET)/share \
+            	--with-sysroot=$(PREFIX)/$(TARGET) \
+            	--disable-binutils \
+            	--disable-gas \
+            	--disable-ld \
+            	--disable-nls \
+		--disable-sim \
+		--disable-werror \
+		--with-tui \
+		--with-python=$(shell which python3)
+	touch $@
+
+gdb-build: $(GDB)/.build
+$(GDB)/.build: $(GDB)/.configure
+	cd $(GDB) && $(MAKE)
+	touch $@
+
+gdb-install: $(GDB)/.install
+$(GDB)/.install: $(GDB)/.build
+	cd $(GDB) && $(MAKE) install
+	touch $@
+
+gdb-clean:
+	$(RM) -r $(GDB)
+
+.PHONY: gdb-unpack gdb-configure gdb-build gdb-install gdb-clean
