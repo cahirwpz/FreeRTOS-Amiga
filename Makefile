@@ -35,6 +35,7 @@ toolchain:
 	make -C external/vbcc PREFIX=$(PWD)/toolchain
 	make -C external/gnu PREFIX=$(PWD)/toolchain
 	make -C external/elf2hunk PREFIX=$(PWD)/toolchain
+	make -C external/fs-uae PREFIX=$(PWD)/toolchain
 
 run: freertos.adf
 	./launch $^

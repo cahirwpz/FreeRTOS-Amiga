@@ -1,0 +1,19 @@
+Index: fs-uae/fs-uae/src/newcpu.cpp
+===================================================================
+--- fs-uae.orig/fs-uae/src/newcpu.cpp
++++ fs-uae/fs-uae/src/newcpu.cpp
+@@ -3195,6 +3195,14 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcod
+ 		}
+ 	}
+ 
++	/* Break into debugger on ILLEGAL instruction placed outside of ROM. */
++	if (opcode == 0x4AFC && !inrom) {
++		m68k_incpc_normal (2);
++		fill_prefetch ();
++		activate_debugger ();
++		return 4;
++	}
++
+ #ifdef AUTOCONFIG
+ 	if (opcode == 0xFF0D && inrt) {
+ 		/* User-mode STOP replacement */

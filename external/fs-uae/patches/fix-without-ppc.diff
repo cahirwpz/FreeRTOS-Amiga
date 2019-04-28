@@ -1,0 +1,21 @@
+Index: fs-uae/fs-uae/src/cpuboard.cpp
+===================================================================
+--- fs-uae.orig/fs-uae/src/cpuboard.cpp
++++ fs-uae/fs-uae/src/cpuboard.cpp
+@@ -898,12 +898,16 @@ void cpuboard_rethink(void)
+ 			INTREQ_0(0x8000 | 0x0008);
+ 			if (currprefs.cachesize)
+ 				uae_int_requested |= 0x010000;
++#ifdef WITH_PPC
+ 			uae_ppc_wakeup_main();
++#endif
+ 		} else if (!(io_reg[CSIII_REG_IRQ] & (P5_IRQ_PPC_1 | P5_IRQ_PPC_2))) {
+ 			INTREQ_0(0x8000 | 0x0008);
+ 			if (currprefs.cachesize)
+ 				uae_int_requested |= 0x010000;
++#ifdef WITH_PPC
+ 			uae_ppc_wakeup_main();
++#endif
+ 		} else {
+ 			uae_int_requested &= ~0x010000;
+ 		}
