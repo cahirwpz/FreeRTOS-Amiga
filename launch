@@ -32,10 +32,11 @@ class Launchable():
 
 class FSUAE(Launchable):
     def __init__(self):
-        super().__init__('fs-uae', shutil.which('fs-uae'))
+        super().__init__('fs-uae', 'tools/uaedbg.py')
 
     def configure(self, adf):
-        self.options = ['--stdout=1',
+        self.options = ['-e', 'toolchain/bin/fs-uae', '--',
+                        '--stdout=1',
                         '--floppy_drive_0=' + os.path.realpath(adf),
                         os.path.realpath('Config.fs-uae')]
 
