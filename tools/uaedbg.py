@@ -28,11 +28,11 @@ async def UaeDebuggerPrompt(uaedbg):
                     while not cmd:
                         cmd = await session.prompt(async_=True)
                         cmd.strip()
-                    await uaedbg.send(cmd, response=False)
+                    uaedbg.send(cmd)
                 except EOFError:
-                    await uaedbg.send('g', response=False)
+                    uaedbg.send('g')
                 except KeyboardInterrupt:
-                    await uaedbg.send('q', response=False)
+                    uaedbg.send('q')
                 lines = await uaedbg.recv()
         except asyncio.CancelledError:
             pass
@@ -46,10 +46,12 @@ class UaeDebugger():
         self.reader = reader
         self.writer = writer
 
-    async def send(self, cmd, response=True):
+    async def communicate(self, cmd):
+        self.send(cmd)
+        return await self.recv()
+
+    def send(self, cmd):
         self.writer.write(cmd.encode() + b'\n')
-        if response:
-            return await self.recv()
 
     async def recv(self):
         text = ''
@@ -64,9 +66,7 @@ class UaeDebugger():
             # finished by debugger prompt ?
             if text.endswith('\n>'):
                 text = text[:-2]
-                break
-
-        return [line.strip() for line in text.splitlines()]
+                return [line.rstrip() for line in text.splitlines()]
 
 
 async def UaeLaunch(loop, args):
