@@ -7,6 +7,7 @@
 #include <interrupt.h>
 #include <trap.h>
 #include <cpu.h>
+#include <boot.h>
 
 extern void vPortStartFirstTask(void);
 extern void vPortYieldHandler(void);
@@ -68,7 +69,7 @@ StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
   char *sp = (char *)pxTopOfStack;
 
   MOVEL(pvParameters);
-  PUSHL(0xDEADBEEF);
+  PUSHL(0); /* last return address at the bottom of stack */
 
   /* Exception stack frame starts with the return address, unless we're running
    * on 68010 and above. Then we need to put format vector word on stack. */
@@ -108,9 +109,12 @@ INTCHAIN(PortsChain);
 INTCHAIN(VertBlankChain);
 INTCHAIN(ExterChain);
 
-void vPortSetupExceptionVector(void) {
-  if (CpuModel & CF_68010)
-    ExcVecBase = portGetVBR();
+void vPortSetupExceptionVector(BootData_t *aBootData) {
+  ExcVecBase = (ExcVec_t *)aBootData->bd_vbr;
+
+  /* Set up magic number and pointer to boot data for debugger. */
+  ExcVec[0] = (ESR_t)0x1EE7C0DE;
+  ExcVec[1] = (ESR_t)aBootData;
 
   /* Initialize M68k interrupt vector. */
   for (int i = EXC_BUSERR; i <= EXC_LAST; i++)

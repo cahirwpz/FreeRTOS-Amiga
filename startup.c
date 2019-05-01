@@ -16,7 +16,7 @@ void _start(BootData_t *aBootData) {
   CpuModel = aBootData->bd_cpumodel;
 
   vPortSetupHardware();
-  vPortSetupExceptionVector();
+  vPortSetupExceptionVector(aBootData);
   vPortDefineMemoryRegions(aBootData->bd_region);
 
   main();

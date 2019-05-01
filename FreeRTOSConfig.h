@@ -68,6 +68,7 @@ to exclude the API function. */
 
 struct TrapFrame;
 struct MemRegion;
+struct BootData;
 
 /* Called when a synchronous exception or trap happens. */
 void vPortTrapHandler(struct TrapFrame *);
@@ -75,7 +76,7 @@ void vPortTrapHandler(struct TrapFrame *);
 /* For use by startup code. */
 void vPortDefineMemoryRegions(struct MemRegion *);
 void vPortSetupHardware(void);
-void vPortSetupExceptionVector(void);
+void vPortSetupExceptionVector(struct BootData *);
 
 /* Allocate chip memory, should be freed with vPortFree. */
 void *pvPortMallocChip(size_t size);
