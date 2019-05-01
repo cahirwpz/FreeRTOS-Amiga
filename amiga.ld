@@ -13,18 +13,21 @@ SECTIONS
   .text 0: ALIGN(4)
   {
     *(.text .text.*)
+    . = ALIGN(4);
   } : text
 
   .data : ALIGN(4)
   {
     *(.data .data.*)
     *(.rodata .rodata.*)
+    . = ALIGN(4);
   } : data
 
   .bss : ALIGN(4)
   {
     *(.bss .bss.*)
     *(COMMON)
+    . = ALIGN(4);
   } : bss
 
   /* Sections to be discarded */
