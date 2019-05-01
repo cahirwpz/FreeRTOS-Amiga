@@ -66,17 +66,10 @@ _LVOCacheControl        EQU     -648
         BITDEF  M,CLEAR,1       ; clear allocated block
         BITDEF  M,REVERSE,2     ; allocate from the top down
 
-; Loadable file segment definition
-
- STRUCTURE SEG,0                ; Executable file segment
-	LONG	SEG_LEN
-	APTR	SEG_NEXT
-	LABEL	SEG_START
-	LABEL	SEG_SIZE
-
 ; Boot loader data definition
 
  STRUCTURE BD,0                 ; Boot Data
+        APTR    BD_ENTRY
         APTR    BD_VBR
         WORD    BD_CPUMODEL
         WORD    BD_NREGIONS
@@ -268,7 +261,7 @@ Start:
         ; move hunks around and relocate them
         move.l  d3,a0
         bsr     SetupHunkFile
-        move.l  d0,a4                   ; [a4] first hunk of executable file
+        move.l  d0,BD_ENTRY(a6)         ; first hunk of executable file
 
         ; free up space taken by executable file image
         move.l  d3,a0
@@ -298,7 +291,8 @@ Start:
 
         ; enter the kernel with pointer to boot data as first argument
         move.l  sp,-(sp)
-        jsr     SEG_START(a4)
+        move.l  BD_ENTRY(a6),a0         ; [a0] first hunk of executable file
+        jsr     (a0)
 
 ; Something failed or kernel returned back to boot loader.
 ; Set background color to red and halt the processor.
@@ -447,42 +441,34 @@ SetupHunkFile:
         bne     Panic
 
 .setup  movem.l d2-d4/a2-a3,-(sp)
+
+        ; assume there's no resident library name (skip long)
         lea     4(a0),a2
 
-        ; read number of hunks, assume there's no resident library name
+        ; read number of hunks (n)
         move.l  (a2)+,d2
-        lsl.l   #2,d2           ; [d2] hunk array size
-        sub.l   d2,sp           ; [sp] hunk array
-
-        ; move to hunk information
+        ; assume first hunk is 0 and last n-1 (skip two longs)
         addq.l  #8,a2
 
-        ; allocate hunks
-        move.l  sp,a3
+        ; prepare for reading hunk specifiers (size, memory type)
+        lsl.l   #2,d2           ; [d2] hunk pointer array size
+        sub.l   d2,sp           ; [sp] hunk pointer array
+
+        ; allocate hunks in reverse order to make their addresses grow
         move.l  d2,d4
-.alloc  move.l  (a2)+,d3
+.alloc  move.l  -4(a2,d4.l),d3
         rol.l   #2,d3           ; [d3] hunk size, bit(1) FAST, bit(0) CHIP
         moveq.l #-4,d0
         and.l   d3,d0
-        addq.l  #SEG_SIZE,d0
         moveq.l #1,d1
         and.l   d3,d1
         addq.l  #MF_REVERSE|MF_CLEAR,d1
         bsr     AllocMem
-        move.l  d0,(a3)+
-        move.l  d0,a0
-        move.l  d3,SEG_LEN(a0)
+        move.l  d0,-4(sp,d4.l)
         subq.l  #4,d4
         bgt     .alloc
 
-        ; link hunks
-        move.l  sp,a1
-        move.l  d2,d4
-        subq.l  #4,d4
-.link   move.l  (a1)+,a0        ; previous hunk
-        move.l  (a1),SEG_NEXT(a0)
-        subq.l  #4,d4
-        bgt     .link
+        add.l   d2,a2           ; [a2] first hunk header
 
         ; parse hunks
         move.l  sp,a3
@@ -505,9 +491,8 @@ SetupHunkFile:
         bra     .error
 
 .hdata  move.l  (a3),a1
-        lea.l   SEG_START(a1),a1
         move.l  (a2)+,d0
-        lsl.l   #2,d0
+        lsl.l   #2,d0           ; [d0] hunk size
         move.l  a2,a0
         add.l   d0,a2           ; move pointer to next hunk
         bsr     CopyMem
@@ -527,11 +512,10 @@ SetupHunkFile:
         beq     .parse
         move.l  (a2)+,d0        ; referenced hunk number
         lsl.l   #2,d0
-        move.l  (sp,d0.l),d0
-        addq.l  #SEG_START,d0    ; [d0] referenced hunk data address
+        move.l  (sp,d0.l),d0    ; [d0] referenced hunk data address
         move.l  (a3),a1
 .reloc  move.l  (a2)+,d1
-        add.l   d0,SEG_START(a1,d1.l)
+        add.l   d0,(a1,d1.l)
         subq.l  #1,d3
         bgt     .reloc
         bra     .hreloc
