@@ -2,5 +2,6 @@
 --ignore-dir=external
 --asm
 --cc
+--cpp
 --python
 --make
