@@ -87,7 +87,7 @@ Index: elf2hunk/elf2hunk.c
  
      if (stat(src, &st) >= 0) {
          mode = st.st_mode;
-@@ -1081,23 +1079,34 @@ static int copy(const char *src, const c
+@@ -1081,23 +1079,35 @@ static int copy(const char *src, const c
      return ret;
  }
  
@@ -100,6 +100,7 @@ Index: elf2hunk/elf2hunk.c
  int main(int argc, char **argv)
  {
 -    int flags = 0;
++    const char *progname = argv[0];
 +    int ch;
  
 -    if (argc == 4 && strcmp(argv[1],"-v") == 0) {
@@ -114,7 +115,7 @@ Index: elf2hunk/elf2hunk.c
 +        else if (ch == 's')
 +            cmdline_flags |= F_SYMBOLS;
 +        else
-+            usage(argv[0]);
++            usage(progname);
      }
  
 -    if (argc != 3) {
@@ -125,11 +126,11 @@ Index: elf2hunk/elf2hunk.c
 +    argc -= optind;
 +    argv += optind;
 +
-+    if (argc != 3)
-+      usage(argv[0]);
++    if (argc != 2)
++      usage(progname);
  
 -    return copy(argv[1], argv[2], flags);
-+    return copy(argv[1], argv[2], cmdline_flags);
++    return copy(argv[0], argv[1], cmdline_flags);
  }
  
  /* vim: set ts=8 sw=8: */

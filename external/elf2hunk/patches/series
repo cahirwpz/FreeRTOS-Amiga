@@ -1,2 +1,3 @@
 exec-relocs.diff
 cmdline-flags.diff
+fix-section-size.diff
