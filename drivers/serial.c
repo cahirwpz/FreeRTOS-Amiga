@@ -13,7 +13,7 @@
 static QueueHandle_t SendQ;
 static QueueHandle_t RecvQ;
 
-#define SendByte(byte) { custom->serdat = (uint16_t)(byte) | (uint16_t)0x100; }
+#define SendByte(byte) { custom.serdat = (uint16_t)(byte) | (uint16_t)0x100; }
 
 static void SendIntHandler(__unused void *ptr) {
   /* Send one byte into the wire. */
@@ -24,14 +24,14 @@ static void SendIntHandler(__unused void *ptr) {
 
 static void RecvIntHandler(__unused void *ptr) {
   /* Send one byte to waiting task. */
-  char cRecv = custom->serdatr;
+  char cRecv = custom.serdatr;
   (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, &xNeedRescheduleTask);
 }
 
 void SerialInit(unsigned baud) {
   printf("[Init] Serial port driver!\n");
 
-  custom->serper = CLOCK / baud - 1;
+  custom.serper = CLOCK / baud - 1;
 
   RecvQ = xQueueCreate(QUEUELEN, sizeof(char));
   SendQ = xQueueCreate(QUEUELEN, sizeof(char));

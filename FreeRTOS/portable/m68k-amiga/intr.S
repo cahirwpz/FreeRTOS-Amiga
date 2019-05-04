@@ -1,3 +1,5 @@
+        include 'hardware/custom.i'
+
         xdef AmigaLvl1Handler
         xdef AmigaLvl2Handler
         xdef AmigaLvl3Handler
@@ -9,9 +11,6 @@
         xref IntVec
         xref vPortYieldHandler
         xref xNeedRescheduleTask
-
-INTREQR equ $dff01e
-INTREQ  equ $dff09c
 
 TBE     equ 0
 DSKBLK  equ 1
@@ -51,7 +50,7 @@ EXTER   equ 13
 
 AmigaLvl1Handler:
         ENTER   TBE
-        move.w  INTREQR,d0
+        move.w  custom+intreqr,d0
 
         HANDLE  TBE
         HANDLE  DSKBLK
@@ -67,7 +66,7 @@ AmigaLvl2Handler:
 
 AmigaLvl3Handler:
         ENTER   COPER
-        move.w  INTREQR,d0
+        move.w  custom+intreqr,d0
 
         HANDLE  COPER
         HANDLE  VERTB
@@ -77,7 +76,7 @@ AmigaLvl3Handler:
 
 AmigaLvl4Handler:
         ENTER   AUD2
-        move.w  INTREQR,d0
+        move.w  custom+intreqr,d0
 
         HANDLE  AUD2
         HANDLE  AUD0
@@ -90,7 +89,7 @@ _handle:
         ; Make INTF_* mask, and clear pending interrupt.
         clr.w   d0
         bset    d1,d0
-        move.w  d0,INTREQ
+        move.w  d0,custom+intreq
 
         ; Enter interrupt service routine.
         move.l  (a0)+,a1                ; IntVecEntry_t.code
@@ -124,7 +123,7 @@ _noswitch:
 
 AmigaLvl5Handler:
         ENTER   RBF
-        move.w  INTREQR,d0
+        move.w  custom+intreqr,d0
 
         HANDLE  RBF
         FINISH  ; DSKSYNC

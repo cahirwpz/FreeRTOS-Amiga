@@ -12,11 +12,6 @@
 extern void vPortStartFirstTask(void);
 extern void vPortYieldHandler(void);
 
-/* Define custom chipset register bases uses throughout the code. */
-volatile Custom_t custom = CUSTOM;
-volatile CIA_t ciaa = CIAA;
-volatile CIA_t ciab = CIAB;
-
 /* Exception Vector Base: 0 for 68000, for 68010 and above read from VBR */
 ExcVec_t *ExcVecBase = (ExcVec_t *)0L;
 

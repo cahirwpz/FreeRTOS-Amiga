@@ -45,14 +45,10 @@
 #define INTF_TBE INTF(TBE)
 
 /* All macros below take or'ed INTF_* flags. */
-#define EnableINT(x)                                                           \
-  { custom->intena_ = INTF_SETCLR | (x); }
-#define DisableINT(x)                                                          \
-  { custom->intena_ = (x); }
-#define CauseIRQ(x)                                                            \
-  { custom->intreq_ = INTF_SETCLR | (x); }
-#define ClearIRQ(x)                                                            \
-  { custom->intreq_ = (x); }
+static inline void EnableINT(uint16_t x) { custom.intena_ = INTF_SETCLR | x; }
+static inline void DisableINT(uint16_t x) { custom.intena_ = x; }
+static inline void CauseIRQ(uint16_t x) { custom.intreq_ = INTF_SETCLR | x; }
+static inline void ClearIRQ(uint16_t x) { custom.intreq_ = x; }
 
 /* Interrupt Service Routine */
 typedef void (*ISR_t)(void *);

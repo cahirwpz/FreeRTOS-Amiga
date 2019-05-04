@@ -11,24 +11,24 @@ static List_t WaitingTasks;
  * until after a read of LSB event. */
 static uint32_t GetCounter(void) {
   uint32_t line = 0;
-  line |= CIAB->ciatodhi;
+  line |= ciab.ciatodhi;
   line <<= 8;
-  line |= CIAB->ciatodmid;
+  line |= ciab.ciatodmid;
   line <<= 8;
-  line |= CIAB->ciatodlow;
+  line |= ciab.ciatodlow;
   return line;
 }
 
 /* TOD is automatically stopped whenever a write to the register occurs. The
  * clock will not start again until after a write to the LSB event register. */
 static void SetCounter(uint32_t line) {
-  CIAB->ciatodhi = line >> 16;
-  CIAB->ciatodmid = line >> 8;
-  CIAB->ciatodlow = line;
+  ciab.ciatodhi = line >> 16;
+  ciab.ciatodmid = line >> 8;
+  ciab.ciatodlow = line;
 }
 
 static void SetAlarm(uint32_t line) {
-  volatile uint8_t *ciacrb = &CIAB->ciacrb;
+  volatile uint8_t *ciacrb = &ciab.ciacrb;
   BSET(*ciacrb, CIACRAB_TODIN);
   SetCounter(line);
   BCLR(*ciacrb, CIACRAB_TODIN);

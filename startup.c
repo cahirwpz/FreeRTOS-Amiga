@@ -10,8 +10,8 @@ extern int main(void);
 void _start(BootData_t *aBootData) {
   printf("FreeRTOS running on Amiga!\n");
 
-  configASSERT(custom->intenar == 0);
-  configASSERT((custom->dmaconr & DMAF_ALL) == 0);
+  configASSERT(custom.intenar == 0);
+  configASSERT((custom.dmaconr & DMAF_ALL) == 0);
   configASSERT((portGetSR() & 0x2700) == 0x2700);
 
   CpuModel = aBootData->bd_cpumodel;
@@ -20,10 +20,10 @@ void _start(BootData_t *aBootData) {
   vPortDefineMemoryRegions(aBootData->bd_region);
 
   /* CIA-A & CIA-B: Stop timers and return to default settings. */
-  CIAA->ciacra = 0;
-  CIAA->ciacrb = 0;
-  CIAB->ciacra = 0;
-  CIAB->ciacrb = 0;
+  ciaa.ciacra = 0;
+  ciaa.ciacrb = 0;
+  ciab.ciacra = 0;
+  ciab.ciacrb = 0;
 
   /* CIA-A & CIA-B: Clear pending interrupts. */
   SampleICR(CIAA, CIAICRF_ALL);

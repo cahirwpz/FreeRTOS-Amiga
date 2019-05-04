@@ -9,13 +9,13 @@
 
 static void vRedTask(__unused void *data) {
   for (;;) {
-    custom->color[0] = 0xf00;
+    custom.color[0] = 0xf00;
   }
 }
 
 static void vGreenTask(__unused void *data) {
   for (;;) {
-    custom->color[0] = 0x0f0;
+    custom.color[0] = 0x0f0;
   }
 }
 
@@ -45,7 +45,7 @@ int main(void) {
   return 0;
 }
 
-void vApplicationIdleHook(void) { custom->color[0] = 0x00f; }
+void vApplicationIdleHook(void) { custom.color[0] = 0x00f; }
 
 void vApplicationMallocFailedHook(void) {
   printf("Memory exhausted!\n");
