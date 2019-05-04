@@ -16,6 +16,12 @@ freertos.elf: $(FREERTOS)
 
 freertos.adf: freertos.exe
 
+a500rom.elf: a500rom.o $(FREERTOS)
+	$(LD) -T a500rom.ld -Map $@.map -o $@ $^
+
+a500rom.bin: a500rom.elf
+	$(OBJCOPY) -O binary $^ $@
+
 # Lists of all files that we consider our sources.
 SRCDIRS = include drivers libc FreeRTOS 
 SRCFILES_C = $(shell find $(SRCDIRS) -iname '*.[ch]')
@@ -39,8 +45,11 @@ toolchain:
 	make -C external/elf2hunk PREFIX=$(PWD)/toolchain
 	make -C external/fs-uae PREFIX=$(PWD)/toolchain
 
-run: freertos.adf
-	./launch $^
+run-floppy: freertos.adf
+	./launch -f freertos.adf
+
+run-rom: a500rom.bin freertos.adf
+	./launch -r a500rom.bin -f freertos.adf
 
 clean-here:
 	$(RM) bootloader.bin

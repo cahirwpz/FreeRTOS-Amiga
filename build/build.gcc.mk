@@ -6,6 +6,9 @@ AS = $(BINDIR)/vasm
 LD = $(BINDIR)/m68k-elf-ld
 AR = $(BINDIR)/m68k-elf-ar
 RANLIB = $(BINDIR)/m68k-elf-ranlib
+READELF = $(BINDIR)/m68k-elf-readelf
+OBJCOPY = $(BINDIR)/m68k-elf-objcopy
+OBJDUMP = $(BINDIR)/m68k-elf-objdump
 ELF2HUNK = $(BINDIR)/elf2hunk
 
 ASFLAGS = -m68010 -quiet \
