@@ -10,7 +10,9 @@ include $(TOPDIR)/build/build.gcc.mk
 build-before: cscope tags 
 build-here: bootloader.bin freertos.adf
 
-freertos.elf: $(OBJECTS) drivers/drivers.lib FreeRTOS/freertos.lib libc/c.lib 
+FREERTOS = $(OBJECTS) drivers/drivers.lib FreeRTOS/freertos.lib libc/c.lib 
+
+freertos.elf: $(FREERTOS)
 
 freertos.adf: freertos.exe
 

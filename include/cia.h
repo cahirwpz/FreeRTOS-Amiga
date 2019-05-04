@@ -3,13 +3,13 @@
 
 #include <cia_regdef.h>
 
-typedef struct CIA *const CIA_t;
+typedef volatile struct CIA *const CIA_t;
 
-#define CIAA ((volatile CIA_t)0xbfe001)
-#define CIAB ((volatile CIA_t)0xbfd000)
+extern struct CIA volatile ciaa;
+extern struct CIA volatile ciab;
 
-extern volatile CIA_t ciaa;
-extern volatile CIA_t ciab;
+#define CIAA (&ciaa)
+#define CIAB (&ciab)
 
 /* Both CIAA & CIAB have Timer A & Timer B */
 #define TIMER_ANY -1UL

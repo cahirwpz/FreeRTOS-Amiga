@@ -3,14 +3,10 @@
 
 #include <custom_regdef.h>
 
-typedef struct Custom *const Custom_t;
-
-#define CUSTOM ((volatile Custom_t)0xdff000)
-
-extern volatile Custom_t custom;
+extern struct Custom volatile custom;
 
 /* Macros below take or'ed DMAF_* flags. */
-#define EnableDMA(x) { custom->dmacon_ = DMAF_SETCLR | (x); }
-#define DisableDMA(x) { custom->dmacon_ = (x); }
+static inline void EnableDMA(uint16_t x) { custom.dmacon_ = DMAF_SETCLR | x; }
+static inline void DisableDMA(uint16_t x) { custom.dmacon_ = x; }
 
 #endif /* !_CUSTOM_H_ */

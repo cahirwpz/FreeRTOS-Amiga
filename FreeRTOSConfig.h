@@ -75,7 +75,6 @@ void vPortTrapHandler(struct TrapFrame *);
 
 /* For use by startup code. */
 void vPortDefineMemoryRegions(struct MemRegion *);
-void vPortSetupHardware(void);
 void vPortSetupExceptionVector(struct BootData *);
 
 /* Allocate chip memory, should be freed with vPortFree. */

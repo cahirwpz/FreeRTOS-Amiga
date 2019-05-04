@@ -8,27 +8,36 @@ PHDRS
   data   PT_LOAD FLAGS(6);      /* read-write */
   bss    PT_LOAD FLAGS(6);      /* read-write */
 }
+PROVIDE(ciaa = 0xbfe001);
+PROVIDE(ciab = 0xbfd000);
+PROVIDE(custom = 0xdff000);
 SECTIONS
 {
   .text 0: ALIGN(4)
   {
+    PROVIDE(_text = .);
     *(.text .text.*)
+    *(.rodata .rodata.*)
     . = ALIGN(4);
-  } : text
+    PROVIDE(_etext = .);
+  } :text
 
   .data : ALIGN(4)
   {
+    PROVIDE(_data = .);
     *(.data .data.*)
-    *(.rodata .rodata.*)
     . = ALIGN(4);
-  } : data
+    PROVIDE(_edata = .);
+  } :data
 
   .bss : ALIGN(4)
   {
+    PROVIDE(_bss = .);
     *(.bss .bss.*)
     *(COMMON)
     . = ALIGN(4);
-  } : bss
+    PROVIDE(_ebss = .);
+  } :bss
 
   /* Sections to be discarded */
   /DISCARD/ :

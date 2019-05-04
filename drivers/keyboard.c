@@ -201,7 +201,7 @@ void KeyboardInit(void) {
   /* Register keyboard interrupt. */
   AddIntServer(PortsChain, KeyboardInt);
   /* Set to input mode. */
-  BCLR(CIAA->ciacra, CIACRAB_SPMODE);
+  BCLR(ciaa.ciacra, CIACRAB_SPMODE);
   /* Enable keyboard interrupt.
    * The keyboard is attached to CIA-A serial port. */
   WriteICR(CIAA, CIAICRF_SETCLR | CIAICRF_SP);

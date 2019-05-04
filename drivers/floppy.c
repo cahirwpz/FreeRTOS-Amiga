@@ -38,10 +38,10 @@ void FloppyInit(unsigned aFloppyIOTaskPrio) {
   configASSERT(FloppyTimer != NULL);
 
   /* Set standard synchronization marker. */
-  custom->dsksync = DSK_SYNC;
+  custom.dsksync = DSK_SYNC;
 
   /* Standard settings for Amiga format disk floppies. */
-  custom->adkcon = ADKF_SETCLR | ADKF_MFMPREC | ADKF_WORDSYNC | ADKF_FAST;
+  custom.adkcon = ADKF_SETCLR | ADKF_MFMPREC | ADKF_WORDSYNC | ADKF_FAST;
 
   /* Handler that will wake up track reader task. */
   SetIntVec(DSKBLK, TrackTransferDone, NULL);
@@ -82,10 +82,8 @@ static int16_t TrackNum;
 #define STEP_SETTLE TIMER_MS(3)
 
 static void StepHeads(void) {
-  volatile uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
-
-  BCLR(*ciaprb, CIAB_DSKSTEP);
-  BSET(*ciaprb, CIAB_DSKSTEP);
+  BCLR(ciab.ciaprb, CIAB_DSKSTEP);
+  BSET(ciab.ciaprb, CIAB_DSKSTEP);
 
   WaitTimerSleep(FloppyTimer, STEP_SETTLE);
 
@@ -95,13 +93,11 @@ static void StepHeads(void) {
 #define DIRECTION_REVERSE_SETTLE TIMER_MS(18)
 
 static inline void HeadsStepDirection(int16_t inwards) {
-  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
-
   if (inwards) {
-    BCLR(*ciaprb, CIAB_DSKDIREC);
+    BCLR(ciab.ciaprb, CIAB_DSKDIREC);
     HeadDir = 2;
   } else {
-    BSET(*ciaprb, CIAB_DSKDIREC);
+    BSET(ciab.ciaprb, CIAB_DSKDIREC);
     HeadDir = -2;
   }
 
@@ -109,38 +105,30 @@ static inline void HeadsStepDirection(int16_t inwards) {
 }
 
 static inline void ChangeDiskSide(int16_t upper) {
-  uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
-
   if (upper) {
-    BCLR(*ciaprb, CIAB_DSKSIDE);
+    BCLR(ciab.ciaprb, CIAB_DSKSIDE);
     TrackNum++;
   } else {
-    BSET(*ciaprb, CIAB_DSKSIDE);
+    BSET(ciab.ciaprb, CIAB_DSKSIDE);
     TrackNum--;
   }
 }
 
 static inline void WaitDiskReady(void) {
-  volatile uint8_t *ciapra = (uint8_t *)&CIAA->ciapra;
-
-  while (*ciapra & CIAF_DSKRDY);
+  while (ciaa.ciapra & CIAF_DSKRDY);
 }
 
 static inline int HeadsAtTrack0() {
-  volatile uint8_t *ciapra = (uint8_t *)&CIAA->ciapra;
-
-  return !(*ciapra & CIAF_DSKTRACK0);
+  return !(ciaa.ciapra & CIAF_DSKTRACK0);
 }
 
 static void FloppyMotorOn(void) {
   if (MotorOn)
     return;
 
-  volatile uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
-
-  BSET(*ciaprb, CIAB_DSKSEL0);
-  BCLR(*ciaprb, CIAB_DSKMOTOR);
-  BCLR(*ciaprb, CIAB_DSKSEL0);
+  BSET(ciab.ciaprb, CIAB_DSKSEL0);
+  BCLR(ciab.ciaprb, CIAB_DSKMOTOR);
+  BCLR(ciab.ciaprb, CIAB_DSKSEL0);
 
   WaitDiskReady();
 
@@ -151,11 +139,9 @@ static void FloppyMotorOff(void) {
   if (!MotorOn)
     return;
 
-  volatile uint8_t *ciaprb = (uint8_t *)&CIAB->ciaprb;
-
-  BSET(*ciaprb, CIAB_DSKSEL0);
-  BSET(*ciaprb, CIAB_DSKMOTOR);
-  BCLR(*ciaprb, CIAB_DSKSEL0);
+  BSET(ciab.ciaprb, CIAB_DSKSEL0);
+  BSET(ciab.ciaprb, CIAB_DSKMOTOR);
+  BCLR(ciab.ciaprb, CIAB_DSKSEL0);
 
   MotorOn = 0;
 }
@@ -194,7 +180,7 @@ static void FloppyReader(__unused void *ptr) {
       WaitTimerSleep(FloppyTimer, DISK_SETTLE);
 
       /* Make sure the DMA for the disk is turned off. */
-      custom->dsklen = 0;
+      custom.dsklen = 0;
 
 #if DEBUG
       printf("[Floppy] Read track %d.\n", (int)fio.trackNum);
@@ -206,16 +192,16 @@ static void FloppyReader(__unused void *ptr) {
       EnableDMA(DMAF_DISK);
 
       /* Buffer in chip memory. */
-      custom->dskpt = (void *)fio.track;
+      custom.dskpt = (void *)fio.track;
 
       /* Write track size twice to initiate DMA transfer. */
-      custom->dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
-      custom->dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
+      custom.dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
+      custom.dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
 
       (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
       /* Disable DMA & interrupts. */
-      custom->dsklen = 0;
+      custom.dsklen = 0;
       DisableINT(INTF_DSKBLK);
       DisableDMA(DMAF_DISK);
 

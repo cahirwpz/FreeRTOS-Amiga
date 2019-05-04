@@ -20,7 +20,7 @@ typedef struct {
 static MouseData_t mouseData[1];
 
 static inline bool GetMouseX(MouseData_t *mouse, MouseEvent_t *event) {
-  int8_t xctr = custom->joy0dat & 0xff;
+  int8_t xctr = custom.joy0dat & 0xff;
   int8_t xrel = xctr - mouse->xctr;
   int16_t x = mouse->x;
 
@@ -46,7 +46,7 @@ static inline bool GetMouseX(MouseData_t *mouse, MouseEvent_t *event) {
 }
 
 static inline bool GetMouseY(MouseData_t *mouse, MouseEvent_t *event) {
-  int8_t yctr = custom->joy0dat >> 8;
+  int8_t yctr = custom.joy0dat >> 8;
   int8_t yrel = yctr - mouse->yctr;
   int16_t y = mouse->y;
 
@@ -74,9 +74,9 @@ static inline bool GetMouseY(MouseData_t *mouse, MouseEvent_t *event) {
 static inline uint8_t ReadButtonState(void) {
   uint8_t state = 0;
 
-  if (!(ciaa->ciapra & CIAF_GAMEPORT0))
+  if (!(ciaa.ciapra & CIAF_GAMEPORT0))
     state |= LMB_PRESSED;
-  if (!(custom->potinp & DATLY))
+  if (!(custom.potinp & DATLY))
     state |= RMB_PRESSED;
 
   return state;
@@ -138,8 +138,8 @@ void MouseInit(int16_t minX, int16_t minY, int16_t maxX, int16_t maxY) {
     .bottom = maxY,
     .x = minX,
     .y = minY,
-    .xctr = custom->joy0dat & 0xff,
-    .yctr = custom->joy0dat >> 8,
+    .xctr = custom.joy0dat & 0xff,
+    .yctr = custom.joy0dat >> 8,
     .button = ReadButtonState()
   };
 
