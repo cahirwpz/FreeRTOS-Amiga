@@ -46,19 +46,22 @@ Index: elf2hunk/elf2hunk.c
  	symname = (const char *)(hh[shsymtab->link]->data + sym.name);
  
          if (sym.shindex != SHN_XINDEX)
-@@ -586,7 +588,11 @@ static int relocate
+@@ -586,10 +588,14 @@ static int relocate
          }
  
  	D(bug("[ELF2HUNK]   shid %d, offset 0x%x: base 0x%x\n", (int)shid, (int)offset, (int)value));
 -        *(ULONG *)(h->data + offset) = htonl(value + ntohl(*(ULONG *)(h->data + offset)));
-+        *(ULONG *)(h->data + offset) = htonl(
-+            (eh->type == ET_REL) ?
-+                (value + ntohl(*(ULONG *)(h->data + offset))) :
-+                (value - sh[shid].addr));
-+
          if (shid == ~0) {
      	    h->relocs--;
      	    continue;
++        } else {
++            *(ULONG *)(h->data + offset) = htonl(
++                (eh->type == ET_REL) ?
++                    (value + ntohl(*(ULONG *)(h->data + offset))) :
++                    (value - sh[shid].addr));
+         }
+         hrel->shid = shid;
+         hrel->offset = offset;
 @@ -1093,3 +1099,5 @@ int main(int argc, char **argv)
  
      return copy(argv[1], argv[2], flags);
