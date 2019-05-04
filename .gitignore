@@ -51,6 +51,9 @@ tags
 etags
 cscope.out
 
+# Python files
+__pycache__
+
 # Backup files
 *.orig
 *~
