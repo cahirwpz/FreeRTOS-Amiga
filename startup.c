@@ -1,6 +1,7 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <custom.h>
 #include <cpu.h>
+#include <cia.h>
 #include <boot.h>
 #include <stdio.h>
 
@@ -15,9 +16,25 @@ void _start(BootData_t *aBootData) {
 
   CpuModel = aBootData->bd_cpumodel;
 
-  vPortSetupHardware();
   vPortSetupExceptionVector(aBootData);
   vPortDefineMemoryRegions(aBootData->bd_region);
+
+  /* CIA-A & CIA-B: Stop timers and return to default settings. */
+  CIAA->ciacra = 0;
+  CIAA->ciacrb = 0;
+  CIAB->ciacra = 0;
+  CIAB->ciacrb = 0;
+
+  /* CIA-A & CIA-B: Clear pending interrupts. */
+  SampleICR(CIAA, CIAICRF_ALL);
+  SampleICR(CIAB, CIAICRF_ALL);
+
+  /* CIA-A & CIA-B: Disable all interrupts. */
+  WriteICR(CIAA, CIAICRF_ALL);
+  WriteICR(CIAB, CIAICRF_ALL);
+
+  /* Enable master bit in DMACON */
+  EnableDMA(DMAF_MASTER);
 
   main();
 }

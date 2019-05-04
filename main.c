@@ -19,9 +19,6 @@ static void vGreenTask(__unused void *data) {
   }
 }
 
-  }
-}
-
 static void SystemClockTickHandler(__unused void *data) {
   /* Increment the system timer value and possibly preempt. */
   uint32_t ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
