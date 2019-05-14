@@ -40,35 +40,62 @@ class Registers():
         return '{' + ' '.join(regs) + '}'
 
 
-class UaeCommandsMixin():
-    @staticmethod
-    def _parse_cpu_state(lines):
-        # D0 000424B9   D1 00000000   D2 00000000   D3 00000000
-        # D4 00000000   D5 00000000   D6 FFFFFFFF   D7 00000000
-        # A0 00CF6D1C   A1 00DC0000   A2 00D40000   A3 00000000
-        # A4 00D00000   A5 00FC0208   A6 00C00276   A7 00040000
-        # USP  00000000 ISP  00040000
-        # T=00 S=1 M=0 X=0 N=0 Z=1 V=0 C=0 IMASK=7 STP=0
-        # Prefetch fffc (ILLEGAL) 51c8 (DBcc) Chip latch 00000000
-        # 00FC0610 51c8 fffc                DBF .W D0,#$fffc == $00fc060e (F)
-        # Next PC: 00fc0614
-        lines = [line.strip() for line in lines]
-        if False:
-            for line in lines:
-                print(line)
-        regs = Registers()
-        for l in lines[:5]:
-            l = l.split()
-            for n, v in zip(l[0::2], l[1::2]):
-                regs[n] = int(v, 16)
-        sr = lines[5].split()
-        T, S, M, X, N, Z, V, C, IMASK, STP = [f.split('=')[1] for f in sr]
-        SR_HI = '{:02b}{}{}0{:03b}'.format(int(T), S, M, int(IMASK))
-        SR_LO = '000{}{}{}{}{}'.format(X, N, Z, V, C)
-        regs['SR'] = int(SR_HI + SR_LO, 2)
-        regs['PC'] = int(lines[7].split()[0], 16)
-        return regs
+def ParseStatusRegister(line):
+    T, S, M, X, N, Z, V, C, IMASK, STP = \
+            [f.split('=')[1] for f in line.split()]
+    SR_HI = '{:02b}{}{}0{:03b}'.format(int(T), S, M, int(IMASK))
+    SR_LO = '000{}{}{}{}{}'.format(X, N, Z, V, C)
+    return int(SR_HI + SR_LO, 2)
 
+
+def ParseProcessorState(lines):
+    regs = Registers()
+    lines = [line.strip() for line in lines]
+
+    # Read general purpose and supervisor registers,
+    # until you hit Status Register info.
+    # 'D0 000424B9   D1 00000000   D2 00000000   D3 00000000'
+    # 'D4 00000000   D5 00000000   D6 FFFFFFFF   D7 00000000'
+    # 'A0 00CF6D1C   A1 00DC0000   A2 00D40000   A3 00000000'
+    # 'A4 00D00000   A5 00FC0208   A6 00C00276   A7 00040000'
+    # 'USP  00000000 ISP  00040000'
+    while not lines[0].startswith('T='):
+        l = lines.pop(0).split()
+        for n, v in zip(l[0::2], l[1::2]):
+            regs[n] = int(v, 16)
+
+    # We are at line starting with 'T=' so read Status Register.
+    # 'T=00 S=1 M=0 X=0 N=0 Z=1 V=0 C=0 IMASK=7 STP=0'
+    regs['SR'] = ParseStatusRegister(lines.pop(0))
+
+    # floating point unit registers follow?
+    while lines[0].startswith('FP'):
+        lines.pop(0)
+
+    # Only for 68000:
+    # 'Prefetch fffc (ILLEGAL) 51c8 (DBcc) Chip latch 00000000'
+    if lines[0].startswith('Prefetch'):
+        lines.pop(0)
+
+    # Only for 68030 + MMU:
+    # 'SRP: 0 CRP: 800000020781C000'
+    # 'TT0: 00000000 TT1: 00000000 TC: 80C07760'
+    if lines[0].startswith('SRP:'):
+        lines.pop(0)
+
+    if lines[0].startswith('TT0:'):
+        lines.pop(0)
+
+    # '00FC0610 51c8 fffc  DBF .W D0,#$fffc == $00fc060e (F)'
+    regs['PC'] = int(lines.pop(0).split()[0], 16)
+
+    # 'Next PC: 00fc0614'
+    assert(lines.pop(0).startswith('Next PC'))
+
+    return regs
+
+
+class UaeCommandsMixin():
     def resume(self, addr=None):
         # {g [<address>]} Start execution at the current address or <address>.
         cmd = 'g'
@@ -135,7 +162,7 @@ class UaeCommandsMixin():
 
     async def read_registers(self):
         # {r} Dump state of the CPU.
-        return self._parse_cpu_state(await self.communicate('r'))
+        return ParseProcessorState(await self.communicate('r'))
 
     async def write_register(self, regname, value):
         # {r <reg> <value>} Modify CPU registers (Dx,Ax,USP,ISP,VBR,...).
@@ -172,7 +199,7 @@ class UaeCommandsMixin():
             line = lines.pop(0)
             data['exception'] = int(line[10:].split(',')[0])
         # just processor state
-        data['regs'] = self._parse_cpu_state(lines)
+        data['regs'] = ParseProcessorState(lines)
         return data
 
     async def kill(self):
