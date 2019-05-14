@@ -32,6 +32,8 @@ static xTaskHandle red_handle;
 static xTaskHandle green_handle;
 
 int main(void) {
+  portNOP(); /* Breakpoint for simulator. */
+
   AddIntServer(VertBlankChain, SystemClockTick);
 
   xTaskCreate(vRedTask, "red", configMINIMAL_STACK_SIZE, NULL,
