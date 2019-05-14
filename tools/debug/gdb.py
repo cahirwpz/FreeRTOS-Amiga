@@ -163,7 +163,8 @@ class GdbStub():
             return await self.handle_query(packet[1:])
         elif packet[0] == 'D':
             self.gdb.send_ack('OK')
-            return False
+            self.uae.resume()
+            raise asyncio.CancelledError
         elif packet[0] == 'H':
             # Set thread for subsequent operations
             op = packet[1]
@@ -238,7 +239,6 @@ class GdbStub():
         assert await self.gdb.ack()
         self.uae.interrupt()
         stopdata = await self.uae.prologue()
-        print(stopdata)
 
         running = True
 
