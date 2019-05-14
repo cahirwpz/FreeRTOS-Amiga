@@ -18,7 +18,7 @@ async def UaeLaunch(loop, args):
             await asyncio.create_subprocess_exec(
                 args.emulator, *args.params,
                 stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE))
 
     # Call FS-UAE debugger on CTRL+C

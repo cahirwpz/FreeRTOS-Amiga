@@ -229,8 +229,10 @@ async def UaeDebugger(uaedbg):
                 lines = await uaedbg.recv()
         except asyncio.CancelledError:
             pass
+        except EOFError:
+            pass
         except Exception as ex:
-            logging.exception('Debugger bug!')
+            print('Debugger bug!')
     print('Quitting...')
 
 
