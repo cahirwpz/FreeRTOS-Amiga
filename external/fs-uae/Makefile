@@ -58,9 +58,13 @@ fs-uae/.install: fs-uae/.build
 	cd fs-uae && $(MAKE) install
 	touch $@
 
+force-build:
+	$(RM) fs-uae/.build fs-uae/.install
+	$(MAKE) install
+
 clean:
 	cd fs-uae && rm -f .install .build .configure
 	$(MAKE) -C fs-uae clean
 	-quilt pop -a
 
-.PHONY: patch configure build install
+.PHONY: patch configure build install force-build

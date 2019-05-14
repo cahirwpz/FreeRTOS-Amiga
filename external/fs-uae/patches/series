@@ -1,4 +1,5 @@
 break-on-illegal.diff
 break-on-sigint.diff
+break-at-start.diff
 debugger-on-stderr.diff
 fix-without-ppc.diff
