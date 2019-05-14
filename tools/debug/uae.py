@@ -83,6 +83,31 @@ class UaeCommandsMixin():
             cmd +=  ' ' + str(insn)
         self.send(cmd)
 
+    async def memory_map(self):
+        lines = await self.communicate('dm')
+        regions = []
+        for line in lines:
+            line = line.strip()
+            if line.startswith('='):
+                continue
+            start, _1, _2, size, desc = line.split(maxsplit=4)
+            segment, blocks = _1.split('/')
+            if int(blocks) == 0:
+                continue
+            if 'memory' in desc:
+                desc = 'ram'
+            elif 'ROM' in desc:
+                desc = 'rom'
+            else:
+                desc = '???'
+            assert segment[-1] == 'K'
+            blocks = int(blocks)
+            start = int(start, 16)
+            segment = int(segment[:-1]) * 1024 // blocks
+            for i in range(blocks):
+                regions.append((start + segment * i, segment, desc))
+        return regions
+
     async def read_memory(self, addr, length):
         # {m <address> [<lines>]} Memory dump starting at <address>.
         lines = await self.communicate('m %x %d' % (addr, (length + 15) / 16))

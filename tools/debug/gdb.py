@@ -29,6 +29,12 @@ feature_xml = """<?xml version="1.0"?>
 </feature>
 </target>"""
 
+memory_map_xml = """<?xml version="1.0"?>
+<!DOCTYPE memory-map PUBLIC "+//IDN gnu.org//DTD GDB Memory Map V1.0//EN" "http://sourceware.org/gdb/gdb-memory-map.dtd">
+<memory-map>
+{}
+</memory-map>"""
+
 
 class GdbConnection():
     def __init__(self, reader, writer):
@@ -122,8 +128,17 @@ class GdbStub():
             else:
                 self.gdb.send_ack('')
         elif packet.startswith('Supported'):
-            self.gdb.send_ack(
-                    'PacketSize=4096;qXfer:features:read+;hwbreak+')
+            supported = ['PacketSize=4096', 'qXfer:features:read+',
+                         'qXfer:memory-map:read+', 'hwbreak+']
+            self.gdb.send_ack(';'.join(supported))
+        elif packet.startswith('Xfer:memory-map:read:'):
+            memmap = await self.uae.memory_map()
+            entries = []
+            for start, length, desc in memmap:
+                entries.append('<memory type="{}" start="{}" length="{}"/>'
+                               .format(desc, hex(start), hex(length)))
+            layout = '\n'.join(entries)
+            self.gdb.send_ack('l' + memory_map_xml.format(layout))
         elif packet.startswith('Xfer:features:read:'):
             self.gdb.send_ack('l' + feature_xml)
         elif packet == 'TStatus':
