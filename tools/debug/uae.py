@@ -110,6 +110,10 @@ class UaeCommandsMixin():
             cmd +=  ' ' + str(insn)
         self.send(cmd)
 
+    def break_opcode(self, opcode):
+        # {fi <opcode>} Step forward until PC points to <opcode>.
+        self.send('fi {:04x}'.format(int(opcode, 16)))
+
     async def memory_map(self):
         lines = await self.communicate('dm')
         regions = []
