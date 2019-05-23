@@ -1,0 +1,12 @@
+Index: fs-uae/fs-uae/src/debug.cpp
+===================================================================
+--- fs-uae.orig/fs-uae/src/debug.cpp
++++ fs-uae/fs-uae/src/debug.cpp
+@@ -3219,6 +3219,7 @@ static void memwatch (TCHAR **c)
+ 		mwn->access_mask = MW_MASK_CPU_D_R | MW_MASK_CPU_D_W | MW_MASK_CPU_I;
+ 	if (mwn->frozen && mwn->rwi == 0)
+ 		mwn->rwi = 3;
++	console_out_f (_T("Memwatch %d added\n"), num);
+ 	memwatch_setup ();
+ 	memwatch_dump (num);
+ }
