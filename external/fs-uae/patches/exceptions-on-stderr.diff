@@ -1,3 +1,5 @@
+Index: fs-uae/fs-uae/src/debug.cpp
+===================================================================
 --- fs-uae.orig/fs-uae/src/debug.cpp
 +++ fs-uae/fs-uae/src/debug.cpp
 @@ -4836,7 +4836,7 @@ static bool debug_line (TCHAR *input)
@@ -9,6 +11,8 @@
  				debug_illegal = debug_illegal_mask ? 1 : 0;
  			} else {
  				addr = 0xffffffff;
+Index: fs-uae/fs-uae/src/newcpu.cpp
+===================================================================
 --- fs-uae.orig/fs-uae/src/newcpu.cpp
 +++ fs-uae/fs-uae/src/newcpu.cpp
 @@ -2191,6 +2191,7 @@ static void exception_debug (int nr)
@@ -19,7 +23,7 @@
  }
  
  #ifdef CPUEMU_13
-@@ -2993,7 +2994,7 @@ static void ExceptionX (int nr, uaecptr address)
+@@ -2993,7 +2994,7 @@ static void ExceptionX (int nr, uaecptr
  
  	if (debug_illegal && !in_rom (M68K_GETPC)) {
  		if (nr <= 63 && (debug_illegal_mask & ((uae_u64)1 << nr))) {

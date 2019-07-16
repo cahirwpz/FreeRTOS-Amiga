@@ -8,16 +8,20 @@ CFLAGS = -O2 -Wall
 PREFIX ?= $(PWD)/local
 GETTEXT_PATH = $(wildcard /usr/local/Cellar/gettext/*)
 
+VER = 3.0.0
+
 all: install
 
-fs-uae:
-	git clone "https://github.com/FrodeSolheim/fs-uae.git"
+fs-uae-$(VER).tar.gz:
+	$(CURL) -o $@ "https://fs-uae.net/stable/$(VER)/fs-uae-$(VER).tar.gz"
 
-fs-uae/configure:
-	cd fs-uae && ./bootstrap
+fs-uae: fs-uae-$(VER).tar.gz
+	tar xvzf $^
+	mv fs-uae-$(VER) fs-uae
+	touch $@
 
 patch: .pc/applied-patches
-.pc/applied-patches: fs-uae/configure
+.pc/applied-patches: fs-uae
 	quilt push -a
 
 configure: fs-uae/.configure
