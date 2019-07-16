@@ -24,7 +24,22 @@ feature_xml = """<?xml version="1.0"?>
   <reg name="fp" bitsize="32" type="data_ptr"/>
   <reg name="sp" bitsize="32" type="data_ptr"/>
 
-  <reg name="ps" bitsize="16"/>
+  <flags id="ps_flags" size="2">
+    <field name="T1" start="15" end="15"/>
+    <field name="T0" start="14" end="14"/>
+    <field name="S" start="13" end="13"/>
+    <field name="M" start="12" end="12"/>
+    <field name="IM2" start="10" end="10"/>
+    <field name="IM1" start="9" end="9"/>
+    <field name="IM0" start="8" end="8"/>
+    <field name="X" start="4" end="4"/>
+    <field name="N" start="3" end="3"/>
+    <field name="Z" start="2" end="2"/>
+    <field name="V" start="1" end="1"/>
+    <field name="C" start="0" end="0"/>
+  </flags>
+  <reg name="ps" bitsize="16" type="ps_flags"/>
+
   <reg name="pc" bitsize="32" type="code_ptr"/>
 </feature>
 </target>"""
