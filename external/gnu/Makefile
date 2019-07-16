@@ -16,7 +16,7 @@ TARGET = m68k-elf
 
 all: gcc-install gdb-install
 
-clean: gmp-clean mpfr-clean mpc-clean isl-clean binutils-clean gcc-clean
+clean: gmp-clean mpfr-clean mpc-clean isl-clean binutils-clean gcc-clean gdb-clean
 	$(RM) -r host
 	$(RM) *~
 

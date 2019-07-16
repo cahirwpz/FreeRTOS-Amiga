@@ -52,8 +52,8 @@ run-rom: a500rom.bin freertos.adf
 	./launch -r a500rom.bin -f freertos.adf
 
 clean-here:
-	$(RM) bootloader.bin
-	$(RM) *.adf *.exe *~
+	$(RM) *.adf *.bin *.elf *.map *.rom
+	$(RM) *.o *~
 	$(RM) cscope.out etags tags
 
 .PHONY: toolchain run cscope tags

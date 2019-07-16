@@ -1,7 +1,7 @@
 PREFIX = $(TOPDIR)/toolchain
 BINDIR = $(PREFIX)/bin
 
-CC = $(BINDIR)/m68k-elf-gcc
+CC = $(BINDIR)/m68k-elf-gcc -ggdb
 AS = $(BINDIR)/vasm
 LD = $(BINDIR)/m68k-elf-ld
 AR = $(BINDIR)/m68k-elf-ar
