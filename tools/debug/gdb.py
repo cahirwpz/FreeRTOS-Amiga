@@ -45,7 +45,7 @@ class GdbConnection():
     def chksum(packet):
         return sum(ord(c) for c in packet) & 255
 
-    async def ack(self):
+    async def recv_ack(self):
         # read a character
         data = await self.reader.read(1)
         print("(gdb) <- {}".format(data))
@@ -56,34 +56,36 @@ class GdbConnection():
 
         return data == b'+'
 
-    async def wait(self):
+    async def recv_break(self):
         data = await self.reader.read(1)
         print("(gdb) <- {}".format(data))
         assert data == b'\x03'
 
-    async def recv(self):
-        # read first character
-        data = await self.reader.read(1)
+    async def recv_packet(self):
+        packet = None
 
-        # end of stream ?
-        if not data:
-            return ''
+        while not packet or self.reader._buffer:
+            # read first character
+            data = await self.reader.read(1)
 
-        # packet start marker ?
-        if data != b'$':
-            raise ValueError(data)
+            # end of stream ?
+            if not data:
+                return ''
 
-        # read packet and decode it
-        raw_packet = await self.reader.readuntil(b'#')
-        packet = raw_packet.decode()[:-1]
-        raw_chksum = await self.reader.read(2)
-        chksum = int(raw_chksum.decode(), 16)
-        print("(gdb) <- '{}'".format(packet))
+            # packet start marker ?
+            if data != b'$':
+                raise ValueError(data)
 
-        # check if check sum matches
-        if chksum != self.chksum(packet):
-            self.send_nack()
-            return None
+            # read packet and decode it
+            raw_packet = await self.reader.readuntil(b'#')
+            packet = raw_packet.decode()[:-1]
+            raw_chksum = await self.reader.read(2)
+            chksum = int(raw_chksum.decode(), 16)
+            print("(gdb) <- '{}'".format(packet))
+
+            # check if check sum matches
+            if chksum != self.chksum(packet):
+                raise ValueError('Packet checksum is invalid!')
 
         return packet
 
@@ -287,8 +289,7 @@ class GdbStub():
         return True
 
     async def run(self):
-        assert await self.gdb.ack()
-        self.uae.interrupt()
+        assert await self.gdb.recv_ack()
         stopdata = await self.uae.prologue()
 
         running = True
@@ -297,16 +298,16 @@ class GdbStub():
             interactive = True
 
             while interactive:
-                packet = await self.gdb.recv()
+                packet = await self.gdb.recv_packet()
                 if not packet:
                     return
 
                 interactive = await self.handle_packet(packet)
                 if interactive:
-                    assert await self.gdb.ack()
+                    assert await self.gdb.recv_ack()
 
             uae_stop = asyncio.create_task(self.uae.prologue())
-            gdb_wait = asyncio.create_task(self.gdb.wait())
+            gdb_wait = asyncio.create_task(self.gdb.recv_break())
 
             done, pending = await asyncio.wait(
                     {uae_stop, gdb_wait}, return_when=asyncio.FIRST_COMPLETED)
@@ -336,4 +337,4 @@ class GdbStub():
             dump = ';'.join('{:x}:{}'.format(num, regs.as_hex(name))
                             for num, name in enumerate(self.__regs__))
             self.gdb.send('T05;{};'.format(dump))
-            await self.gdb.ack()
+            await self.gdb.recv_ack()

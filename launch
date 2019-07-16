@@ -34,13 +34,18 @@ class FSUAE(Launchable):
     def __init__(self):
         super().__init__('fs-uae', 'tools/uaedbg.py')
 
-    def configure(self, floppy=None, rom=None):
-        self.options = ['-e', 'toolchain/bin/fs-uae', '-g', '--']
+    def configure(self, floppy=None, rom=None, debug=False):
+        self.options = ['-e', 'toolchain/bin/fs-uae']
+        if debug:
+            self.options.append('-g')
+        # Now options for FS-UAE.
+        self.options.append('--')
         if floppy:
             self.options.append('--floppy_drive_0=' + os.path.realpath(floppy))
         if rom:
             self.options.append('--kickstart_file=' + os.path.realpath(rom))
-        self.options.append('--use_debugger=1')
+        if debug:
+            self.options.append('--use_debugger=1')
         self.options.append(os.path.realpath('Config.fs-uae'))
 
 
@@ -80,7 +85,9 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--floppy', metavar='ADF', type=str,
                         help='Floppy disk image in ADF format.')
     parser.add_argument('-e', '--elf', metavar='ELF', type=str,
-                        help='Provide ELF executable file for gdb debugger.')
+                        help='Provide ELF executable file for GDB debugger.')
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='Run the program under GDB debugger control.')
     args = parser.parse_args()
 
     # Check if floppy disk image file exists
@@ -92,11 +99,11 @@ if __name__ == '__main__':
         raise SystemExit('%s: file does not exist!' % args.rom)
 
     # Check if ELF executable exists.
-    if args.elf and not os.path.isfile(args.elf):
+    if args.debug and not os.path.isfile(args.elf):
         raise SystemExit('%s: file does not exist!' % args.elf)
 
     uae = FSUAE()
-    uae.configure(floppy=args.floppy, rom=args.rom)
+    uae.configure(floppy=args.floppy, rom=args.rom, debug=args.debug)
 
     ser_port = SOCAT('serial')
     ser_port.configure(tcp_port=8000)
@@ -121,7 +128,8 @@ if __name__ == '__main__':
         uae.start(session)
         ser_port.start(session)
         par_port.start(session)
-        debugger.start(session)
+        if args.debug:
+            debugger.start(session)
 
         session.kill_window(':0')
         session.select_window(par_port.name)

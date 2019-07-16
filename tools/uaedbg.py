@@ -6,6 +6,7 @@ import asyncio.subprocess
 import logging
 import signal
 import sys
+import traceback
 
 from prompt_toolkit.eventloop import use_asyncio_event_loop
 from debug.uae import UaeDebugger, UaeProcess
@@ -29,8 +30,8 @@ async def UaeLaunch(loop, args):
     async def GdbClient(reader, writer):
         try:
             await GdbStub(GdbConnection(reader, writer), uaeproc).run()
-        except Exception as ex:
-            print(ex)
+        except:
+            traceback.print_exc()
 
     async def GdbListen():
         await uaeproc.prologue()
