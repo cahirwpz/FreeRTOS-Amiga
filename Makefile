@@ -46,10 +46,10 @@ toolchain:
 	make -C external/fs-uae PREFIX=$(PWD)/toolchain
 
 run-floppy: freertos.adf
-	./launch -f freertos.adf
+	./launch -f freertos.adf -e freertos.elf
 
 run-rom: a500rom.bin freertos.adf
-	./launch -r a500rom.bin -f freertos.adf
+	./launch -r a500rom.bin -e freertos.elf -f freertos.adf
 
 clean-here:
 	$(RM) *.adf *.bin *.elf *.map *.rom

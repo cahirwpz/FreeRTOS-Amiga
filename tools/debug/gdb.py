@@ -113,7 +113,7 @@ class GdbStub():
     def __init__(self, gdb, uae):
         self.gdb = gdb
         self.uae = uae
-        self.bp_set = set()
+        self.brks = set()
 
     async def handle_query(self, packet):
         if packet == 'C':
@@ -190,6 +190,10 @@ class GdbStub():
             regs = await self.uae.read_registers()
             dump = ''.join(regs.as_hex(name) for name in self.__regs__)
             self.gdb.send_ack(dump)
+        elif packet == 'G':
+            # Write general registers.
+            # TODO {G XX…XX}
+            self.gdb.send_ack('E00')
         elif packet == 'c':
             # Continue.
             self.uae.resume()
@@ -203,28 +207,66 @@ class GdbStub():
         elif packet[0] == 'p':
             # Read the value of register n; n is in hex.
             self.gdb.send_ack('DEAD{:04X}'.format(int(packet[1:], 16)))
+        elif packet[0] == 'P':
+            # Write register n… with value r….
+            # TODO {P n…=r…}
+            self.gdb.send_ack('E00')
         elif packet[0] == 'm':
             # Read length addressable memory units starting at address
             # addr.
             addr, length = map(lambda x: int(x, 16), packet[1:].split(','))
             self.gdb.send_ack(await self.uae.read_memory(addr, length))
+        elif packet[0] == 'M':
+            # Write length addressable memory units starting at address addr.
+            # TODO {M addr,length:XX…}
+            self.gdb.send_ack('E00')
         elif packet == 'vCont?':
             self.gdb.send_ack('vCont:')
-        elif packet.startswith('z0'):
-            # Remove a software breakpoint at address _addr_ of type _kind_.
-            addr, kind = packet[3:].split(',')
-            if addr in self.bp_set:
-                self.bp_set.remove(addr)
-                await self.uae.remove_hwbreak(int(addr, 16))
+        elif packet.startswith('z'):
+            # Remove _type_ breakpoint/watchpoint starting at _addr_ of _kind_.
+            brktype = packet[1]
+            brkid = packet[1:]
+            addr, kind = map(lambda x: int(x, 16), packet[3:].split(','))
+            if brkid in self.brks:
+                self.brks.remove(brkid)
+                if brktype == '0' or brktype == '1':
+                    # Software or hardware breakpoint.
+                    await self.uae.remove_breakpoint(addr)
+                elif brktype == '2':
+                    # Write watchpoint.
+                    await self.uae.remove_watchpoint(addr, kind, 'W')
+                elif brktype == '3':
+                    # Read watchpoint.
+                    await self.uae.remove_watchpoint(addr, kind, 'R')
+                elif brktype == '4':
+                    # Access watchpoint.
+                    await self.uae.remove_watchpoint(addr, kind)
+                else:
+                    raise NotImplementedError(brktype)
                 self.gdb.send_ack('OK')
             else:
                 self.gdb.send_ack('E01')
-        elif packet.startswith('Z0'):
+        elif packet.startswith('Z'):
             # Insert a software breakpoint at address _addr_ of type _kind_.
-            addr, kind = packet[3:].split(',')
-            if addr not in self.bp_set:
-                self.bp_set.add(addr)
-                await self.uae.insert_hwbreak(int(addr, 16))
+            brktype = packet[1]
+            brkid = packet[1:]
+            addr, kind = map(lambda x: int(x, 16), packet[3:].split(','))
+            if brkid not in self.brks:
+                self.brks.add(brkid)
+                if brktype == '0' or brktype == '1':
+                    # Software or hardware breakpoint.
+                    await self.uae.insert_breakpoint(addr)
+                elif brktype == '2':
+                    # Write watchpoint.
+                    await self.uae.insert_watchpoint(addr, kind, 'W')
+                elif brktype == '3':
+                    # Read watchpoint.
+                    await self.uae.insert_watchpoint(addr, kind, 'R')
+                elif brktype == '4':
+                    # Access watchpoint.
+                    await self.uae.insert_watchpoint(addr, kind)
+                else:
+                    raise NotImplementedError(brktype)
                 self.gdb.send_ack('OK')
             else:
                 self.gdb.send_ack('E01')
@@ -233,20 +275,14 @@ class GdbStub():
             # number of addressable memory units length.
             # TODO
             self.gdb.send_ack('OK')
+        elif packet[0] == 'R':
+            # Restart the program being debugged. The XX is ignored.
+            # TODO {R XX}
+            self.gdb.send_ack('E00')
         elif packet[0] == 'v':
             # The correct reply to an unknown 'v' packet is to return the
             # empty string.
             self.gdb.send_ack('')
-
-        # TODO
-        # {G XX…XX}
-        #   Write general registers.
-        # {M addr,length:XX…}
-        #   Write length addressable memory units starting at address addr.
-        # {P n…=r…}
-        #   Write register n… with value r….
-        # {R XX}
-        #   Restart the program being debugged. The XX is ignored.
 
         return True
 

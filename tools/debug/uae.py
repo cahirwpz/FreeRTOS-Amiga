@@ -164,6 +164,10 @@ class UaeCommandsMixin():
             hexbytes.append(byte)
         await self.communicate('W ' + ' '.join(hexbytes))
 
+    # W <address> <values[.x] separated by space> Write into Amiga memory.
+    # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]] (read/write/opcode/freeze/mustchange).
+    #                    Add/remove memory watchpoints.
+
     async def read_registers(self):
         # {r} Dump state of the CPU.
         return ParseProcessorState(await self.communicate('r'))
@@ -172,12 +176,22 @@ class UaeCommandsMixin():
         # {r <reg> <value>} Modify CPU registers (Dx,Ax,USP,ISP,VBR,...).
         await self.communicate('r {} {:x}'.format(regname, value))
 
-    async def insert_hwbreak(self, addr):
+    async def insert_breakpoint(self, addr):
         # {f <address>} Add/remove breakpoint.
         lines = await self.communicate('f %X' % addr)
         assert lines and lines[0] == 'Breakpoint added'
 
-    async def remove_hwbreak(self, addr):
+    async def remove_breakpoint(self, addr):
+        # {f <address>} Add/remove breakpoint.
+        lines = await self.communicate('f %X' % addr)
+        assert lines and lines[0] == 'Breakpoint removed'
+
+    async def insert_watchpoint(self, addr, size, kind=''):
+        # {f <address>} Add/remove breakpoint.
+        lines = await self.communicate('f %X' % addr)
+        assert lines and lines[0] == 'Breakpoint added'
+
+    async def remove_watchpoint(self, addr):
         # {f <address>} Add/remove breakpoint.
         lines = await self.communicate('f %X' % addr)
         assert lines and lines[0] == 'Breakpoint removed'

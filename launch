@@ -32,14 +32,15 @@ class Launchable():
 
 class FSUAE(Launchable):
     def __init__(self):
-        super().__init__('fs-uae', 'toolchain/bin/fs-uae')
+        super().__init__('fs-uae', 'tools/uaedbg.py')
 
     def configure(self, floppy=None, rom=None):
-        self.options = ['--stdout=1']
+        self.options = ['-e', 'toolchain/bin/fs-uae', '-g', '--']
         if floppy:
             self.options.append('--floppy_drive_0=' + os.path.realpath(floppy))
         if rom:
             self.options.append('--kickstart_file=' + os.path.realpath(rom))
+        self.options.append('--use_debugger=1')
         self.options.append(os.path.realpath('Config.fs-uae'))
 
 
@@ -54,6 +55,23 @@ class SOCAT(Launchable):
             'STDIO', 'tcp:localhost:{},retry,forever'.format(tcp_port)]
 
 
+class GDB(Launchable):
+    def __init__(self):
+        super().__init__('gdb', './toolchain/bin/m68k-elf-gdb')
+        # gdbtui & cgdb output is garbled if there is no delay
+        self.cmd = 'sleep 0.5 && ' + self.cmd
+
+    def configure(self, program=''):
+        self.options += ['-ex=set prompt \033[35;1m(gdb) \033[0m']
+        self.options += [
+            '-iex=set auto-load safe-path {}/'.format(os.getcwd()),
+            '-ex=set tcp connect-timeout 30',
+            '-ex=target remote localhost:8888',
+            '--nh',
+            '--silent',
+            program]
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Launch FreeRTOS kernel in FS-UAE emulator.')
@@ -61,6 +79,8 @@ if __name__ == '__main__':
                         help='Replace Amiga Kickstart with provided ROM.')
     parser.add_argument('-f', '--floppy', metavar='ADF', type=str,
                         help='Floppy disk image in ADF format.')
+    parser.add_argument('-e', '--elf', metavar='ELF', type=str,
+                        help='Provide ELF executable file for gdb debugger.')
     args = parser.parse_args()
 
     # Check if floppy disk image file exists
@@ -71,6 +91,10 @@ if __name__ == '__main__':
     if args.rom and not os.path.isfile(args.rom):
         raise SystemExit('%s: file does not exist!' % args.rom)
 
+    # Check if ELF executable exists.
+    if args.elf and not os.path.isfile(args.elf):
+        raise SystemExit('%s: file does not exist!' % args.elf)
+
     uae = FSUAE()
     uae.configure(floppy=args.floppy, rom=args.rom)
 
@@ -79,6 +103,9 @@ if __name__ == '__main__':
 
     par_port = SOCAT('parallel')
     par_port.configure(tcp_port=8001)
+
+    debugger = GDB()
+    debugger.configure(args.elf)
 
     subprocess.run(['tmux', '-f', TMUX_CONF, '-L', SOCKET, 'start-server'])
 
@@ -94,6 +121,7 @@ if __name__ == '__main__':
         uae.start(session)
         ser_port.start(session)
         par_port.start(session)
+        debugger.start(session)
 
         session.kill_window(':0')
         session.select_window(par_port.name)

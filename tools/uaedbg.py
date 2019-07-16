@@ -12,6 +12,9 @@ from debug.uae import UaeDebugger, UaeProcess
 from debug.gdb import GdbConnection, GdbStub
 
 
+BREAK = 0xCF47  # no-op: 'exg.l d7,d7'
+
+
 async def UaeLaunch(loop, args):
     # Create the subprocess, redirect the standard I/O to respective pipes
     uaeproc = UaeProcess(
@@ -21,11 +24,7 @@ async def UaeLaunch(loop, args):
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.PIPE))
 
-    # Call FS-UAE debugger on CTRL+C
-    # loop.add_signal_handler(signal.SIGINT, uaeproc.interrupt)
-    loop.add_signal_handler(signal.SIGINT, uaeproc.terminate)
-
-    # prompt_task = asyncio.ensure_future(UaeDebugger(uaeproc))
+    gdbserver = None
 
     async def GdbClient(reader, writer):
         try:
@@ -33,12 +32,26 @@ async def UaeLaunch(loop, args):
         except Exception as ex:
             print(ex)
 
-    gdbserver = await asyncio.start_server(
-            GdbClient, host='127.0.0.1', port=8888)
+    async def GdbListen():
+        await uaeproc.prologue()
+        uaeproc.break_opcode('{:04x}'.format(BREAK))
+        print('Listening for gdb connection at localhost:8888')
+        gdbserver = await asyncio.start_server(
+                GdbClient, host='127.0.0.1', port=8888)
+
+    if args.gdbserver:
+        # Terminate FS-UAE on CTRL+C
+        loop.add_signal_handler(signal.SIGINT, uaeproc.terminate)
+        await GdbListen()
+    else:
+        # Call FS-UAE debugger on CTRL+C
+        loop.add_signal_handler(signal.SIGINT, uaeproc.interrupt)
+        prompt_task = asyncio.ensure_future(UaeDebugger(uaeproc))
 
     await uaeproc.wait()
 
-    gdbserver.close()
+    if gdbserver:
+        gdbserver.close()
 
 
 if __name__ == '__main__':
@@ -60,6 +73,8 @@ if __name__ == '__main__':
         description='Run FS-UAE with enabled console debugger.')
     parser.add_argument('-e', '--emulator', type=str, default='fs-uae',
                         help='Path to FS-UAE emulator binary.')
+    parser.add_argument('-g', '--gdbserver', action='store_true',
+                        help='Configure and run gdbserver on localhost:8888')
     parser.add_argument('params', nargs='*', type=str,
                         help='Parameters passed to FS-UAE emulator.')
     args = parser.parse_args()
