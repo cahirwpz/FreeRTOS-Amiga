@@ -71,6 +71,11 @@ uint32_t ulPortSetIPL(uint32_t);
 /* Halt the processor by masking all interrupts and waiting for NMI. */
 #define portHALT() { asm volatile("\tstop\t#0x2700\n"); }
 
+/* Instruction that effectively is a no-op, but its opcode is different from
+ * real nop instruction. Useful for introducing transparent breakpoints that
+ * are only understood by simulator. */
+#define portNOP() { asm volatile("exg %%d7,%%d7":::); }
+
 /* Read Vector Base Register (68010 and above only) */
 static inline void *portGetVBR(void) {
   void *vbr;

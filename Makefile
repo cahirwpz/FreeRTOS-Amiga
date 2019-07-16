@@ -46,14 +46,20 @@ toolchain:
 	make -C external/fs-uae PREFIX=$(PWD)/toolchain
 
 run-floppy: freertos.adf
-	./launch -f freertos.adf
+	./launch -f freertos.adf -e freertos.elf
 
 run-rom: a500rom.bin freertos.adf
-	./launch -r a500rom.bin -f freertos.adf
+	./launch -r a500rom.bin -e freertos.elf -f freertos.adf
+
+debug-floppy: freertos.adf
+	./launch -d -f freertos.adf -e freertos.elf
+
+debug-rom: a500rom.bin freertos.adf
+	./launch -d -r a500rom.bin -e freertos.elf -f freertos.adf
 
 clean-here:
-	$(RM) bootloader.bin
-	$(RM) *.adf *.exe *~
+	$(RM) *.adf *.bin *.elf *.map *.rom
+	$(RM) *.o *~
 	$(RM) cscope.out etags tags
 
-.PHONY: toolchain run cscope tags
+.PHONY: toolchain debug-floppy debug-rom run-floppy run-rom cscope tags

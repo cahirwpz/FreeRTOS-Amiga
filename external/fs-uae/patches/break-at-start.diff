@@ -1,0 +1,24 @@
+--- fs-uae.orig/fs-uae/src/fs-uae/main.c
++++ fs-uae/fs-uae/src/fs-uae/main.c
+@@ -526,6 +526,10 @@ static void on_init(void)
+     fs_uae_configure_input();
+     fs_uae_configure_directories();
+ 
++    if (fs_config_true("use_debugger")) {
++        amiga_set_option("use_debugger", "yes");
++    }
++
+     if (fs_config_get_int("save_state_compression") == 0) {
+         amiga_set_save_state_compression(0);
+     }
+--- fs-uae.orig/fs-uae/src/od-fs/stubs.cpp
++++ fs-uae/fs-uae/src/od-fs/stubs.cpp
+@@ -188,7 +188,7 @@ void target_fixup_options (struct uae_prefs *p) {
+ }
+ 
+ int debuggable (void) {
+-    return 0;
++    return 1;
+ }
+ 
+ void logging_init(void) {
