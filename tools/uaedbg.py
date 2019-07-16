@@ -39,9 +39,10 @@ async def UaeLaunch(loop, args):
         gdbserver = await asyncio.start_server(
                 GdbClient, host='127.0.0.1', port=8888)
 
+    # Terminate FS-UAE when connection with terminal is broken
+    loop.add_signal_handler(signal.SIGHUP, uaeproc.terminate)
+
     if args.gdbserver:
-        # Terminate FS-UAE on CTRL+C
-        loop.add_signal_handler(signal.SIGINT, uaeproc.terminate)
         await GdbListen()
     else:
         # Call FS-UAE debugger on CTRL+C
