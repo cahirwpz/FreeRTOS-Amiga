@@ -15,13 +15,13 @@ all: install
 fs-uae-$(VER).tar.gz:
 	$(CURL) -o $@ "https://fs-uae.net/stable/$(VER)/fs-uae-$(VER).tar.gz"
 
-fs-uae: fs-uae-$(VER).tar.gz
+fs-uae/.unpack: fs-uae-$(VER).tar.gz
 	tar xvzf $^
 	mv fs-uae-$(VER) fs-uae
 	touch $@
 
 patch: .pc/applied-patches
-.pc/applied-patches: fs-uae
+.pc/applied-patches: fs-uae/.unpack
 	quilt push -a
 
 configure: fs-uae/.configure
@@ -68,7 +68,7 @@ force-build:
 
 clean:
 	cd fs-uae && rm -f .install .build .configure
-	$(MAKE) -C fs-uae clean
+	-$(MAKE) -C fs-uae clean
 	-quilt pop -a
 
 .PHONY: patch configure build install force-build

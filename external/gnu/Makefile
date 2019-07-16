@@ -7,7 +7,7 @@ GMP = gmp-6.1.2
 MPC = mpc-1.1.0
 BINUTILS = binutils-2.32
 GCC = gcc-8.3.0
-GDB = gdb-8.2.1
+GDB = gdb-8.3
 
 ROOTDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 HOSTDIR := $(ROOTDIR)/host
