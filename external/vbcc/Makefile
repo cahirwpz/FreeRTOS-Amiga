@@ -55,8 +55,9 @@ ndk: $(NDK).lha
 	touch $@
 
 ndk-install: ndk
-	mkdir -p "$(PREFIX)/$(TARGET)/include"
-	cp -r "ndk/Include/include_i/" "$(PREFIX)/$(TARGET)/include"
+	mkdir -p "$(PREFIX)/$(TARGET)"
+	rm -rf "$(PREFIX)/$(TARGET)/include"
+	cp -r "ndk/Include/include_i" "$(PREFIX)/$(TARGET)/include" 
 
 ndk-clean:
 	$(RM) -r ndk

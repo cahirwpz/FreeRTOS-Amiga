@@ -84,12 +84,12 @@ mpfr-clean:
 
 ### Library for the arithmetic of complex numbers
 
-$(MPC).tar.xz:
+$(MPC).tar.gz:
 	$(CURL) -o $@ "https://ftp.gnu.org/gnu/mpc/$(MPC).tar.gz"
 
 mpc-unpack: $(MPC)/.unpack
-$(MPC)/.unpack: $(MPC).tar.xz
-	tar xvJf $^
+$(MPC)/.unpack: $(MPC).tar.gz
+	tar xvzf $^
 	touch $@
 
 mpc-configure: $(MPC)/.configure

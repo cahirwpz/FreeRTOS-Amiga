@@ -13,7 +13,7 @@ elf2hunk.c:
 	$(CURL) -o $@ "https://repo.or.cz/AROS.git/blob_plain/HEAD:/tools/elf2hunk/elf2hunk.c"
 
 elf2hunk-patch: .pc/applied-patches
-.pc/applied-patches:
+.pc/applied-patches: elf2hunk.c
 	quilt push -a
 
 elf2hunk-unpatch: .pc/applied-patches
