@@ -1,0 +1,23 @@
+version: 2
+
+defaults: &defaults
+    working_directory: ~/FreeRTOS-Amiga
+    docker:
+      - image: cahirwpz/freertos-amiga:latest
+
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - run:
+          name: FreeRTOS for Amiga 500
+          command: 'make'
+      - store_artifacts:
+          path: /FreeRTOS-Amiga.tar.gz
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
