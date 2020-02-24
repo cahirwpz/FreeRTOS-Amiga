@@ -1,9 +1,0 @@
-binutils-*
-gcc-*
-gdb-*
-isl-*
-gmp-*
-mpfr-*
-mpc-*
-host
-local

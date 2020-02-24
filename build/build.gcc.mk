@@ -1,4 +1,4 @@
-PREFIX = $(TOPDIR)/toolchain
+PREFIX = /opt/FreeRTOS-Amiga
 BINDIR = $(PREFIX)/bin
 
 CC = $(BINDIR)/m68k-elf-gcc -ggdb
@@ -11,8 +11,7 @@ OBJCOPY = $(BINDIR)/m68k-elf-objcopy
 OBJDUMP = $(BINDIR)/m68k-elf-objdump
 ELF2HUNK = $(BINDIR)/elf2hunk
 
-ASFLAGS = -m68010 -quiet \
-	  -I$(TOPDIR)/toolchain/m68k-amigaos/include
+ASFLAGS = -m68010 -quiet -I$(PREFIX)/m68k-amigaos/include
 CFLAGS = -std=gnu11 $(OFLAGS) $(WFLAGS)
 OFLAGS = -m68010 -Wall -fomit-frame-pointer -Os -fno-common # -mpcrel
 WFLAGS = -Wall -Wno-builtin-declaration-mismatch
