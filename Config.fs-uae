@@ -1,4 +1,5 @@
 keep_aspect = 1
+governor_warning = 0
 fade_in_duration = 0
 fade_out_duration = 0
 accuracy = 1
