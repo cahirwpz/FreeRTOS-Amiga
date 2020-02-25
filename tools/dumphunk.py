@@ -288,7 +288,8 @@ class HunkHeader(Hunk):
         print('  hunks={0}, first={1}, last={2}'.format(self.hunks, self.first,
                                                         self.last))
         print('  residents  : ' + repr(self.residents))
-        print('  specifiers : ' + repr(self.specifiers))
+        print('  specifiers : [{}]'.format(
+            ', '.join(['{:08x}'.format(s) for s in self.specifiers])))
 
 
 class HunkExt(Hunk):

@@ -15,5 +15,7 @@
 #define BCLR(x, b) ((x) &= ~BIT(b))
 
 #define __unused __attribute__((unused))
+#define __datachip __attribute__((section(".datachip")))
+#define __bsschip __attribute__((section(".bsschip")))
 
 #endif /* !_CDEFS_H_ */
