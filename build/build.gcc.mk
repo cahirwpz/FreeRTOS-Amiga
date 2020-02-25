@@ -1,6 +1,8 @@
 PREFIX = /opt/FreeRTOS-Amiga
 BINDIR = $(PREFIX)/bin
 
+export BINDIR
+
 CC = $(BINDIR)/m68k-elf-gcc -ggdb
 AS = $(BINDIR)/vasm
 LD = $(BINDIR)/m68k-elf-ld

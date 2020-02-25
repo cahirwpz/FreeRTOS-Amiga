@@ -39,22 +39,16 @@ tags:
 	$(CTAGS) --language-force=asm -a $(SRCFILES_ASM)
 	$(CTAGS) --language-force=asm -aef etags $(SRCFILES_ASM)
 
-toolchain:
-	make -C external/vbcc PREFIX=$(PWD)/toolchain
-	make -C external/gnu PREFIX=$(PWD)/toolchain
-	make -C external/elf2hunk PREFIX=$(PWD)/toolchain
-	make -C external/fs-uae PREFIX=$(PWD)/toolchain
-
-run-floppy: freertos.adf
+run-floppy: build freertos.adf
 	./launch -f freertos.adf -e freertos.elf
 
-run-rom: a500rom.bin freertos.adf
+run-rom: build a500rom.bin freertos.adf
 	./launch -r a500rom.bin -e freertos.elf -f freertos.adf
 
-debug-floppy: freertos.adf
+debug-floppy: build freertos.adf
 	./launch -d -f freertos.adf -e freertos.elf
 
-debug-rom: a500rom.bin freertos.adf
+debug-rom: build a500rom.bin freertos.adf
 	./launch -d -r a500rom.bin -e freertos.elf -f freertos.adf
 
 clean-here:

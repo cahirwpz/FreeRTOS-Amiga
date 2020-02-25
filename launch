@@ -14,6 +14,10 @@ SOCKET = 'fsuae'
 SESSION = 'fsuae'
 
 
+def BinPath(cmd):
+    return os.path.join(os.environ['BINDIR'], cmd)
+
+
 class Launchable():
     def __init__(self, name, cmd):
         self.name = name
@@ -35,7 +39,7 @@ class FSUAE(Launchable):
         super().__init__('fs-uae', 'tools/uaedbg.py')
 
     def configure(self, floppy=None, rom=None, debug=False):
-        self.options = ['-e', 'toolchain/bin/fs-uae']
+        self.options = ['-e', BinPath('fs-uae')]
         if debug:
             self.options.append('-g')
         # Now options for FS-UAE.
@@ -62,7 +66,7 @@ class SOCAT(Launchable):
 
 class GDB(Launchable):
     def __init__(self):
-        super().__init__('gdb', './toolchain/bin/m68k-elf-gdb')
+        super().__init__('gdb', BinPath('m68k-elf-gdb'))
         # gdbtui & cgdb output is garbled if there is no delay
         self.cmd = 'sleep 0.5 && ' + self.cmd
 
@@ -132,7 +136,10 @@ if __name__ == '__main__':
             debugger.start(session)
 
         session.kill_window(':0')
-        session.select_window(par_port.name)
+        if args.debug:
+            session.select_window(debugger.name)
+        else:
+            session.select_window(par_port.name)
         session.attach_session()
     finally:
         try:
