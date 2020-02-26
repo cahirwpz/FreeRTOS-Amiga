@@ -2,13 +2,13 @@
 
 import argparse
 import asyncio
-import asyncio.subprocess
 import logging
 import signal
 import sys
 import traceback
 
 from prompt_toolkit.eventloop import use_asyncio_event_loop
+
 from debug.uae import UaeDebugger, UaeProcess
 from debug.gdb import GdbConnection, GdbStub
 
@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO,
                         format='%(levelname)s: %(message)s')
-    # logging.getLogger("asyncio").setLevel(logging.DEBUG)
+    # logging.getLogger('asyncio').setLevel(logging.DEBUG)
 
     if sys.platform == 'win32':
         loop = asyncio.ProactorEventLoop()

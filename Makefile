@@ -16,11 +16,9 @@ freertos.elf: $(FREERTOS)
 
 freertos.adf: freertos.exe
 
-a500rom.elf: a500rom.o $(FREERTOS)
-	$(LD) -T a500rom.ld -Map $@.map -o $@ $^
-
-a500rom.bin: a500rom.elf
-	$(OBJCOPY) -O binary $^ $@
+a500rom.bin: a500rom.S build 
+	@echo "[LD] $(addprefix $(DIR),$^) -> $(DIR)$@"
+	$(AS) -Fbin $(ASFLAGS) -o $@ $(realpath $<)
 
 # Lists of all files that we consider our sources.
 SRCDIRS = include drivers libc FreeRTOS 

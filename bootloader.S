@@ -32,8 +32,6 @@
 
 ; Export some symbols so they appear in disassembly.
 
-        XDEF    Entry
-        XDEF    KillOS
         XDEF    Start
         XDEF    Panic
         XDEF    CopyMem
@@ -80,6 +78,11 @@ _LVOCacheControl        EQU     -648
         APTR    MR_LOWER
         APTR    MR_UPPER
         LABEL   MR_SIZE
+
+        ifnd    ROM
+
+        XDEF    Entry
+        XDEF    KillOS
 
 ; Boot block cannot generally be assumed to be placed in a specific kind of
 ; memory, or at any specific address, so all code must be completely PC
@@ -210,6 +213,8 @@ KillOS:
         ; jump into second phase code relocated at the beginning of memory
         jmp     $8.w
 
+        endif
+
 ; Normalize memory layout by moving executable file image at well known
 ; position. Set up primitive memory manager and relocate executable file.
 ;
@@ -218,6 +223,7 @@ KillOS:
 ;   [d3] pointer to executable file image
 ;   [a3] size of boot loader data
 ;   [a6] boot loader data (cpu model, memory regions)
+;   [sp] temporary stack at $400
 
 Start:
         ; reserve space for the boot loader
@@ -245,6 +251,7 @@ Start:
 
 .novbr  move.l  d0,BD_VBR(a6)
 
+        ifnd    ROM
         ; reserve space for executable file image
         move.l  d2,d0
         moveq   #MF_CHIP,d1
@@ -257,6 +264,7 @@ Start:
         move.l  d2,d0
         bsr     CopyMem
         move.l  (sp)+,d3
+        endif
 
         ; move hunks around and relocate them
         move.l  d3,a0
@@ -264,9 +272,11 @@ Start:
         move.l  d0,BD_ENTRY(a6)         ; first hunk of executable file
 
         ; free up space taken by executable file image
+        ifnd    ROM
         move.l  d3,a0
         move.l  d2,d0
         bsr     FreeMem
+        endif
 
         ; if VBR was relocated free space used by initial exception vector
         tst.l   BD_VBR(a6)

@@ -1,60 +1,69 @@
         include 'hardware/custom.i'
         include 'hardware/cia.i'
 
-        xref _start
-        xdef _entry
+ChipStart equ $400
+ChipEnd   equ $80000
+SlowStart equ $c00000
+SlowEnd   equ $c80000
 
-        section '.init',code
+; custom chips addresses
 
-; Boot data carries all necessary information for FreeRTOS startup,
-; that is normally filled out by boot loader.
-_bootdata:
-        dc.l    _text           ; bd_entry
-        dc.l    0               ; bd_vbr
-        dc.w    0               ; bd_cpumodel : 68000
-        dc.w    2               ; bd_nregions
-        dc.l    _ebss, _eslow   ; slow memory
-        dc.l    $400, _echip    ; chip memory (reserve exception vector)
-        dc.l    0, 0            ; terminator 
+custom  equ     $dff000
+ciaa    equ     $bfe001
+ciab    equ     $bfd000
+
+; A500 kickstart begin address
+
+        org     $fc0000
+
+Kickstart:
+        dc.l    $400             ; Initial SP
+        dc.l    Entry            ; Initial PC
 
 ; The ROM is located at $fc0000 but is mapped at $0 after reset shadowing RAM
-_entry:
+Entry:
         lea     ciaa,a6
         move.b  #3,ciaddra(a6)  ; Set port A direction to output for /LED and OVL
         move.b  #0,ciapra(a6)   ; Disable OVL (Memory from $0 onwards available)
 
-inithw:
+InitHW:
         move.w  #$7fff,d0       ; Make sure DMA and interrupts are disabled
         lea     custom,a6
         move.w  d0,intena(a6)
         move.w  d0,intreq(a6)
         move.w  d0,dmacon(a6)
 
-clrstack:                       ; Clear stack space
-        lea     _stack,a0
-        lea     _estack,a1
-.loop   clr.l   (a0)+
-        cmp.l   a1,a0
-        blt     .loop
+Setup:
+        move.l  #(HunkFileEnd-HunkFile),d2
+        move.l  #HunkFile,d3
+        move.l  #BD_SIZE+3*MR_SIZE,a3
+        sub.l   a3,sp
+        move.l  sp,a6
 
-clrbss:                         ; Clear BSS section space
-        lea     _bss,a0
-        lea     _ebss,a1
-.loop   clr.l   (a0)+
-        cmp.l   a1,a0
-        blt     .loop
+        clr.l   BD_ENTRY(a6)
+        clr.l   BD_VBR(a6)
+        clr.w   BD_CPUMODEL(a6)
+        move.w  #2,BD_NREGIONS(a6)
 
-copyrom:                        ; Copy TEXT & DATA sections to RAM
-        lea     _rom,a0
-        lea     _erom,a1
-        lea     _text,a2
-.loop   move.l  (a0)+,(a2)+
-        cmp.l   a1,a0
-        blt     .loop
+        lea     BD_REGION(a6),a0
+        move.l  #SlowStart,(a0)+
+        move.l  #SlowEnd,(a0)+
+        move.l  #ChipStart,(a0)+
+        move.l  #ChipEnd,(a0)+
+        clr.l   (a0)+
+        clr.l   (a0)+
 
-doneinit:
-        move.l  #_bootdata,-(sp)
-        jsr     _start
-        stop    #$2700
+ROM = 1
+
+        include 'bootloader.S'
+
+HunkFile
+        incbin 'freertos.exe'
+HunkFileEnd
+
+        org     $fffff0
+
+        dc.w    $4718, $4819, $4f1a, $531b
+        dc.w    $541c, $4f1d, $571e, $4e1f
 
 ; vim: ft=asm68k:ts=8:sw=8:noet:

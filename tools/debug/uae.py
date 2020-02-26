@@ -3,8 +3,6 @@
 import asyncio
 import signal
 
-from prompt_toolkit import prompt
-from prompt_toolkit.eventloop import use_asyncio_event_loop
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession
 from prompt_toolkit.history import InMemoryHistory
