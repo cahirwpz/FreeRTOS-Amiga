@@ -137,6 +137,13 @@ struct Custom {
 #define VSYNCTRUE BIT(1)   /* vertical sync true */
 #define HSYNCTRUE BIT(0)   /* horizontal sync true */
 
+#define BPLCON0_BPU(d) (((d) & 7) << 12)
+#define BPLCON0_COLOR BIT(9)
+#define BPLCON0_LACE BIT(2)
+#define BPLCON0_DBLPF BIT(10)
+#define BPLCON0_HOMOD BIT(11)
+#define BPLCON0_HIRES BIT(15)
+
 /* new defines for bplcon0 */
 #define USE_BPLCON3 1
 
@@ -146,6 +153,9 @@ struct Custom {
 #define BPLCON2_ZDBPSEL0 BIT(12) /* three bits to select one */
 #define BPLCON2_ZDBPSEL1 BIT(13) /* of 8 bitplanes in */
 #define BPLCON2_ZDBPSEL2 BIT(14) /* ZDBPEN genlock mode */
+#define BPLCON2_PF2PRI BIT(6)
+#define BPLCON2_PF2P2 BIT(5)
+#define BPLCON2_PF1P2 BIT(2)
 
 /* defines for bplcon3 register */
 #define BPLCON3_EXTBLNKEN BIT(0) /* external blank enable */
