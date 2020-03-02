@@ -211,7 +211,7 @@ class UaeCommandsMixin():
             line = lines.pop(0)
             data['break'] = int(line.split()[2], 16)
         # Exception 27, PC=00C15AC6
-        if lines[0].startswith('Exception'):
+        while lines[0].startswith('Exception'):
             line = lines.pop(0)
             data['exception'] = int(line[10:].split(',')[0])
         # just processor state
