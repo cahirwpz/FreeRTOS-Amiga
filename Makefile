@@ -2,13 +2,13 @@ TOPDIR = $(CURDIR)
 
 SUBDIR = libc drivers FreeRTOS
 SOURCES = startup.c trap.c main.c
+BUILD-FILES = bootloader.bin freertos.exe freertos.adf
 
 all: build
 
 include $(TOPDIR)/build/build.gcc.mk
 
 build-before: cscope tags 
-build-here: bootloader.bin freertos.adf
 
 FREERTOS = $(OBJECTS) drivers/drivers.lib FreeRTOS/freertos.lib libc/c.lib 
 
@@ -50,8 +50,8 @@ debug-rom: build a500rom.bin freertos.adf
 	./launch -d -r a500rom.bin -e freertos.elf -f freertos.adf
 
 clean-here:
-	$(RM) *.adf *.bin *.elf *.map *.rom
+	$(RM) *.adf *.bin *.elf *.exe *.map *.rom
 	$(RM) *.o *~
 	$(RM) cscope.out etags tags
 
-.PHONY: toolchain debug-floppy debug-rom run-floppy run-rom cscope tags
+.PHONY: debug-floppy debug-rom run-floppy run-rom cscope tags

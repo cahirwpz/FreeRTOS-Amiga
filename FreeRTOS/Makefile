@@ -17,6 +17,8 @@ SOURCES = \
 	  $(PORT_DIR)/trap.S \
 	  $(PORT_DIR)/portasm.S
 
+BUILD-FILES = freertos.lib
+
 all: build
 
 include $(TOPDIR)/build/build.gcc.mk
@@ -27,8 +29,6 @@ CPPFLAGS = -I$(TOPDIR)/FreeRTOS/include \
 	   -I$(TOPDIR)
 
 event_groups.o: CFLAGS += -Wno-unused-but-set-variable
-
-build-here: freertos.lib
 
 freertos.lib: $(OBJECTS)
 

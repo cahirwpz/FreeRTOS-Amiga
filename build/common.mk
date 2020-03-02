@@ -48,7 +48,7 @@ build-recursive: $(SUBDIR:%=%-build)
 clean-recursive: $(SUBDIR:%=%-clean)
 
 # Define main rules of the build system
-build: build-dependencies build-before build-recursive $(BUILD-FILES) build-here
+build: build-dependencies build-before build-recursive $(BUILD-FILES)
 
 clean: clean-recursive clean-here
 	$(RM) $(CLEAN-FILES)
@@ -56,7 +56,7 @@ clean: clean-recursive clean-here
 	$(RM) *~
 
 PHONY-TARGETS += all
-PHONY-TARGETS += build build-before build-dependencies build-here
+PHONY-TARGETS += build build-before build-dependencies
 PHONY-TARGETS += clean clean-here
 
 .PHONY: $(PHONY-TARGETS)

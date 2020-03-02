@@ -23,14 +23,12 @@ SOURCES = \
 	string/strncpy.S \
 	string/strrchr.S
 
+BUILD-FILES = c.lib
+
 all: build
 
 include $(TOPDIR)/build/build.gcc.mk
 
-build-here: c.lib
-
 c.lib: $(OBJECTS)
-
-CLEAN-FILES += c.lib
 
 # vim: ts=8 sw=8 noet
