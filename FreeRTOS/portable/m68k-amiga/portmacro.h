@@ -71,6 +71,9 @@ uint32_t ulPortSetIPL(uint32_t);
 /* Halt the processor by masking all interrupts and waiting for NMI. */
 #define portHALT() { asm volatile("\tstop\t#0x2700\n"); }
 
+/* Issue trap 0..15 instruction that can be interpreted by a trap handler. */
+#define portTRAP(n) { asm volatile("\ttrap\t#" #n "\n"); }
+
 /* Instruction that effectively is a no-op, but its opcode is different from
  * real nop instruction. Useful for introducing transparent breakpoints that
  * are only understood by simulator. */

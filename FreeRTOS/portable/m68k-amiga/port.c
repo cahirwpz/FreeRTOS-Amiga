@@ -151,5 +151,5 @@ void vPortSetupExceptionVector(BootData_t *aBootData) {
 
   /* Intialize TRAP instruction handlers. */
   for (int i = EXC_TRAP(0); i <= EXC_TRAP(15); i++)
-    ExcVec[i] = IllegalTrap;
+    ExcVec[i] = TrapInstTrap;
 }

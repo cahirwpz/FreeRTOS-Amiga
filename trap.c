@@ -74,4 +74,6 @@ void vPortTrapHandler(struct TrapFrame *frame) {
     printf("%s %s at $%08x!\n", (data ? "Instruction" : "Data"),
            (read ? "read" : "write"), addr);
   }
+
+  portHALT();
 }

@@ -8,6 +8,7 @@
         xdef PrivInstTrap
         xdef TraceTrap
         xdef FmtErrTrap
+        xdef TrapInstTrap
         xref vPortTrapHandler
 
 T_UNKNOWN   equ 0
@@ -20,6 +21,7 @@ T_TRAPVINST equ 6
 T_PRIVINST  equ 7
 T_TRACE	    equ 8
 T_FMTERR    equ 9
+T_TRAPINST  equ 10
 
         section '.text',code
 
@@ -41,11 +43,15 @@ T_FMTERR    equ 9
         HANDLER PrivInstTrap,T_PRIVINST
         HANDLER TraceTrap,T_TRACE
         HANDLER FmtErrTrap,T_FMTERR
+        HANDLER TrapInstTrap, T_TRAPINST
 
 EnterTrap:
         movem.l d0-a7,-(sp)             ; save all registers
         move.l  sp,-(sp)                ; pass trap frame as an argument
         jsr     vPortTrapHandler
-        stop    #$2700
+        addq.l  #4,sp
+        movem.l (sp)+,d0-a7             ; restore all registers
+        addq.l  #2,sp                   ; pop trap number
+        rte
 
 ; vim: ft=asm68k ts=8 sw=8
