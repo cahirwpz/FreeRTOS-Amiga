@@ -1,8 +1,4 @@
-# Common tools used by actions
-RM = rm -v -f
-FSUTIL = $(TOPDIR)/tools/fsutil.py
-CSCOPE = cscope -b
-CTAGS = ctags
+export TOPDIR
 
 # Current directory without common prefix
 DIR = $(patsubst $(TOPDIR)/%,%,$(CURDIR)/)
@@ -15,49 +11,40 @@ endif
 # Disable all built-in recipes
 .SUFFIXES:
 
-# Define our own recipes
-%.S: %.c
-	@echo "[CC] $(DIR)$< -> $(DIR)$@"
-	$(CC) $(CFLAGS) $(CPPFLAGS) -S -o $@ $(realpath $<)
+# Recursive rules for subdirectories
+format-%:
+	@echo "[MAKE] format $(DIR)$*"
+	$(MAKE) -C $* format
 
-%.o: %.c
-	@echo "[CC] $(DIR)$< -> $(DIR)$@"
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $(realpath $<)
+build-%: before-%
+	@echo "[MAKE] build $(DIR)$*"
+	$(MAKE) -C $* build
 
-%.bin: %.S
-	@echo "[AS] $(DIR)$< -> $(DIR)$@"
-	$(AS) -Fbin $(CPPFLAGS) $(ASFLAGS) -o $@ $(realpath $<)
+PHONY-TARGETS += $(SUBDIR:%=before-%)
 
-%.adf: $(TOPDIR)/bootloader.bin
-	@echo "[ADF] $(filter-out %bootloader.bin,$^) -> $(DIR)$@"
-	$(FSUTIL) -b $(TOPDIR)/bootloader.bin create $@ \
-		$(filter-out %bootloader.bin,$^)
-
-# Generate recursive rules for subdirectories
-define emit_subdir_rule
-$(1)-$(2):
-	@echo "[MAKE] $(2) $(DIR)$(1)"
-	$(MAKE) -C $(1) $(2)
-PHONY-TARGETS += $(1)-$(2)
-endef
-
-$(foreach dir,$(SUBDIR),$(eval $(call emit_subdir_rule,$(dir),build)))
-$(foreach dir,$(SUBDIR),$(eval $(call emit_subdir_rule,$(dir),clean)))
-
-build-recursive: $(SUBDIR:%=%-build)
-clean-recursive: $(SUBDIR:%=%-clean)
+clean-%:
+	@echo "[MAKE] clean $(DIR)$*"
+	$(MAKE) -C $* clean
 
 # Define main rules of the build system
-build: build-dependencies build-before build-recursive $(BUILD-FILES)
+build: $(DEPENDENCY-FILES) $(SUBDIR:%=build-%) $(BUILD-FILES)
 
-clean: clean-recursive clean-here
+clean: $(SUBDIR:%=clean-%)
 	$(RM) $(CLEAN-FILES)
 	$(RM) $(BUILD-FILES)
 	$(RM) *~
 
-PHONY-TARGETS += all
-PHONY-TARGETS += build build-before build-dependencies
-PHONY-TARGETS += clean clean-here
+FORMAT-RECURSE ?= $(SUBDIR:%=format-%)
+
+format: $(FORMAT-RECURSE)
+ifneq ($(FORMAT-FILES),)
+	@echo "[FORMAT] $(FORMAT-FILES)"
+	$(FORMAT) -i $(FORMAT-FILES)
+endif
+
+PHONY-TARGETS += all build clean format
 
 .PHONY: $(PHONY-TARGETS)
-.PRECIOUS: $(BUILD-FILES)
+.PRECIOUS: $(PRECIOUS-FILES)
+
+include $(TOPDIR)/build/tools.mk

@@ -4,8 +4,7 @@
 
 # Object files
 *.o
-*.ko
-*.obj
+*.rom
 *.elf
 
 # Linker output
@@ -42,6 +41,7 @@
 *.adf
 
 # Debug files
+.gdb_history
 *.dSYM/
 *.su
 *.idb
@@ -61,7 +61,3 @@ __pycache__
 
 # Quilt files
 .pc
-
-# directories with binaries
-external/vbcc
-toolchain/

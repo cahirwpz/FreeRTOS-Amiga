@@ -55,10 +55,10 @@ Setup:
 
 ROM = 1
 
-        include 'bootloader.S'
+        include '$(TOPDIR)/bootloader.S'
 
 HunkFile
-        incbin 'freertos.exe'
+        incbin  '$(PROGRAM).exe'
 HunkFileEnd
 
         org     $fffff0

@@ -16,20 +16,17 @@ SOURCES = \
 	  $(PORT_DIR)/intr.S \
 	  $(PORT_DIR)/trap.S \
 	  $(PORT_DIR)/portasm.S
+FORMAT-EXCLUDE = $(SOURCES)
 
-BUILD-FILES = freertos.lib
+LIBNAME = freertos.lib
 
-all: build
-
-include $(TOPDIR)/build/build.gcc.mk
+include $(TOPDIR)/build/build.lib.mk
 
 CPPFLAGS = -I$(TOPDIR)/FreeRTOS/include \
-	   -I$(TOPDIR)/FreeRTOS/portable/m68k-amiga \
+	   -I$(TOPDIR)/FreeRTOS/$(PORT_DIR) \
 	   -I$(TOPDIR)/include \
 	   -I$(TOPDIR)
 
 event_groups.o: CFLAGS += -Wno-unused-but-set-variable
-
-freertos.lib: $(OBJECTS)
 
 # vim: ts=8 sw=8 noet

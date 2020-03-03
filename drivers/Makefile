@@ -12,12 +12,8 @@ SOURCES = \
 	  mouse.c \
 	  serial.c
 
-BUILD-FILES = drivers.lib
+LIBNAME = drivers.lib
 
-all: build
-
-include $(TOPDIR)/build/build.gcc.mk
-
-drivers.lib: $(OBJECTS)
+include $(TOPDIR)/build/build.lib.mk
 
 # vim: ts=8 sw=8 noet

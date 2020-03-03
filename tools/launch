@@ -9,13 +9,17 @@ import subprocess
 from libtmux import Server, Session
 
 
-TMUX_CONF = './.tmux.conf'
+def BinPath(*components):
+    return os.path.join(os.environ['BINDIR'], *components)
+
+
+def HerePath(*components):
+    return os.path.join(os.environ['TOPDIR'], *components)
+
+
 SOCKET = 'fsuae'
 SESSION = 'fsuae'
-
-
-def BinPath(cmd):
-    return os.path.join(os.environ['BINDIR'], cmd)
+TMUX_CONF = HerePath('.tmux.conf')
 
 
 class Launchable():
@@ -36,7 +40,7 @@ class Launchable():
 
 class FSUAE(Launchable):
     def __init__(self):
-        super().__init__('fs-uae', 'tools/uaedbg.py')
+        super().__init__('fs-uae', HerePath('tools', 'uaedbg.py'))
 
     def configure(self, floppy=None, rom=None, debug=False):
         self.options = ['-e', BinPath('fs-uae')]
@@ -50,7 +54,7 @@ class FSUAE(Launchable):
             self.options.append('--kickstart_file=' + os.path.realpath(rom))
         if debug:
             self.options.append('--use_debugger=1')
-        self.options.append(os.path.realpath('Config.fs-uae'))
+        self.options.append(HerePath('Config.fs-uae'))
 
 
 class SOCAT(Launchable):
@@ -73,7 +77,8 @@ class GDB(Launchable):
     def configure(self, program=''):
         self.options += ['-ex=set prompt \033[35;1m(gdb) \033[0m']
         self.options += [
-            '-iex=set auto-load safe-path {}/'.format(os.getcwd()),
+            '-iex=directory {}/'.format(HerePath()),
+            '-ix={}'.format(HerePath('.gdbinit')),
             '-ex=set tcp connect-timeout 30',
             '-ex=target remote localhost:8888',
             '--nh',
