@@ -11,10 +11,15 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Git LFS (install Git Large File Storage)
+          command: |
+            mkdir -p ~/.ssh
+            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+            ssh git@github.com git-lfs-authenticate "${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}" download
+            git lfs pull
+      - run:
           name: FreeRTOS for Amiga 500
           command: 'make'
-      - store_artifacts:
-          path: /FreeRTOS-Amiga.tar.gz
 
 workflows:
   version: 2
