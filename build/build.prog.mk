@@ -41,10 +41,10 @@ $(PROGRAM).adf: $(TOPDIR)/bootloader.bin $(PROGRAM).exe
 	@echo "[AS] $(addprefix $(DIR),$^) -> $(DIR)$@"
 	$(AS) -Fbin $(ASFLAGS) -o $@ $(realpath $<)
 
-$(TOPDIR)/%.lib:
+$(TOPDIR)/%.lib: dummy
 	$(MAKE) -C $(dir $@) $(notdir $@)
 
-$(TOPDIR)/%.bin:
+$(TOPDIR)/%.bin: dummy
 	$(MAKE) -C $(dir $@) $(notdir $@)
 
 run-floppy: $(PROGRAM).elf $(PROGRAM).adf

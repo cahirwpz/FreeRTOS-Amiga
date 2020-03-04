@@ -42,7 +42,7 @@ ifneq ($(FORMAT-FILES),)
 	$(FORMAT) -i $(FORMAT-FILES)
 endif
 
-PHONY-TARGETS += all build clean format
+PHONY-TARGETS += all build clean format dummy
 
 .PHONY: $(PHONY-TARGETS)
 .PRECIOUS: $(PRECIOUS-FILES)
