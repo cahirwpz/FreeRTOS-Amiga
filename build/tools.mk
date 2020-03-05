@@ -18,7 +18,11 @@ ELF2HUNK = $(BINDIR)/elf2hunk
 # Common tools used by actions
 RM = rm -v -f
 CSCOPE = cscope -b
+ifneq ($(shell which uctags),)
+CTAGS = uctags # under FreeBSD install universal-ctags
+else
 CTAGS = ctags
+endif
 FORMAT = clang-format -style=file
 FSUTIL = $(TOPDIR)/tools/fsutil.py
 LAUNCH = $(TOPDIR)/tools/launch
