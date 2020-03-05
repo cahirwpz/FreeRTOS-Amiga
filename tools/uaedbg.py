@@ -7,8 +7,6 @@ import signal
 import sys
 import traceback
 
-from prompt_toolkit.eventloop import use_asyncio_event_loop
-
 from debug.uae import UaeDebugger, UaeProcess
 from debug.gdb import GdbConnection, GdbStub
 
@@ -57,9 +55,6 @@ async def UaeLaunch(loop, args):
 
 
 if __name__ == '__main__':
-    # Tell prompt_toolkit to use asyncio for the event loop.
-    use_asyncio_event_loop()
-
     logging.basicConfig(level=logging.INFO,
                         format='%(levelname)s: %(message)s')
     # logging.getLogger('asyncio').setLevel(logging.DEBUG)

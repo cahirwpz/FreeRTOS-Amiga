@@ -235,7 +235,7 @@ async def UaeDebugger(uaedbg):
                 try:
                     cmd = ''
                     while not cmd:
-                        cmd = await session.prompt(async_=True)
+                        cmd = await session.prompt_async()
                         cmd.strip()
                     uaedbg.send(cmd)
                 except EOFError:
