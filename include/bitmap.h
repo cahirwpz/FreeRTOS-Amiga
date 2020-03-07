@@ -8,12 +8,12 @@
 #define BM_INTERLEAVED 1
 
 typedef struct bitmap {
-  uint16_t width;
-  uint16_t height;
-  uint8_t depth;
-  uint8_t flags;
-  uint16_t bytesPerRow;
-  uint16_t bplSize;
+  int16_t width;
+  int16_t height;
+  int8_t depth;
+  int8_t flags;
+  int16_t bytesPerRow;
+  int16_t bplSize;
   void *planes[MAXDEPTH];
 } bitmap_t;
 

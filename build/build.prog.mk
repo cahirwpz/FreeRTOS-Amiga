@@ -12,8 +12,6 @@ CLEAN-FILES = $(PROGRAM).elf $(PROGRAM).elf.map $(PROGRAM).rom
 
 all: build
 
-build-before: $(TOPDIR)/bootloader.bin
-
 include $(TOPDIR)/build/compile.mk
 include $(TOPDIR)/build/flags.mk
 include $(TOPDIR)/build/common.mk
@@ -41,6 +39,14 @@ $(PROGRAM).adf: $(TOPDIR)/bootloader.bin $(PROGRAM).exe
 	@echo "[AS] $(addprefix $(DIR),$^) -> $(DIR)$@"
 	$(AS) -Fbin $(ASFLAGS) -o $@ $(realpath $<)
 
+%.c: %.png
+	@echo "[PNG2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
+	$(PNG2C) $(PNG2COPTS) $(realpath $<) > $@
+
+%.c: %.psfu
+	@echo "[PSF2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
+	$(PSF2C) $(PSF2COPTS) $(realpath $<) > $@
+
 $(TOPDIR)/%.lib: dummy
 	$(MAKE) -C $(dir $@) $(notdir $@)
 
@@ -48,15 +54,19 @@ $(TOPDIR)/%.bin: dummy
 	$(MAKE) -C $(dir $@) $(notdir $@)
 
 run-floppy: $(PROGRAM).elf $(PROGRAM).adf
-	$(LAUNCH) -f $(PROGRAM).adf -e $(PROGRAM).elf
+	$(LAUNCH) $(LAUNCHOPTS) \
+	  -f $(PROGRAM).adf -e $(PROGRAM).elf
 
 run-rom: $(PROGRAM).rom $(PROGRAM).elf $(PROGRAM).adf
-	$(LAUNCH) -r $(PROGRAM).rom -e $(PROGRAM).elf -f $(PROGRAM).adf
+	$(LAUNCH) $(LAUNCHOPTS) \
+	  -r $(PROGRAM).rom -e $(PROGRAM).elf -f $(PROGRAM).adf
 
 debug-floppy: $(PROGRAM).elf $(PROGRAM).adf
-	$(LAUNCH) -d -f $(PROGRAM).adf -e $(PROGRAM).elf
+	$(LAUNCH) $(LAUNCHOPTS) \
+	  -d -f $(PROGRAM).adf -e $(PROGRAM).elf
 
 debug-rom: $(PROGRAM).rom $(PROGRAM).elf $(PROGRAM).adf
-	$(LAUNCH) -d -r $(PROGRAM).rom -e $(PROGRAM).elf -f $(PROGRAM).adf
+	$(LAUNCH) $(LAUNCHOPTS) \
+	  -d -r $(PROGRAM).rom -e $(PROGRAM).elf -f $(PROGRAM).adf
 
 .PHONY: debug-floppy debug-rom run-floppy run-rom

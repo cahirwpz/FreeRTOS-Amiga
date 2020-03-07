@@ -1,6 +1,7 @@
 TOPDIR = $(realpath ../..)
 
 PROGRAM = preemption
-SOURCES = ../startup.c ../trap.c main.c
+SOURCES = main.c
+OBJECTS = ../startup.o ../fault.o ../trap.o
 
 include $(TOPDIR)/build/build.prog.mk

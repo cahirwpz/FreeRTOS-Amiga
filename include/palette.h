@@ -20,4 +20,6 @@ copins_t *CopLoadPal(coplist_t *list, palette_t *pal, uint16_t start) {
   return ins;
 }
 
+#define CopLoadColor(CP, NUM, RGB) CopMove16((CP), color[(NUM)], (RGB))
+
 #endif /* !_PALETTE_H_ */

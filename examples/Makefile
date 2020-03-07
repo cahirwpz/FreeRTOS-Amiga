@@ -1,7 +1,7 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = startup.c trap.c 
-SUBDIR = preemption
+SUBDIR = console preemption
 
 include $(TOPDIR)/build/build.lib.mk
 

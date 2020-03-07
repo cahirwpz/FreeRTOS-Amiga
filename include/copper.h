@@ -160,7 +160,7 @@ static inline void CopSetupBitplaneFetch(coplist_t *list, uint16_t mode,
    * For HiRes: DDFSTART = HS / 2 - 4.5, DDFSTOP = DDFSTRT + W / 4 - 8 */
 
   if (mode & MODE_HIRES) {
-    xs -= 9;
+    xs -= 7; /* should be 9, but it does not align with sprite position */
     w >>= 2;
     ddfstrt = (xs >> 1) & ~3; /* 4 clock resolution */
   } else {

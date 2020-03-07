@@ -26,3 +26,5 @@ endif
 FORMAT = clang-format -style=file
 FSUTIL = $(TOPDIR)/tools/fsutil.py
 LAUNCH = $(TOPDIR)/tools/launch
+PNG2C = $(TOPDIR)/tools/png2c.py
+PSF2C = $(TOPDIR)/tools/psf2c.py

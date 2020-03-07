@@ -4,20 +4,8 @@ from PIL import Image
 import math
 import argparse
 import os.path
-import sys
 from array import array
-from contextlib import contextmanager
 from collections import namedtuple
-
-
-@contextmanager
-def redirect_stdout(fileobj):
-    old_stdout = sys.stdout
-    sys.stdout = fileobj
-    try:
-        yield fileobj
-    finally:
-        sys.stdout = old_stdout
 
 
 def c2p(pix, width, height, depth):
@@ -39,15 +27,26 @@ def c2p(pix, width, height, depth):
     return data
 
 
+def bitstr(word, n):
+    return ''.join([str(int(bool(word & (1 << k))))
+                    for k in range(n - 1, -1, -1)])
+
+
 Bitmap = namedtuple('Bitmap', 'bpl width height depth')
 
 
 def save_sprite(name, bm):
-    print('__datachip short %s_spr[][2] = {' % name)
+    print('__datachip sprdat_t %s_spr_data0[] = {' % name)
     print('  SPRHDR(0, 0, 0, %d),' % bm.height)
     for y in range(bm.height):
-        print('  {0x%04x, 0x%04x},' % (bm.bpl[y*2+0], bm.bpl[y*2+1]))
+        print('  {0b%s, 0b%s},' % (bitstr(bm.bpl[y*2+0], 16),
+                                   bitstr(bm.bpl[y*2+1], 16)))
     print('  SPREND()')
+    print('};')
+    print('')
+    print('sprite_t %s_spr = {' % name)
+    print('  .height = %d,' % bm.height)
+    print('  .data = %s_spr_data0' % name)
     print('};')
 
 
@@ -56,14 +55,14 @@ def save_bitmap(name, bm):
     wordsPerRow = bytesPerRow // 2
     for d in range(bm.depth):
         i = d * wordsPerRow
-        print('__datachip short %s_bpl%d[] = {' % (name, d))
+        print('__datachip uint16_t %s_bpl%d[] = {' % (name, d))
         for y in range(bm.height):
             words = ['0x%04x' % bm.bpl[i + x]
                      for x in range(wordsPerRow)]
             print('  %s,' % ','.join(words))
             i += wordsPerRow * bm.depth
         print('};')
-        print('')
+    print('')
     print('bitmap_t %s_bm = {' % name)
     print('  .width = %d,' % bm.width)
     print('  .height = %d,' % bm.height)
@@ -115,18 +114,14 @@ def convert(path, name, is_sprite, do_palette):
         cmap = [pal[i * 3:(i + 1) * 3] for i in range(colors)]
     bpls = c2p(pix, width, height, depth)
 
-    path = os.path.splitext(path)[0]
-
-    with open(path + '.c', 'w') as f:
-        with redirect_stdout(f):
-            bm = Bitmap(bpls, width, height, depth)
-            if is_sprite:
-                save_sprite(name, bm)
-            else:
-                save_bitmap(name, bm)
-            if do_palette:
-                print('')
-                save_palette(name, cmap)
+    bm = Bitmap(bpls, width, height, depth)
+    if is_sprite:
+        save_sprite(name, bm)
+    else:
+        save_bitmap(name, bm)
+    if do_palette:
+        print('')
+        save_palette(name, cmap)
 
 
 if __name__ == '__main__':
@@ -146,7 +141,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not args.name:
-        path = os.path.splitext(args.path)[0]
+        path = os.path.splitext(os.path.basename(args.path))[0]
         name = path.replace('-', '_')
     else:
         name = args.name

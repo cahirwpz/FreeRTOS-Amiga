@@ -97,6 +97,8 @@ if __name__ == '__main__':
                         help='Provide ELF executable file for GDB debugger.')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Run the program under GDB debugger control.')
+    parser.add_argument('-w', '--window', metavar='WIN', type=str,
+                        help='Select tmux window name to switch to.')
     args = parser.parse_args()
 
     # Check if floppy disk image file exists
@@ -144,7 +146,7 @@ if __name__ == '__main__':
         if args.debug:
             session.select_window(debugger.name)
         else:
-            session.select_window(par_port.name)
+            session.select_window(args.window or par_port.name)
         session.attach_session()
     finally:
         try:

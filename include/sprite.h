@@ -8,14 +8,22 @@
  * http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node00AE.html
  */
 
-typedef uint16_t sprite_t[][2];
+typedef struct sprdat {
+  uint16_t lo, hi;
+} sprdat_t;
+
+typedef struct sprite {
+  short height;
+  sprdat_t *data;
+  sprdat_t *attached;
+} sprite_t;
 
 /*
  * SPRxPOS:
- *  Bits 15-8 contain the low 8 bits of VSTART (y)
- *  Bits 7-0 contain the high 8 bits of HSTART (x)
+ *  Bits 15-8 contain the low 8 bits of VSTART
+ *  Bits 7-0 contain the high 8 bits of HSTART
  */
-#define SPRPOS(x, y) (((y) << 8) | (((x) >> 1) & 255))
+#define SPRPOS(X, Y) (((Y) << 8) | (((X) >> 1) & 255))
 
 /*
  * SPRxCTL:
@@ -26,14 +34,22 @@ typedef uint16_t sprite_t[][2];
  *  Bit 1           The VSTOP high bit
  *  Bit 0           The HSTART low bit
  */
-#define SPRCTL(x, y, a, h)                                                     \
-  ((((x) + (h) + 1) << 8) |                                                    \
-   (((a) & 1) << 7) |                                                          \
-   ((y & 256) >> 6) |                                                          \
-   ((((x) + (h) + 1) & 256) >> 7) |                                            \
-   ((x) & 1))
+#define SPRCTL(X, Y, A, H)                                                     \
+  (((((Y) + (H) + 1) & 255) << 8) |                                            \
+   (((A) & 1) << 7) |                                                          \
+   (((Y) & 256) >> 6) |                                                        \
+   ((((Y) + (H) + 1) & 256) >> 7) |                                            \
+   ((X) & 1))
 
-#define SPRHDR(x, y, a, h) { SPRPOS((x),(y)), SPRCTL((x), (y), (a), (h)) }
-#define SPREND() SPRHDR(0, 0, 0, 0)
+#define SPRHDR(x, y, a, h)                                                     \
+  (sprdat_t){ SPRPOS((x),(y)), SPRCTL((x), (y), (a), (h)) }
+
+#define SPREND() (sprdat_t){ 0, 0 }
+
+static inline void SpriteUpdatePos(sprite_t *spr, short x, short y) {
+  spr->data[0] = SPRHDR(x, y, 0, spr->height);
+  if (spr->attached)
+    spr->attached[0] = SPRHDR(x, y, 1, spr->height);
+}
 
 #endif /* !_SPRITE_H_ */
