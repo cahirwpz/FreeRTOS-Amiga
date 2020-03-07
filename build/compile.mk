@@ -14,7 +14,7 @@ $(DEPENDENCY-FILES): $(SOURCES_GEN)
 
 .%.D: %.c
 	@echo "[DEP] $(DIR)$@"
-	$(CC) $(CFLAGS) $(CPPFLAGS) -MT $*.o -MM -MG $^ -MF $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) -MT $*.o -MM -MG $(realpath $<) -MF $@
 
 %.o: %.c
 	@echo "[CC] $(DIR)$< -> $(DIR)$@"
