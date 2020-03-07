@@ -56,11 +56,20 @@ to exclude the API function. */
 #define portCRITICAL_NESTING_IN_TCB             1
 
 /* What to do when assertion fails? */
+#if 1 /* Replace with 0 to turn of verbose assertion messages. */
 #define configASSERT(x)                                                        \
   {                                                                            \
     if (!(x))                                                                  \
       portHALT();                                                              \
   }
+#else
+#include <stdio.h>
+#define configASSERT(x)                                                        \
+  {                                                                            \
+    if (!(x))                                                                  \
+    { printf("Error at %s:%d!", __FILE__, __LINE__); portHALT(); }                                                              \
+  }
+#endif
 
 /*---------------------------------------------------------------------------*
  * Amiga port specific definitions.                                          *
