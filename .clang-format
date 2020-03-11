@@ -5,13 +5,13 @@ AccessModifierOffset: -2
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
-AlignEscapedNewlinesLeft: false
+AlignEscapedNewlines: Right
 AlignOperands:   true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: false
+AllowShortBlocksOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: None
+AllowShortFunctionsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterDefinitionReturnType: None
@@ -45,10 +45,8 @@ Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 DisableFormat:   false
 ExperimentalAutoDetectBinPacking: false
-ForEachMacros:   [ TAILQ_FOREACH, SPLAY_FOREACH, RB_FOREACH, WITH_MTX_LOCK,
-                   WITH_SPIN_LOCK, WITH_RW_LOCK, SET_FOREACH, LIST_FOREACH,
-                   TAILQ_FOREACH_REVERSE, TAILQ_FOREACH_SAFE,
-                   LIST_FOREACH_SAFE, WITH_VM_MAP_LOCK ]
+ForEachMacros:   [ TAILQ_FOREACH, LIST_FOREACH, TAILQ_FOREACH_REVERSE,
+                   TAILQ_FOREACH_SAFE, LIST_FOREACH_SAFE ]
 IncludeCategories: 
   - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
     Priority:        2
