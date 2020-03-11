@@ -1,6 +1,8 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = \
+	  blt-copy.c \
+	  blt-line.c \
 	  cia-frame.c \
 	  cia-icr.c \
 	  cia-line.c \
