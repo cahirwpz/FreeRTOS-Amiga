@@ -15,10 +15,6 @@
 #include "data/lat2-08.c"
 #include "data/pointer.c"
 
-#define S_WIDTH 640
-#define S_HEIGHT 256
-#define S_DEPTH 1
-
 #define mainINPUT_TASK_PRIORITY 3
 
 static void vInputTask(__unused void *data) {
@@ -48,15 +44,7 @@ INTSERVER_DEFINE(SystemClockTick, 10, SystemClockTickHandler, NULL);
 
 static xTaskHandle input_handle;
 
-static __bsschip uint8_t screen_bpl0[S_WIDTH * S_HEIGHT / 8];
-static bitmap_t screen_bm = {
-  .width = S_WIDTH,
-  .height = S_HEIGHT,
-  .depth = 1,
-  .bytesPerRow = S_WIDTH / 8,
-  .bplSize = S_WIDTH * S_HEIGHT / 8,
-  .planes = { screen_bpl0 }
-};
+#include "data/screen.c"
 
 static __bsschip sprdat_t empty_spr[] = { SPREND() };
 
@@ -77,8 +65,9 @@ int main(void) {
    *  - set sprite 0 to mouse pointer graphics,
    *  - set other sprites to empty graphics,
    */
-  CopSetupGfxSimple(cp, MODE_HIRES, S_DEPTH, HP(0), VP(0), S_WIDTH, S_HEIGHT);
-  CopSetupBitplanes(cp, NULL, &screen_bm, S_DEPTH);
+  CopSetupGfxSimple(cp, MODE_HIRES, screen_bm.depth,
+                    HP(0), VP(0), screen_bm.width, screen_bm.height);
+  CopSetupBitplanes(cp, NULL, &screen_bm, screen_bm.depth);
   CopLoadColor(cp, 0, 0x000);
   CopLoadColor(cp, 1, 0xfff);
   CopLoadPal(cp, &pointer_pal, 16);
@@ -97,7 +86,7 @@ int main(void) {
   EnableDMA(DMAF_RASTER|DMAF_SPRITE);
 
   EventQueueInit();
-  MouseInit(0, 0, S_WIDTH - 1, S_HEIGHT - 1);
+  MouseInit(0, 0, screen_bm.width - 1, screen_bm.height - 1);
   KeyboardInit();
 
   ConsoleInit(&screen_bm, &console_font);

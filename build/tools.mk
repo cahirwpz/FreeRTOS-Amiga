@@ -28,3 +28,4 @@ FSUTIL = $(TOPDIR)/tools/fsutil.py
 LAUNCH = $(TOPDIR)/tools/launch
 PNG2C = $(TOPDIR)/tools/png2c.py
 PSF2C = $(TOPDIR)/tools/psf2c.py
+GENSTRUCT = $(TOPDIR)/tools/genstruct.py
