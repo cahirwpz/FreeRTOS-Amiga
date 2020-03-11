@@ -6,8 +6,13 @@
 struct Custom {
   uint16_t bltddat;
   uint16_t dmaconr;
-  uint16_t vposr;
-  uint16_t vhposr;
+  union {
+    struct {
+      uint16_t vposr;
+      uint16_t vhposr;
+    };
+    uint32_t vposr_;
+  };
   uint16_t dskdatr;
   uint16_t joy0dat;
   uint16_t joy1dat;

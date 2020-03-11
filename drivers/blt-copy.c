@@ -55,7 +55,7 @@ void BltCopySetup(bltcopy_t *bc) {
     custom.bltcon0 = 
       bltshift | (SRCA | SRCB | SRCC | DEST) | (ABC | NABC | ABNC | NANBC);
     custom.bltafwm = -1;
-    custom.bltalwm = 0;
+    custom.bltalwm = bltshift ? 0 : -1;
   } else {
     if (_fast) {
       custom.bltcon0 = (SRCB | DEST) | (ABC | ABNC | NABC | NABNC);

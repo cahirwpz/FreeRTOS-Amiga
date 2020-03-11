@@ -78,6 +78,11 @@ static inline copins_t *CopMoveLong(coplist_t *list, uint16_t reg, void *ptr) {
 #define CopMove16(list, reg, data) CopMoveWord(list, CSREG(reg), data)
 #define CopMove32(list, reg, data) CopMoveLong(list, CSREG(reg), data)
 
+static inline void CopInsSet32(copins_t *ins, void *data) {
+  ins[1].data = (intptr_t)data;
+  ins[0].data = (intptr_t)data >> 16;
+}
+
 static inline copins_t *CopWaitMask(coplist_t *list, uint8_t vp, uint8_t hp,
                                     uint8_t vpmask, uint8_t hpmask) {
   copins_t *ins = list->curr++;
