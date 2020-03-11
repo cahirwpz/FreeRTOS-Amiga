@@ -48,7 +48,7 @@ static xTaskHandle input_handle;
 
 static __bsschip sprdat_t empty_spr[] = { SPREND() };
 
-COPLIST(cp, 40);
+static COPLIST(cp, 40);
 
 int main(void) {
   portNOP(); /* Breakpoint for simulator. */
@@ -70,7 +70,7 @@ int main(void) {
   CopLoadColor(cp, 0, 0x000);
   CopLoadColor(cp, 1, 0xfff);
   CopLoadPal(cp, &pointer_pal, 16);
-  CopMove32(cp, sprpt[0], &pointer_spr);
+  CopMove32(cp, sprpt[0], pointer_spr.data);
   for (int i = 1; i < 8; i++)
     CopMove32(cp, sprpt[i], &empty_spr);
   CopEnd(cp);

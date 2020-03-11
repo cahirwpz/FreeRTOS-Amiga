@@ -43,17 +43,6 @@ void ConsoleSetCursor(short x, short y) {
     cons.cursor.y = y;
 }
 
-static void ConsoleNextLine(void) {
-  cons.cursor.x = 0;
-  if (++cons.cursor.y >= cons.height)
-    cons.cursor.y = 0;
-}
-
-static void ConsoleNextChar(void) {
-  if (++cons.cursor.x >= cons.width)
-    ConsoleNextLine();
-}
-
 static void ConsoleDrawChar(short x, short y, uint8_t c) {
   unsigned char *src = cons.font->glyphs;
   unsigned char *dst = cons.bitmap->planes[0];
@@ -78,6 +67,19 @@ void ConsoleDrawCursor(void) {
   do {
     *dst = ~*dst; dst += dwidth;
   } while (--h != -1);
+}
+
+static void ConsoleNextLine(void) {
+  for (short x = cons.cursor.x; x < cons.width; x++)
+    ConsoleDrawChar(x, cons.cursor.y, ' ');
+  cons.cursor.x = 0;
+  if (++cons.cursor.y >= cons.height)
+    cons.cursor.y = 0;
+}
+
+static void ConsoleNextChar(void) {
+  if (++cons.cursor.x >= cons.width)
+    ConsoleNextLine();
 }
 
 void ConsolePutChar(char c) {
