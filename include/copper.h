@@ -181,13 +181,4 @@ static inline void CopSetupBitplaneFetch(coplist_t *list, uint16_t mode,
   CopMove16(list, fmode, 0);
 }
 
-static inline void CopSetupGfxSimple(coplist_t *list,
-                                     uint16_t mode, uint16_t depth,
-                                     uint16_t xs, uint16_t ys,
-                                     uint16_t w, uint16_t h) {
-  CopSetupMode(list, mode, depth);
-  CopSetupDisplayWindow(list, mode, xs, ys, w, h);
-  CopSetupBitplaneFetch(list, mode, xs, w);
-}
-
 #endif /* !_COPPER_H_ */

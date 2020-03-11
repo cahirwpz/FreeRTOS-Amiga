@@ -10,21 +10,21 @@ static uint16_t LastWordMask[16] = {
   0xFF00, 0xFF80, 0xFFC0, 0xFFE0, 0xFFF0, 0xFFF8, 0xFFFC, 0xFFFE
 };
 
-#define srcstride bc->src.stride
-#define mask bc->src.mask
-#define sx bc->src.x
-#define sy bc->src.y
-#define sw bc->src.w
-#define sh bc->src.h
+#define srcstride (bc->src.bm->bytesPerRow)
+#define mask (bc->src.bm->flags & BM_HASMASK)
+#define sx (bc->src.x)
+#define sy (bc->src.y)
+#define sw (bc->src.w)
+#define sh (bc->src.h)
 
-#define dststride bc->dst.stride
-#define dx bc->dst.x
-#define dy bc->dst.y
+#define dststride (bc->dst.bm->bytesPerRow)
+#define dx (bc->dst.x)
+#define dy (bc->dst.y)
 
-#define _srcstart bc->_srcstart
-#define _dststart bc->_dststart
-#define _bltsize bc->_bltsize
-#define _fast bc->_fast
+#define _srcstart (bc->_srcstart)
+#define _dststart (bc->_dststart)
+#define _bltsize (bc->_bltsize)
+#define _fast (bc->_fast)
 
 #define START(x) (((x) & ~15) >> 3)
 #define ALIGN(x) START((x) + 15)

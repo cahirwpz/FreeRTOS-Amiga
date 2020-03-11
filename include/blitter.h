@@ -2,6 +2,7 @@
 #define _BLITTER_H_
 
 #include <custom.h>
+#include <bitmap.h>
 
 /* definitions for blitter control register 0 */
 #define ABC BIT(7)
@@ -74,14 +75,13 @@ static inline void WaitBlitter(void) {
 typedef struct {
   /* public fields */
   struct {
+    bitmap_t *bm; /* destination bitmap */
     short x, y;
-    short stride; /* destination bitplane row size (in bytes) */
   } dst;
   struct {
+    bitmap_t *bm; /* source bitmap */
     short x, y;   /* x must be 16 pixels aligned */
     short w, h;   /* w must be 16 pixels aligned */
-    short stride; /* source bitplane row size (in bytes) */
-    bool mask;    /* copy only pixels marked as lit in the mask */
   } src;
 
   /* private fields */
@@ -94,22 +94,28 @@ typedef struct {
 void BltCopySetup(bltcopy_t *bc);
 void BltCopy(bltcopy_t *bc, void *dstbpl, void *srcbpl, void *mskbpl);
 
-#define BltCopySetSrc(BC, BM, X, Y, W, H)                                      \
-  {                                                                            \
-    (BC)->src.x = (X);                                                         \
-    (BC)->src.y = (Y);                                                         \
-    (BC)->src.w = (W) < 0 ? (BM)->width : (W);                                 \
-    (BC)->src.h = (H) < 0 ? (BM)->height : (H);                                \
-    (BC)->src.stride = (BM)->bytesPerRow;                                      \
-    (BC)->src.mask = (BM)->flags & BM_HASMASK;                                 \
-  }
+static inline void BltCopySetSrc(bltcopy_t *bc, bitmap_t *bm,
+                                 short x, short y, short w, short h)
+{
+  bc->src.bm = bm;
+  bc->src.x = x;
+  bc->src.y = y;
+  bc->src.w = w < 0 ? bm->width : w;
+  bc->src.h = h < 0 ? bm->height : h;
+}
 
-#define BltCopySetDst(BC, BM, X, Y)                                            \
-  {                                                                            \
-    (BC)->dst.x = (X);                                                         \
-    (BC)->dst.y = (Y);                                                         \
-    (BC)->dst.stride = (BM)->bytesPerRow;                                      \
-  }
+static inline void BltCopySetDst(bltcopy_t *bc, bitmap_t *bm, short x, short y)
+{
+  bc->dst.bm = bm;
+  bc->dst.x = x;
+  bc->dst.y = y;
+}
+
+static inline void BitmapCopy(bltcopy_t *bc) {
+  BltCopySetup(bc);
+  for (int i = 0; i < min(bc->src.bm->depth, bc->dst.bm->depth); i++)
+    BltCopy(bc, bc->dst.bm->planes[i], bc->src.bm->planes[i], bc->src.bm->mask);
+}
 
 /* Line drawing modes. */
 typedef enum __packed {

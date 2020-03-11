@@ -18,10 +18,17 @@ typedef struct bitmap {
   void *planes[MAXDEPTH];
 } bitmap_t;
 
-static inline void CopSetupBitplanes(coplist_t *list, copins_t **bplptr,
-                                     bitmap_t *bm, uint16_t depth)
+static inline void CopSetupScreen(coplist_t *list, bitmap_t *bm,
+                                  uint16_t mode, uint16_t xs, uint16_t ys) {
+  CopSetupMode(list, mode, bm->depth);
+  CopSetupDisplayWindow(list, mode, xs, ys, bm->width, bm->height);
+  CopSetupBitplaneFetch(list, mode, xs, bm->width);
+}
+
+static inline void CopSetupBitplanes(coplist_t *list, bitmap_t *bm,
+                                     copins_t **bplptr)
 {
-  for (int i = 0; i < depth; i++) {
+  for (int i = 0; i < bm->depth; i++) {
     copins_t *ins = CopMove32(list, bplpt[i], bm->planes[i]);
     if (bplptr)
       *bplptr++ = ins;
@@ -30,7 +37,7 @@ static inline void CopSetupBitplanes(coplist_t *list, copins_t **bplptr,
   short modulo = 0;
 
   if (bm->flags & BM_INTERLEAVED)
-    modulo = (short)bm->bytesPerRow * (short)(depth - 1);
+    modulo = (short)bm->bytesPerRow * (short)(bm->depth - 1);
 
   CopMove16(list, bpl1mod, modulo);
   CopMove16(list, bpl2mod, modulo);

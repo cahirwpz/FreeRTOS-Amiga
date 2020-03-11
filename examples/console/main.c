@@ -65,9 +65,8 @@ int main(void) {
    *  - set sprite 0 to mouse pointer graphics,
    *  - set other sprites to empty graphics,
    */
-  CopSetupGfxSimple(cp, MODE_HIRES, screen_bm.depth,
-                    HP(0), VP(0), screen_bm.width, screen_bm.height);
-  CopSetupBitplanes(cp, NULL, &screen_bm, screen_bm.depth);
+  CopSetupScreen(cp, &screen_bm, MODE_HIRES, HP(0), VP(0));
+  CopSetupBitplanes(cp, &screen_bm, NULL);
   CopLoadColor(cp, 0, 0x000);
   CopLoadColor(cp, 1, 0xfff);
   CopLoadPal(cp, &pointer_pal, 16);
