@@ -6,6 +6,7 @@
 #define MAXDEPTH 8
 
 #define BM_INTERLEAVED 1
+#define BM_HASMASK 2
 
 typedef struct bitmap {
   int16_t width;
@@ -13,14 +14,9 @@ typedef struct bitmap {
   int8_t depth;
   int8_t flags;
   int16_t bytesPerRow;
-  int16_t bplSize;
+  void *mask;
   void *planes[MAXDEPTH];
 } bitmap_t;
-
-#define BITMAP(w, h, d)                                                        \
-  {.width = (w), .height = (h), .depth = (d),                                  \
-   .bytesPerRow = (((w) + 15) & ~15) / 8,                                      \
-   .bplSize = (((w) + 15) & ~15) / 8 * (h)}
 
 static inline void CopSetupBitplanes(coplist_t *list, copins_t **bplptr,
                                      bitmap_t *bm, uint16_t depth)

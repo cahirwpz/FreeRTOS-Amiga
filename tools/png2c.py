@@ -27,9 +27,9 @@ def c2p(pix, width, height, depth):
     return data
 
 
-def bitstr(word, n):
-    return ''.join([str(int(bool(word & (1 << k))))
-                    for k in range(n - 1, -1, -1)])
+def bitword(word):
+    return '0b' + ''.join([str(int(bool(word & (1 << k))))
+                           for k in range(15, -1, -1)])
 
 
 Bitmap = namedtuple('Bitmap', 'bpl width height depth')
@@ -39,8 +39,7 @@ def save_sprite(name, bm):
     print('__datachip sprdat_t %s_spr_data0[] = {' % name)
     print('  SPRHDR(0, 0, 0, %d),' % bm.height)
     for y in range(bm.height):
-        print('  {0b%s, 0b%s},' % (bitstr(bm.bpl[y*2+0], 16),
-                                   bitstr(bm.bpl[y*2+1], 16)))
+        print('  {%s, %s},' % (bitword(bm.bpl[y*2+0]), bitword(bm.bpl[y*2+1])))
     print('  SPREND()')
     print('};')
     print('')
@@ -50,7 +49,7 @@ def save_sprite(name, bm):
     print('};')
 
 
-def save_bitmap(name, bm):
+def save_bitmap(name, bm, mask):
     bytesPerRow = ((bm.width + 15) & ~15) // 8
     wordsPerRow = bytesPerRow // 2
     for d in range(bm.depth):
@@ -62,12 +61,28 @@ def save_bitmap(name, bm):
             print('  %s,' % ','.join(words))
             i += wordsPerRow * bm.depth
         print('};')
+    if mask:
+        print('')
+        print('__datachip uint16_t %s_mask[] = {' % name)
+        i = 0
+        for y in range(bm.height):
+            maskRow = [0 for _ in range(wordsPerRow)]
+            for d in range(bm.depth):
+                for x in range(wordsPerRow):
+                    maskRow[x] |= bm.bpl[i + x]
+                i += wordsPerRow
+            print('  %s,' % ','.join(['0x%04x' % w for w in maskRow]))
+        print('};')
     print('')
     print('bitmap_t %s_bm = {' % name)
     print('  .width = %d,' % bm.width)
     print('  .height = %d,' % bm.height)
     print('  .depth = %s,' % bm.depth)
+    if mask:
+        print('  .flags = BM_HASMASK,')
     print('  .bytesPerRow = %d,' % bytesPerRow)
+    if mask:
+        print('  .mask = %s_mask,' % name)
     print('  .planes = {')
     for d in range(bm.depth):
         print('    %s_bpl%d,' % (name, d))
@@ -85,7 +100,7 @@ def save_palette(name, pal):
     print('};')
 
 
-def convert(path, name, is_sprite, do_palette):
+def convert(path, name, is_sprite, do_palette, do_mask):
     im = Image.open(path)
 
     if im.mode not in ['1', 'L', 'P']:
@@ -118,7 +133,7 @@ def convert(path, name, is_sprite, do_palette):
     if is_sprite:
         save_sprite(name, bm)
     else:
-        save_bitmap(name, bm)
+        save_bitmap(name, bm, do_mask)
     if do_palette:
         print('')
         save_palette(name, cmap)
@@ -130,6 +145,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '-s', '--sprite', action='store_true',
         help='Generate sprite instead of bitmap.')
+    parser.add_argument(
+        '-m', '--mask', action='store_true',
+        help='Generate blitter mask for the image.')
     parser.add_argument(
         '-p', '--palette', action='store_true',
         help='Export palette as well.')
@@ -146,4 +164,4 @@ if __name__ == '__main__':
     else:
         name = args.name
 
-    convert(args.path, name, args.sprite, args.palette)
+    convert(args.path, name, args.sprite, args.palette, args.mask)
