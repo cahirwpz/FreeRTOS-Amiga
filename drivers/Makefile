@@ -12,7 +12,8 @@ SOURCES = \
 	  floppy-mfm.c \
 	  keyboard.c \
 	  mouse.c \
-	  serial.c
+	  serial.c \
+	  sprite.c
 
 LIBNAME = drivers.lib
 

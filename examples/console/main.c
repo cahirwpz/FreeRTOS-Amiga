@@ -46,8 +46,6 @@ static xTaskHandle input_handle;
 
 #include "data/screen.c"
 
-static __bsschip sprdat_t empty_spr[] = { SPREND() };
-
 static COPLIST(cp, 40);
 
 int main(void) {
@@ -70,9 +68,9 @@ int main(void) {
   CopLoadColor(cp, 0, 0x000);
   CopLoadColor(cp, 1, 0xfff);
   CopLoadPal(cp, &pointer_pal, 16);
-  CopMove32(cp, sprpt[0], pointer_spr.data);
+  CopLoadSprite(cp, 0, &pointer_spr);
   for (int i = 1; i < 8; i++)
-    CopMove32(cp, sprpt[i], &empty_spr);
+    CopLoadSprite(cp, i, NULL);
   CopEnd(cp);
 
   /* Set sprite position in upper-left corner of display window. */

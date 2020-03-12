@@ -2,6 +2,7 @@
 #define _SPRITE_H_
 
 #include <stdint.h>
+#include <copper.h>
 
 /*
  * Sprites are described here:
@@ -46,10 +47,16 @@ typedef struct sprite {
 
 #define SPREND() (sprdat_t){ 0, 0 }
 
+extern sprdat_t _empty_spr[];
+
 static inline void SpriteUpdatePos(sprite_t *spr, short x, short y) {
   spr->data[0] = SPRHDR(x, y, 0, spr->height);
   if (spr->attached)
     spr->attached[0] = SPRHDR(x, y, 1, spr->height);
+}
+
+static inline copins_t *CopLoadSprite(coplist_t *list, int num, sprite_t *spr) {
+  return CopMove32(list, sprpt[num], spr ? spr->data : _empty_spr);
 }
 
 #endif /* !_SPRITE_H_ */
