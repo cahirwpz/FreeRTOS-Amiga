@@ -6,9 +6,10 @@ export BINDIR
 
 # Toolchain tools
 CC = $(BINDIR)/$(TARGET)-gcc -ggdb
-AS = $(BINDIR)/vasm
+AS = $(BINDIR)/$(TARGET)-as
 LD = $(BINDIR)/$(TARGET)-ld
 AR = $(BINDIR)/$(TARGET)-ar
+VASM = $(BINDIR)/vasm
 RANLIB = $(BINDIR)/$(TARGET)-ranlib
 READELF = $(BINDIR)/$(TARGET)-readelf
 OBJCOPY = $(BINDIR)/$(TARGET)-objcopy

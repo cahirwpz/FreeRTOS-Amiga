@@ -1,33 +1,31 @@
-; This code is covered by BSD license. It was taken from NetBSD
-; common/lib/libc/arch/m68k/string/strcmp.S and converted to Motorola syntax.
+# This code is covered by BSD license. It was taken from NetBSD
+# common/lib/libc/arch/m68k/string/strcmp.S
 
-        xdef    strcmp
+#include <asm.h>
 
-        section '.text',code
-
-strcmp:
+ENTRY(strcmp)
 	move.l	4(sp),a0
 	move.l	8(sp),a1
-.L1:				; unrolled by 4 for 680[23]0's
+.L1:				/* unrolled by 4 for 680[23]0's */
 	move.b  (a0)+,d1
-	beq	.L2
+	jeq	.L2
 	sub.b   (a1)+,d1
-	bne	.L3
+	jne	.L3
 
 	move.b  (a0)+,d1
-	beq	.L2
+	jeq	.L2
 	sub.b   (a1)+,d1
-	bne	.L3
+	jne	.L3
 
 	move.b  (a0)+,d1
-	beq	.L2
+	jeq	.L2
 	sub.b   (a1)+,d1
-	bne	.L3
+	jne	.L3
 
 	move.b  (a0)+,d1
-	beq	.L2
+	jeq	.L2
 	sub.b   (a1)+,d1
-	beq	.L1
+	jeq	.L1
 .L3:
 	scs	d0
         ext.w   d0
@@ -39,5 +37,6 @@ strcmp:
 	move.b	(a1),d0
 	neg.l	d0
 	rts
+END(strcmp)
 
-; vim: ft=asm68k:ts=8:sw=8:noet:
+# vim: ft=gas:ts=8:sw=8:noet:

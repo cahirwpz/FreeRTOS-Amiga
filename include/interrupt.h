@@ -1,11 +1,6 @@
 #ifndef _INTERRUPT_H_
 #define _INTERRUPT_H_
 
-#include <FreeRTOS/FreeRTOS.h>
-#include <FreeRTOS/list.h>
-
-#include <custom.h>
-
 #define INTB_SETCLR 15  /* Set/Clear control bit. Determines if bits */
                         /* written with a one get set or cleared. Bits */
                         /* written with a zero are always unchanged */
@@ -43,6 +38,13 @@
 #define INTF_SOFTINT INTF(SOFTINT)
 #define INTF_DSKBLK INTF(DSKBLK)
 #define INTF_TBE INTF(TBE)
+
+#ifndef __ASSEMBLER__
+
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/list.h>
+
+#include <custom.h>
 
 /* All macros below take or'ed INTF_* flags. */
 static inline void EnableINT(uint16_t x) { custom.intena_ = INTF_SETCLR | x; }
@@ -132,5 +134,7 @@ void RunIntChain(IntChain_t *chain);
 extern IntChain_t *PortsChain;
 extern IntChain_t *VertBlankChain;
 extern IntChain_t *ExterChain;
+
+#endif /* __ASSEMBLER__ */
 
 #endif /* !_INTERRUPT_H_ */

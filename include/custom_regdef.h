@@ -1,6 +1,8 @@
 #ifndef _CUSTOM_REGDEF_H_
 #define _CUSTOM_REGDEF_H_
 
+#ifndef __ASSEMBLER__
+
 #include <cdefs.h>
 
 struct Custom {
@@ -126,6 +128,17 @@ struct Custom {
   uint16_t padf3[11];
   uint16_t fmode;
 };
+
+#else
+
+#define dmaconr 0x002
+#define dmacon 0x096
+#define intenar 0x01c
+#define intena 0x09a
+#define intreqr 0x01e
+#define intreq 0x09c
+
+#endif
 
 /* defines for beamcon register */
 #define VARVBLANK BIT(12)  /* Variable vertical blank enable */

@@ -1,43 +1,41 @@
-; This code is covered by BSD license. It was taken from NetBSD
-; common/lib/libc/arch/m68k/string/strncmp.S and converted to Motorola syntax.
+# This code is covered by BSD license. It was taken from NetBSD
+# common/lib/libc/arch/m68k/string/strncmp.S
 
-        xdef    strncmp
+#include <asm.h>
 
-        section '.text',code
-
-strncmp:
+ENTRY(strncmp)
 	move.l	12(sp),d0
-	beq	.L4
+	jeq	.L4
 	move.l	4(sp),a0
 	move.l	8(sp),a1
-.L1:				; unroll by 4 for m680[23]0's
+.L1:				/* unroll by 4 for m680[23]0's */
 	move.b  (a0)+,d1
-	beq	.L2
+	jeq	.L2
 	sub.b   (a1)+,d1
-	bne	.L3
+	jne	.L3
 	subq.l	#1,d0
-	beq	.L4
+	jeq	.L4
 
 	move.b  (a0)+,d1
-	beq	.L2
+	jeq	.L2
 	sub.b   (a1)+,d1
-	bne	.L3
+	jne	.L3
 	subq.l	#1,d0
-	beq	.L4
+	jeq	.L4
 
 	move.b  (a0)+,d1
-	beq	.L2
+	jeq	.L2
 	sub.b   (a1)+,d1
-	bne	.L3
+	jne	.L3
 	subq.l	#1,d0
-	beq	.L4
+	jeq	.L4
 
 	move.b  (a0)+,d1
-	beq	.L2
+	jeq	.L2
 	sub.b   (a1)+,d1
-	bne	.L3
+	jne	.L3
 	subq.l	#1,d0
-	bne	.L1
+	jne	.L1
 .L4:
         rts
 .L2:
@@ -48,5 +46,6 @@ strncmp:
         ext.l   d0
 	move.b	d1,d0
 	rts
+END(strncmp)
 
-; vim: ft=asm68k:ts=8:sw=8:noet:
+# vim: ft=gas:ts=8:sw=8:noet:

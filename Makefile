@@ -8,9 +8,9 @@ all: build
 include $(TOPDIR)/build/flags.mk
 include $(TOPDIR)/build/common.mk
 
-%.bin: %.S
+%.bin: %.asm
 	@echo "[AS] $(DIR)$< -> $(DIR)$@"
-	$(AS) -Fbin $(CPPFLAGS) $(ASFLAGS) -o $@ $(realpath $<)
+	$(VASM) -Fbin $(CPPFLAGS) $(VASMFLAGS) -o $@ $(realpath $<)
 
 before-examples: bootloader.bin build-FreeRTOS build-drivers build-libc
 before-FreeRTOS: build-tools

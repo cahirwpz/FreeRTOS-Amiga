@@ -1,42 +1,38 @@
-        xdef ulPortSetIPL
-        xdef vPortYieldHandler
-        xdef vPortStartFirstTask
-        xref pxCurrentTCB
+#include <asm.h>
 
-        section '.text',code
+#define portSAVE_CONTEXT()                                              \
+        or.w    #0x0700,sr;             /* mask all interrupts */       \
+        movem.l d0-a6,-(sp);            /* save D0-A6 registers */      \
+        move.l  pxCurrentTCB,a0;        /* load current task pointer */ \
+        move.l  sp,(a0);                /* save stack pointer */
 
-        macro portSAVE_CONTEXT
-        or.w    #$0700,sr               ; mask all interrupts
-        movem.l d0-a6,-(sp)             ; save D0-A6 registers
-        move.l  pxCurrentTCB,a0         ; load current task pointer
-        move.l  sp,(a0)                 ; save stack pointer
-	endm
+#define portRESTORE_CONTEXT()                                           \
+        move.l  pxCurrentTCB,a0;        /* load current task pointer */ \
+        move.l  (a0),sp;                /* restore stack pointer */     \
+        movem.l (sp)+,d0-a6;            /* restore D0-A6 registers */   \
+        rte;                            /* restore SR and PC */
 
-        macro portRESTORE_CONTEXT
-        move.l  pxCurrentTCB,a0         ; load current task pointer
-        move.l  (a0),sp                 ; restore stack pointer
-        movem.l (sp)+,d0-a6             ; restore D0-A6 registers
-        rte                             ; restore SR and PC
-	endm
-
-ulPortSetIPL:
+ENTRY(ulPortSetIPL)
         move.l  4(sp),d0
         move.w  sr,-(sp)
         move.w  sr,d1
-        and.w   #$f8ff,d1               ; old SR with IPL bits cleared
-        and.w   #$0700,d0               ; argument with IPL bits left
+        and.w   #0xf8ff,d1              /* old SR with IPL bits cleared */
+        and.w   #0x0700,d0              /* argument with IPL bits left */
         or.w    d0,d1
-        move.w  d1,sr                   ; set new value of IPL in SR
+        move.w  d1,sr                   /* set new value of IPL in SR */
         move.w  (sp)+,d0
-        and.w   #$0700,d0               ; return IPL bits of original SR
+        and.w   #0x0700,d0              /* return IPL bits of original SR */
         rts
+END(ulPortSetIPL)
 
-vPortYieldHandler:
-        portSAVE_CONTEXT
+ENTRY(vPortYieldHandler)
+        portSAVE_CONTEXT()
         jsr     vTaskSwitchContext
-        portRESTORE_CONTEXT
+        portRESTORE_CONTEXT()
+END(vPortYieldHandler)
 
-vPortStartFirstTask:
-        portRESTORE_CONTEXT
+ENTRY(vPortStartFirstTask)
+        portRESTORE_CONTEXT()
+END(vPortStartFirstTask)
 
-; vim: ft=asm68k ts=8 sw=8
+# vim: ft=gas:ts=8:sw=8:noet

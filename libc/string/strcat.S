@@ -1,21 +1,20 @@
-; This code is covered by BSD license. It was taken from NetBSD
-; common/lib/libc/arch/m68k/string/strcat.S and converted to Motorola syntax.
+# This code is covered by BSD license. It was taken from NetBSD
+# common/lib/libc/arch/m68k/string/strcat.S
 
-        xdef    strcat
+#include <asm.h>
 
-        section '.text',code
-
-strcat:
-	move.l	8(sp),a0		; a0 = fromaddr
-	move.l	4(sp),d0		; return value is toaddr
-	move.l	d0,a1			; a1 = toaddr
+ENTRY(strcat)
+	move.l	8(sp),a0	/* a0 = fromaddr */
+	move.l	4(sp),d0	/* return value is toaddr */
+	move.l	d0,a1		/* a1 = toaddr */
 .Lslloop:
-	tst.b	(a1)+			; null?
-	bne	.Lslloop		; no, keep going
+	tst.b	(a1)+		/* null? */
+	jne	.Lslloop	/* no, keep going */
 	subq.l	#1,a1
 .Lscloop:
-	move.b	(a0)+,(a1)+		; copy a byte
-	bne	.Lscloop		; copied non-null, keep going
+	move.b	(a0)+,(a1)+	/* copy a byte */
+	jne	.Lscloop	/* copied non-null, keep going */
 	rts
+END(strcat)
 
-; vim: ft=asm68k:ts=8:sw=8:noet:
+# vim: ft=gas:ts=8:sw=8:noet:

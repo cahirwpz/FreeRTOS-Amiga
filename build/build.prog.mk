@@ -29,15 +29,15 @@ $(PROGRAM).adf: $(TOPDIR)/bootloader.bin $(PROGRAM).exe
 	$(FSUTIL) -b $(TOPDIR)/bootloader.bin create $@ \
 		$(filter-out %bootloader.bin,$^)
 
-%.rom.S: $(TOPDIR)/a500rom.S
+%.rom.asm: $(TOPDIR)/a500rom.asm
 	@echo "[SED] $^ -> $(DIR)$@"
 	sed -e 's,$$(TOPDIR),$(TOPDIR),g' \
 	    -e 's,$$(PROGRAM),$(PROGRAM),g' \
-	    $(TOPDIR)/a500rom.S > $@
+	    $(TOPDIR)/a500rom.asm > $@
 
-%.rom: %.rom.S %.exe
+%.rom: %.rom.asm %.exe
 	@echo "[AS] $(addprefix $(DIR),$^) -> $(DIR)$@"
-	$(AS) -Fbin $(ASFLAGS) -o $@ $(realpath $<)
+	$(VASM) -Fbin $(VASMFLAGS) -o $@ $(realpath $<)
 
 %.c: %.png
 	@echo "[PNG2C] $(addprefix $(DIR),$^) -> $(DIR)$@"

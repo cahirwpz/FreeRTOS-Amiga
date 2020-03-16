@@ -15,7 +15,7 @@ PROVIDE(ciab = 0xbfd000);
 PROVIDE(custom = 0xdff000);
 SECTIONS
 {
-  .text 0: ALIGN(4)
+  .text 0: ALIGN(4) SUBALIGN(2)
   {
     PROVIDE(_text = .);
     *(.text .text.*)

@@ -55,7 +55,7 @@ Setup:
 
 ROM = 1
 
-        include '$(TOPDIR)/bootloader.S'
+        include '$(TOPDIR)/bootloader.asm'
 
 HunkFile
         incbin  '$(PROGRAM).exe'

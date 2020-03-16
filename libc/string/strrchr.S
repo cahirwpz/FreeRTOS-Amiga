@@ -1,24 +1,23 @@
-; This code is covered by BSD license. It was taken from NetBSD
-; common/lib/libc/arch/m68k/string/strrchr.S and converted to Motorola syntax.
+# This code is covered by BSD license. It was taken from NetBSD
+# common/lib/libc/arch/m68k/string/strrchr.S
 
-        xdef    rindex
-        xdef    strrchr
+#include <asm.h>
 
-        section '.text',code
-
-rindex:
-strrchr:
-	move.l	4(sp),a1		; string
-	move.b	11(sp),d0		; char to look for
-	sub.l	a0,a0			; clear rindex pointer
+ENTRY(strrchr)
+	move.l	4(sp),a1	/* string */
+	move.b	11(sp),d0	/* char to look for */
+	sub.l	a0,a0		/* clear rindex pointer */
 .Lrixloop:
-	cmp.b	(a1),d0		        ; found our char?
-	bne	.Lrixnope		; no, check for null
-	move.l	a1,a0			; yes, remember location
+	cmp.b	(a1),d0		/* found our char? */
+	jne	.Lrixnope	/* no, check for null */
+	move.l	a1,a0		/* yes, remember location */
 .Lrixnope:
-	tst.b	(a1)+			; null?
-	bne	.Lrixloop		; no, keep going
-	move.l	a0,d0			; return value
+	tst.b	(a1)+		/* null? */
+	jne	.Lrixloop	/* no, keep going */
+	move.l	a0,d0		/* return value */
 	rts
+END(strrchr)
 
-; vim: ft=asm68k:ts=8:sw=8:noet:
+STRONG_ALIAS(rindex,strrchr)
+
+# vim: ft=gas:ts=8:sw=8:noet:

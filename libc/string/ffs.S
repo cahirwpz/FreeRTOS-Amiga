@@ -1,13 +1,11 @@
-; This code is covered by BSD license. It was taken from NetBSD
-; common/lib/libc/arch/m68k/string/ffs.S and converted to Motorola syntax.
+# This code is covered by BSD license. It was taken from NetBSD
+# common/lib/libc/arch/m68k/string/ffs.S
 
-        xdef    ffs
+#include <asm.h>
 
-        section '.text',code
-
-ffs:
+ENTRY(ffs)
 	move.l	4(sp),d0
-	beq	.L2
+	jeq	.L2
 	moveq.l	#31,d1
 .L1:	
 	lsr.l	#1,d0
@@ -16,5 +14,6 @@ ffs:
 	sub.l	d1,d0
 .L2:
 	rts
+END(ffs)
 
-; vim: ft=asm68k:ts=8:sw=8:noet:
+# vim: ft=gas:ts=8:sw=8:noet:
