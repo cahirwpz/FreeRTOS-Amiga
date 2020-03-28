@@ -12,6 +12,7 @@ PHDRS
 }
 PROVIDE(ciaa = 0xbfe001);
 PROVIDE(ciab = 0xbfd000);
+PROVIDE(msm6242b = 0xdc0000);
 PROVIDE(custom = 0xdff000);
 SECTIONS
 {
