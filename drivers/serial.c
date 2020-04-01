@@ -54,7 +54,8 @@ void SerialKill(void) {
 
 static void TriggerSend(uint8_t cSend) {
   taskENTER_CRITICAL();
-  if (uxQueueMessagesWaiting(SendQ) == 0) {
+  /* Checking if sending queue and serdat register are empty. */
+  if (uxQueueMessagesWaiting(SendQ) == 0 && custom.serdatr & SERDATF_TBE) {
     SendByte(cSend);
   } else {
     uint8_t data = cSend;
