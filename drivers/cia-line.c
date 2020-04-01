@@ -34,7 +34,17 @@ static void SetAlarm(uint32_t line) {
   BCLR(*ciacrb, CIACRAB_TODIN);
 }
 
+/* CIA requires the interrupt to be acknowledged by the handler.
+ * This is done by reading the value in Interrupt Control Register */
+static void AcknowledgeTimerIRQ(void) {
+	CIA_t cia = CIAB;
+	volatile uint8_t * ciab = &cia->_ciaicr;
+	uint8_t read = *ciab; 
+}
+
 static void LineCounterHandler(List_t *tasks) {
+  AcknowledgeTimerIRQ();
+
   if (listLIST_IS_EMPTY(tasks))
     return;
 
