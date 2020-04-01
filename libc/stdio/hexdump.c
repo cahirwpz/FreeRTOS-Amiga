@@ -3,7 +3,7 @@
 
 void hexdump(void *ptr, size_t length) {
   unsigned char *data = ptr;
-  for (int i = 0; i < length; i++) {
+  for (size_t i = 0; i < length; i++) {
     if ((i & 15) == 0)
       printf("%08x:", (intptr_t)data);
     unsigned char byte = *data++;

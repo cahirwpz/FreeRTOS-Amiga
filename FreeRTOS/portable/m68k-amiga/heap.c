@@ -33,7 +33,7 @@ struct memory {
 
 #define ALIGN(x, n) (((x) + (n)-1) & -(n))
 
-static void *_pvPortMalloc(size_t size, memory_t m) {
+static void *_pvPortMalloc(int size, memory_t m) {
   void *ptr = NULL;
 
   /* Loose up to (BLOCK_SIZE - 1) bytes due to internal fragmentation. */

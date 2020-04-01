@@ -24,7 +24,7 @@ $(DEPENDENCY-FILES): $(SOURCES_GEN)
 
 %.o: %.c
 	@echo "[CC] $(DIR)$< -> $(DIR)$@"
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $(realpath $<)
+	$(CC) $(CFLAGS) $(CFLAGS.$*) $(CPPFLAGS) -c -o $@ $(realpath $<)
 
 %.o: %.asm
 	@echo "[VASM] $(DIR)$< -> $(DIR)$@"

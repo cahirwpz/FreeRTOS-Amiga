@@ -53,7 +53,7 @@ CIATimer_t *AcquireTimer(unsigned num) {
   {
     /* Allocate a timer that is not in use and its' number matches
      * (if specified instead of wildcard). */
-    for (int i = TIMER_CIAA_A; i <= TIMER_CIAB_B; i++) {
+    for (unsigned i = TIMER_CIAA_A; i <= TIMER_CIAB_B; i++) {
       if (!BTST(InUse, i) && (num == TIMER_ANY || num == i)) {
         BSET(InUse, i);
         timer = &Timers[i];
