@@ -54,7 +54,7 @@ void SerialKill(void) {
 
 static void TriggerSend(uint8_t cSend) {
   taskENTER_CRITICAL();
-  if (uxQueueMessagesWaiting(SendQ) == 0) {
+  if (uxQueueMessagesWaiting(SendQ) == 0 && (custom.serdatr & SERDATF_TBE)) {
     SendByte(cSend);
   } else {
     uint8_t data = cSend;
