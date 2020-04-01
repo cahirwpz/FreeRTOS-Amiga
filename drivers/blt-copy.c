@@ -11,7 +11,7 @@ static uint16_t LastWordMask[16] = {
 };
 
 #define srcstride (bc->src.bm->bytesPerRow)
-#define mask (bc->src.bm->flags & BM_HASMASK)
+#define mask (bc->src.bm->mask)
 #define sx (bc->src.x)
 #define sy (bc->src.y)
 #define sw (bc->src.w)

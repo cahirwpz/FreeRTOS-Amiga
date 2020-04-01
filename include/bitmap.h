@@ -6,7 +6,6 @@
 #define MAXDEPTH 8
 
 #define BM_INTERLEAVED 1
-#define BM_HASMASK 2
 
 typedef struct bitmap {
   int16_t width;
