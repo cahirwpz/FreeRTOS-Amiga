@@ -47,6 +47,10 @@ $(PROGRAM).adf: $(TOPDIR)/bootloader.bin $(PROGRAM).exe
 	@echo "[PSF2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
 	$(PSF2C) $(PSF2COPTS) $(realpath $<) > $@
 
+data/%.c: data/%.wav
+	@echo "[WAV2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
+	$(WAV2C) $(WAV2C.$*) $(realpath $<) > $@
+
 $(TOPDIR)/%.lib: dummy
 	$(MAKE) -C $(dir $@) $(notdir $@)
 

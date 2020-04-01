@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdalign.h>
 
 #define abs(x)                                                                 \
   ({                                                                           \
