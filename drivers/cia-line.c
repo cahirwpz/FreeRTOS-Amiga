@@ -43,7 +43,7 @@ static void AcknowledgeTimerIRQ(void) {
 }
 
 static void LineCounterHandler(List_t *tasks) {
-  AcknowledgeTimerIRQ();
+  (void)SampleICR(CIAB, 0x00);
 
   if (listLIST_IS_EMPTY(tasks))
     return;
