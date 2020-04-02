@@ -35,6 +35,10 @@ static void SetAlarm(uint32_t line) {
 }
 
 static void LineCounterHandler(List_t *tasks) {
+  /* CIA requires the interrupt to be acknowledged by the handler.
+   * This is done by reading the value in Interrupt Control Register */
+  (void)SampleICR(CIAB, 0x00);
+
   if (listLIST_IS_EMPTY(tasks))
     return;
 
