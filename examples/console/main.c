@@ -44,9 +44,8 @@ INTSERVER_DEFINE(SystemClockTick, 10, SystemClockTickHandler, NULL);
 
 static xTaskHandle input_handle;
 
-#include "data/screen.c"
-
 static COPLIST(cp, 40);
+static BITMAP(screen_bm, 640, 256, 1, 0);
 
 int main(void) {
   portNOP(); /* Breakpoint for simulator. */

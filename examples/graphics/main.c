@@ -11,9 +11,10 @@
 #include "data/bart.c"
 #include "data/homer.c"
 #include "data/marge.c"
-#include "data/screen.c"
 
 static COPLIST(cp, 100);
+static BITMAP(screen0_bm, 320, 176, 4, 0);
+static BITMAP(screen1_bm, 320, 176, 4, 0);
 static copins_t *bplpt[4];
 
 static void vMainTask(__unused void *data) {

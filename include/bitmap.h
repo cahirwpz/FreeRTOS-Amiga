@@ -17,16 +17,28 @@ typedef struct bitmap {
   void *planes[MAXDEPTH];
 } bitmap_t;
 
-static inline void CopSetupScreen(coplist_t *list, bitmap_t *bm,
-                                  uint16_t mode, uint16_t xs, uint16_t ys) {
+#define _BM_WIDTH(W) (((W) + 15) & ~15)
+
+#define BITPLANES(NAME, WIDTH, HEIGHT, DEPTH)                                  \
+  uint16_t NAME[_BM_WIDTH(WIDTH) * HEIGHT * DEPTH / 16]
+
+#define BITMAP(NAME, WIDTH, HEIGHT, DEPTH, BPL, FLAGS)                         \
+  bitmap_t NAME = {.width = _BM_WIDTH(WIDTH),                                  \
+                   .height = (HEIGHT),                                         \
+                   .depth = (DEPTH),                                           \
+                   .flags = (FLAGS),                                           \
+                   .bytesPerRow = _BM_WIDTH(WIDTH) / 8,                        \
+                   .planes = {_BM_PLANE(BPL, DEPTH)}
+
+static inline void CopSetupScreen(coplist_t *list, bitmap_t *bm, uint16_t mode,
+                                  uint16_t xs, uint16_t ys) {
   CopSetupMode(list, mode, bm->depth);
   CopSetupDisplayWindow(list, mode, xs, ys, bm->width, bm->height);
   CopSetupBitplaneFetch(list, mode, xs, bm->width);
 }
 
 static inline void CopSetupBitplanes(coplist_t *list, bitmap_t *bm,
-                                     copins_t **bplptr)
-{
+                                     copins_t **bplptr) {
   for (int i = 0; i < bm->depth; i++) {
     copins_t *ins = CopMove32(list, bplpt[i], bm->planes[i]);
     if (bplptr)
