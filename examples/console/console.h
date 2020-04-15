@@ -3,11 +3,8 @@
 
 struct bitmap;
 struct font;
+typedef struct File File_t;
 
-void ConsoleInit(struct bitmap *bm, struct font *font);
-void ConsoleSetCursor(short x, short y);
-void ConsoleDrawCursor(void);
-void ConsolePutChar(char c);
-void ConsolePrintf(const char *fmt, ...);
+File_t *ConsoleOpen(struct bitmap *bm, struct font *font);
 
 #endif

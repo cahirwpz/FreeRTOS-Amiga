@@ -3,10 +3,13 @@ TOPDIR = $(realpath ..)
 SOURCES = \
 	  blt-copy.c \
 	  blt-line.c \
+	  bootcons.c \
+	  bootcons-putc.S \
 	  cia-frame.c \
 	  cia-icr.c \
 	  cia-line.c \
 	  cia-timer.c \
+	  file.c \
 	  floppy.c \
 	  floppy-mfm.c \
 	  keyboard.c \
