@@ -4,7 +4,6 @@
 #include <interrupt.h>
 #include <stdio.h>
 
-#include <event.h>
 #include <copper.h>
 #include <palette.h>
 #include <bitmap.h>
@@ -12,6 +11,7 @@
 #include <font.h>
 
 #include "console.h"
+#include "event.h"
 #include "data/lat2-08.c"
 #include "data/pointer.c"
 
@@ -27,7 +27,7 @@ static void vInputTask(__unused void *data) {
                     ev.mouse.x, ev.mouse.y, ev.mouse.button);
       SpriteUpdatePos(&pointer_spr, HP(ev.mouse.x), VP(ev.mouse.y));
     } else if (ev.type == EV_KEY) {
-      ConsolePrintf("KEY: ascii = '%c', code = %x, modifier = %x\n",
+      ConsolePrintf("KEY: ascii = '%c', code = %02x, modifier = %02x\n",
                     ev.key.ascii, ev.key.code, ev.key.modifier);
     }
   }
@@ -83,8 +83,8 @@ int main(void) {
   EnableDMA(DMAF_RASTER|DMAF_SPRITE);
 
   EventQueueInit();
-  MouseInit(0, 0, screen_bm.width - 1, screen_bm.height - 1);
-  KeyboardInit();
+  MouseInit(PushMouseEventFromISR, 0, 0, 319, 255);
+  KeyboardInit(PushKeyEventFromISR);
 
   ConsoleInit(&screen_bm, &console_font);
 

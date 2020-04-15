@@ -1,7 +1,7 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/queue.h>
 
-#include <event.h>
+#include "event.h"
 
 #define EV_MAXNUM 16
 
@@ -15,12 +15,12 @@ void EventQueueKill(void) {
   vQueueDelete(EventQueue);
 }
 
-void PushEvent(Event_t *ev) {
-   xQueueSendToBack(EventQueue, (void *)ev, portMAX_DELAY);
+void PushKeyEventFromISR(const KeyEvent_t *ev) {
+  xQueueSendToBackFromISR(EventQueue, (const void *)ev, &xNeedRescheduleTask);
 }
 
-void PushEventFromISR(Event_t *ev) {
-   xQueueSendToBackFromISR(EventQueue, (void *)ev, &xNeedRescheduleTask);
+void PushMouseEventFromISR(const MouseEvent_t *ev) {
+  xQueueSendToBackFromISR(EventQueue, (const void *)ev, &xNeedRescheduleTask);
 }
 
 bool PopEvent(Event_t *ev) {

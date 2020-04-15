@@ -115,14 +115,19 @@ typedef enum {
   MOD_AMIGA = MOD_LAMIGA | MOD_RAMIGA
 } KeyMod_t;
 
+#define EV_KEY 2
+
 typedef struct KeyEvent {
-  uint8_t type;
+  uint8_t type;     /* always set to EV_KEY */
   uint8_t modifier;
   uint8_t code;
   char ascii;
 } KeyEvent_t;
 
-void KeyboardInit(void);
+typedef void (*KeyEventNotify_t)(const KeyEvent_t *);
+
+/* Notify procedure will always be called from ISR! */
+void KeyboardInit(KeyEventNotify_t notify);
 void KeyboardKill(void);
 
 #endif /* !_KEYBOARD_H_ */
