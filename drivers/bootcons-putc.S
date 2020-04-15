@@ -4,7 +4,7 @@
 #include <asm.h>
 #include <cia_regdef.h>
 
-ENTRY(putchar)
+ENTRY(BootConsPutChar)
         move.l  4(sp),d0
         lea     ciab,a0                 /* [a0] ciab, ciaa = ciab + $1001 */
 
@@ -16,6 +16,6 @@ ENTRY(putchar)
         tst.b   (a0)                    /* waste 2 E-cycles */
         tst.b   (a0)
         rts
-END(putchar)
+END(BootConsPutChar)
 
 # vim: ft=gas:ts=8:sw=8:noet:

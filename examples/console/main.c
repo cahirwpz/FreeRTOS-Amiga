@@ -9,6 +9,7 @@
 #include <bitmap.h>
 #include <sprite.h>
 #include <font.h>
+#include <file.h>
 
 #include "console.h"
 #include "event.h"
@@ -17,18 +18,19 @@
 
 #define mainINPUT_TASK_PRIORITY 3
 
-static void vInputTask(__unused void *data) {
+static void vInputTask(void *data) {
+  File_t *cons = data;
   for (;;) {
     Event_t ev;
     if (!PopEvent(&ev))
       continue;
     if (ev.type == EV_MOUSE) {
-      ConsolePrintf("MOUSE: x = %d, y = %d, button = %x\n",
-                    ev.mouse.x, ev.mouse.y, ev.mouse.button);
+      FilePrintf(cons, "MOUSE: x = %d, y = %d, button = %x\n",
+                 ev.mouse.x, ev.mouse.y, ev.mouse.button);
       SpriteUpdatePos(&pointer_spr, HP(ev.mouse.x), VP(ev.mouse.y));
     } else if (ev.type == EV_KEY) {
-      ConsolePrintf("KEY: ascii = '%c', code = %02x, modifier = %02x\n",
-                    ev.key.ascii, ev.key.code, ev.key.modifier);
+      FilePrintf(cons, "KEY: ascii = '%c', code = %02x, modifier = %02x\n",
+                 ev.key.ascii, ev.key.code, ev.key.modifier);
     }
   }
 }
@@ -86,9 +88,9 @@ int main(void) {
   MouseInit(PushMouseEventFromISR, 0, 0, 319, 255);
   KeyboardInit(PushKeyEventFromISR);
 
-  ConsoleInit(&screen_bm, &console_font);
+  File_t *cons = ConsoleOpen(&screen_bm, &console_font);
 
-  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, NULL,
+  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, cons,
               mainINPUT_TASK_PRIORITY, &input_handle);
 
   vTaskStartScheduler();

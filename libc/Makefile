@@ -8,8 +8,6 @@ SOURCES = \
 	gen/umodsi3.S \
 	stdio/hexdump.c \
 	stdio/kvprintf.c \
-	stdio/printf.c \
-	stdio/putchar.S \
 	string/bzero.S \
 	string/ffs.S \
 	string/memcpy.S \

@@ -4,12 +4,15 @@
 #include <cdefs.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <file.h>
+
+extern File_t *KernCons; /* Kernel console file (parallel port by default) */
 
 typedef void (*putchar_t)(char);
-
-void putchar(char);
-void printf(const char *fmt, ...);
 void kvprintf(putchar_t, const char *fmt, va_list ap);
+
+#define putchar(c) FilePutChar(KernCons, (c))
+#define printf(...) FilePrintf(KernCons, __VA_ARGS__)
 
 void hexdump(void *ptr, size_t length);
 #define hexdump_s(ptr) hexdump(ptr, sizeof(*ptr))

@@ -33,5 +33,6 @@ int FileSeek(File_t *f, long offset, int whence);
 void FileClose(File_t *f);
 
 void FilePutChar(File_t *f, char c);
+void FilePrintf(File_t *f, const char *fmt, ...);
 
 #endif /* !_FILE_H_ */
