@@ -7,6 +7,7 @@ SOURCES = \
 	  cia-icr.c \
 	  cia-line.c \
 	  cia-timer.c \
+	  file.c \
 	  floppy.c \
 	  floppy-mfm.c \
 	  keyboard.c \
