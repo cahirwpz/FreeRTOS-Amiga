@@ -8,10 +8,14 @@ int FileWrite(File_t *f, const void *buf, size_t nbyte) {
   return f->ops->write(f, buf, nbyte);
 }
 
-int FileSeek(File_t *f, int offset, int whence) {
+int FileSeek(File_t *f, long offset, int whence) {
   return f->ops->seek(f, offset, whence);
 }
 
-int FileClose(File_t *f) {
-  return f->ops->close(f);
+void FileClose(File_t *f) {
+  f->ops->close(f);
+}
+
+void FilePutChar(File_t *f, char c) {
+  FileWrite(f, &c, 1);
 }

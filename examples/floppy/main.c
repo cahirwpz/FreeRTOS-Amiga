@@ -11,15 +11,17 @@
 #define mainMINUS_TASK_PRIORITY 2
 #define mainREADER_TASK_PRIORITY 3
 
+static File_t *ser = NULL;
+
 static void vPlusTask(__unused void *data) {
   for (;;) {
-    SerialPutChar('-');
+    FilePutChar(ser, '-');
   }
 }
 
 static void vMinusTask(__unused void *data) {
   for (;;) {
-    SerialPutChar('+');
+    FilePutChar(ser, '+');
   }
 }
 
@@ -58,7 +60,8 @@ int main(void) {
   AddIntServer(VertBlankChain, SystemClockTick);
 
   FloppyInit(mainREADER_TASK_PRIORITY);
-  SerialInit(9600);
+
+  ser = SerialOpen(9600);
 
   xTaskCreate(vPlusTask, "plus", configMINIMAL_STACK_SIZE, NULL,
               mainPLUS_TASK_PRIORITY, &plus_handle);

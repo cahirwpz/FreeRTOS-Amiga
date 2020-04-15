@@ -10,77 +10,104 @@
 #define CLOCK 3546895
 #define QUEUELEN 64
 
-static QueueHandle_t SendQ;
-static QueueHandle_t RecvQ;
+typedef struct SerPort {
+  File_t file;
+  QueueHandle_t sendQ;
+  QueueHandle_t recvQ;
+} SerPort_t;
+
+static int SerialRead(SerPort_t *ser, char *buf, size_t nbyte);
+static int SerialWrite(SerPort_t *ser, const char *buf, size_t nbyte);
+static void SerialClose(SerPort_t *ser);
+
+static FileOps_t SerOps = {
+  .read = (FileRead_t)SerialRead,
+  .write = (FileWrite_t)SerialWrite,
+  .close = (FileClose_t)SerialClose
+};
 
 #define SendByte(byte) { custom.serdat = (uint16_t)(byte) | (uint16_t)0x100; }
 
-static void SendIntHandler(__unused void *ptr) {
+static void SendIntHandler(void *ptr) {
+  SerPort_t *ser = ptr;
   /* Send one byte into the wire. */
   uint8_t cSend;
-  if (xQueueReceiveFromISR(SendQ, &cSend, &xNeedRescheduleTask))
+  if (xQueueReceiveFromISR(ser->sendQ, &cSend, &xNeedRescheduleTask))
     SendByte(cSend);
 }
 
-static void RecvIntHandler(__unused void *ptr) {
+static void RecvIntHandler(void *ptr) {
+  SerPort_t *ser = ptr;
   /* Send one byte to waiting task. */
   char cRecv = custom.serdatr;
-  (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, &xNeedRescheduleTask);
+  (void)xQueueSendFromISR(ser->recvQ, (void *)&cRecv, &xNeedRescheduleTask);
 }
 
-void SerialInit(unsigned baud) {
-  printf("[Init] Serial port driver!\n");
+File_t *SerialOpen(unsigned baud) {
+  static SerPort_t ser;
+  File_t *f = &ser.file;
+
+  if (++f->usecount > 1)
+    return f;
+
+  f->ops = &SerOps;
 
   custom.serper = CLOCK / baud - 1;
 
-  RecvQ = xQueueCreate(QUEUELEN, sizeof(char));
-  SendQ = xQueueCreate(QUEUELEN, sizeof(char));
+  ser.recvQ = xQueueCreate(QUEUELEN, sizeof(char));
+  ser.sendQ = xQueueCreate(QUEUELEN, sizeof(char));
 
-  SetIntVec(TBE, SendIntHandler, NULL);
-  SetIntVec(RBF, RecvIntHandler, NULL);
+  SetIntVec(TBE, SendIntHandler, &ser);
+  SetIntVec(RBF, RecvIntHandler, &ser);
 
   ClearIRQ(INTF_TBE|INTF_RBF);
   EnableINT(INTF_TBE|INTF_RBF);
+
+  return f;
 }
 
-void SerialKill(void) {
+static void SerialClose(SerPort_t *ser) {
+  if (--ser->file.usecount > 0)
+    return;
+
   DisableINT(INTF_TBE|INTF_RBF);
   ResetIntVec(TBE);
   ResetIntVec(RBF);
 
-  vQueueDelete(RecvQ);
-  vQueueDelete(SendQ);
+  vQueueDelete(ser->recvQ);
+  vQueueDelete(ser->sendQ);
 }
 
-static void TriggerSend(uint8_t cSend) {
+static void TriggerSend(SerPort_t *ser, uint8_t cSend) {
   taskENTER_CRITICAL();
   /* Checking if sending queue and serdat register are empty. */
-  if (uxQueueMessagesWaiting(SendQ) == 0 && custom.serdatr & SERDATF_TBE) {
+  if (uxQueueMessagesWaiting(ser->sendQ) == 0 && custom.serdatr & SERDATF_TBE) {
     SendByte(cSend);
   } else {
     uint8_t data = cSend;
-    (void)xQueueSend(SendQ, &data, portMAX_DELAY);
+    (void)xQueueSend(ser->sendQ, &data, portMAX_DELAY);
   }
   taskEXIT_CRITICAL();
 }
 
-void SerialPutChar(char data) {
-  TriggerSend(data);
-  if (data == '\n') {
-    data = '\r';
-    TriggerSend(data);
+static int SerialWrite(SerPort_t *ser, const char *buf, size_t nbyte) {
+  for (size_t i = 0; i < nbyte; i++) {
+    char data = *buf++;
+    TriggerSend(ser, data);
+    if (data == '\n') {
+      data = '\r';
+      TriggerSend(ser, data);
+    }
   }
+  return nbyte;
 }
 
-void SerialPrint(const char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  kvprintf(SerialPutChar, fmt, ap);
-  va_end(ap);
-}
-
-int SerialGetChar(void) {
-  char cRecv;
-  xQueueReceive(RecvQ, (void *)&cRecv, portMAX_DELAY);
-  return cRecv;
+static int SerialRead(SerPort_t *ser, char *buf, size_t nbyte) {
+  size_t i = 0;
+  while (i < nbyte) {
+    xQueueReceive(ser->recvQ, (void *)&buf[i], portMAX_DELAY);
+    if (buf[i++] == '\n')
+      break;
+  }
+  return i;
 }
