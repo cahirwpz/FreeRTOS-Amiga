@@ -48,4 +48,6 @@
 #define __datachip __attribute__((section(".datachip")))
 #define __bsschip __attribute__((section(".bsschip")))
 
+#define __weak_alias(alias,sym) __asm(".weak " #alias "\n" #alias " = " #sym)
+
 #endif /* !_CDEFS_H_ */

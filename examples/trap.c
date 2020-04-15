@@ -18,7 +18,7 @@ static const char *const trapname[T_NTRAPS] = {
   [T_TRAPINST] = "Trap Instruction"
 };
 
-void vPortTrapHandler(struct TrapFrame *frame) {
+void vPortDefaultTrapHandler(struct TrapFrame *frame) {
   int memflt = frame->trapnum == T_BUSERR || frame->trapnum == T_ADDRERR;
 
   /* We need to fix stack pointer, as processor pushes data on stack before it
@@ -78,3 +78,5 @@ void vPortTrapHandler(struct TrapFrame *frame) {
 
   portHALT();
 }
+
+__weak_alias(vPortTrapHandler, vPortDefaultTrapHandler);
