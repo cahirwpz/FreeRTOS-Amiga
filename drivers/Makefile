@@ -15,6 +15,7 @@ SOURCES = \
 	  keyboard.c \
 	  mouse.c \
 	  serial.c \
+	  serial-file.c \
 	  sprite.c
 
 LIBNAME = drivers.lib
