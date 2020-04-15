@@ -1,7 +1,7 @@
 TOPDIR = $(realpath ../..)
 
 PROGRAM = console
-SOURCES = main.c console.c event.c
+SOURCES = main.c console.c console-file.c event.c
 SOURCES_GEN = data/drdos8x8.c data/koi8r.8x8.c data/lat2-08.c data/pointer.c \
 	      data/screen.c
 OBJECTS = ../startup.o ../fault.o ../trap.o

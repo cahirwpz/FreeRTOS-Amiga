@@ -87,8 +87,9 @@ int main(void) {
   EventQueueInit();
   MouseInit(PushMouseEventFromISR, 0, 0, 319, 255);
   KeyboardInit(PushKeyEventFromISR);
+  ConsoleInit(&screen_bm, &console_font);
 
-  File_t *cons = ConsoleOpen(&screen_bm, &console_font);
+  File_t *cons = ConsoleOpen();
 
   xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, cons,
               mainINPUT_TASK_PRIORITY, &input_handle);
