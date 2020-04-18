@@ -13,23 +13,24 @@
 
 #include "console.h"
 #include "event.h"
+#include "tty.h"
 #include "data/lat2-08.c"
 #include "data/pointer.c"
 
 #define mainINPUT_TASK_PRIORITY 3
 
 static void vInputTask(void *data) {
-  File_t *cons = data;
+  File_t *tty = data;
   for (;;) {
     Event_t ev;
     if (!PopEvent(&ev))
       continue;
     if (ev.type == EV_MOUSE) {
-      FilePrintf(cons, "MOUSE: x = %d, y = %d, button = %x\n",
+      FilePrintf(tty, "MOUSE: x = %d, y = %d, button = %x\n",
                  ev.mouse.x, ev.mouse.y, ev.mouse.button);
       SpriteUpdatePos(&pointer_spr, HP(ev.mouse.x), VP(ev.mouse.y));
     } else if (ev.type == EV_KEY) {
-      FilePrintf(cons, "KEY: ascii = '%c', code = %02x, modifier = %02x\n",
+      FilePrintf(tty, "KEY: ascii = '%c', code = %02x, modifier = %02x\n",
                  ev.key.ascii, ev.key.code, ev.key.modifier);
     }
   }
@@ -89,9 +90,7 @@ int main(void) {
   KeyboardInit(PushKeyEventFromISR);
   ConsoleInit(&screen_bm, &console_font);
 
-  File_t *cons = ConsoleOpen();
-
-  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, cons,
+  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, TtyOpen(),
               mainINPUT_TASK_PRIORITY, &input_handle);
 
   vTaskStartScheduler();
