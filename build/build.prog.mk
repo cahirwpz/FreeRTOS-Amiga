@@ -7,8 +7,8 @@ LIBS    ?= $(TOPDIR)/drivers/drivers.lib \
 	   $(TOPDIR)/libc/c.lib
 LDFLAGS  = --emit-relocs -T $(TOPDIR)/amiga.ld
 
-BUILD-FILES = $(PROGRAM).exe $(PROGRAM).adf
-CLEAN-FILES = $(PROGRAM).elf $(PROGRAM).elf.map $(PROGRAM).rom
+BUILD-FILES += $(PROGRAM).exe $(PROGRAM).adf
+CLEAN-FILES += $(PROGRAM).elf $(PROGRAM).elf.map $(PROGRAM).rom
 
 all: build
 
@@ -20,14 +20,18 @@ $(PROGRAM).elf: $(OBJECTS) $(LIBS)
 	@echo "[LD] $(addprefix $(DIR),$(OBJECTS)) $(LIBS) -> $(DIR)$@"
 	$(LD) $(LDFLAGS) -Map $@.map -o $@ $^
 
-$(PROGRAM).exe: $(PROGRAM).elf
-	@echo "[ELF2HUNK] $(DIR)$< -> $(DIR)$@"
-	$(ELF2HUNK) $< $@
-
 $(PROGRAM).adf: $(TOPDIR)/bootloader.bin $(PROGRAM).exe
 	@echo "[ADF] $(addprefix $(DIR),$(filter-out %bootloader.bin,$^)) -> $(DIR)$@"
 	$(FSUTIL) -b $(TOPDIR)/bootloader.bin create $@ \
 		$(filter-out %bootloader.bin,$^)
+
+%.exe: %.elf
+	@echo "[ELF2HUNK] $(DIR)$< -> $(DIR)$@"
+	$(ELF2HUNK) $< $@
+
+%.o: %
+	@echo "[OBJCOPY] $(DIR)$< -> $(DIR)$@"
+	$(OBJCOPY) -I binary -O elf32-m68k -B 68000 $^ $@
 
 %.rom.asm: $(TOPDIR)/a500rom.asm
 	@echo "[SED] $^ -> $(DIR)$@"
