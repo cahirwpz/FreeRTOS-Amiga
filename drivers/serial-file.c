@@ -1,8 +1,8 @@
 #include <serial.h>
 #include <file.h>
 
-static int SerialRead(File_t *f, char *buf, size_t nbyte);
-static int SerialWrite(File_t *f, const char *buf, size_t nbyte);
+static long SerialRead(File_t *f, char *buf, size_t nbyte);
+static long SerialWrite(File_t *f, const char *buf, size_t nbyte);
 static void SerialClose(File_t *f);
 
 static FileOps_t SerOps = {
@@ -24,13 +24,13 @@ static void SerialClose(File_t *f) {
     SerialKill();
 }
 
-static int SerialWrite(__unused File_t *f, const char *buf, size_t nbyte) {
+static long SerialWrite(__unused File_t *f, const char *buf, size_t nbyte) {
   for (size_t i = 0; i < nbyte; i++)
     SerialPutChar(*buf++);
   return nbyte;
 }
 
-static int SerialRead(__unused File_t *f, char *buf, size_t nbyte) {
+static long SerialRead(__unused File_t *f, char *buf, size_t nbyte) {
   size_t i = 0;
   while (i < nbyte) {
     buf[i] = SerialGetChar();

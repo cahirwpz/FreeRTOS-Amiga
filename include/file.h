@@ -10,9 +10,9 @@
 
 typedef struct File File_t;
 
-typedef int (*FileRead_t)(File_t *f, void *buf, size_t nbyte);
-typedef int (*FileWrite_t)(File_t *f, const void *buf, size_t nbyte);
-typedef int (*FileSeek_t)(File_t *f, int offset, int whence);
+typedef long (*FileRead_t)(File_t *f, void *buf, size_t nbyte);
+typedef long (*FileWrite_t)(File_t *f, const void *buf, size_t nbyte);
+typedef long (*FileSeek_t)(File_t *f, long offset, int whence);
 typedef void (*FileClose_t)(File_t *f);
 
 typedef struct {
@@ -25,11 +25,13 @@ typedef struct {
 typedef struct File {
   FileOps_t *ops;
   short usecount;
+  long offset;
 } File_t;
 
-int FileRead(File_t *f, void *buf, size_t nbyte);
-int FileWrite(File_t *f, const void *buf, size_t nbyte);
-int FileSeek(File_t *f, long offset, int whence);
+/* These behave like read/write/lseek known from UNIX */
+long FileRead(File_t *f, void *buf, size_t nbyte);
+long FileWrite(File_t *f, const void *buf, size_t nbyte);
+long FileSeek(File_t *f, long offset, int whence);
 void FileClose(File_t *f);
 
 void FilePutChar(File_t *f, char c);
