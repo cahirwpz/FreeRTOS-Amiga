@@ -1,4 +1,5 @@
 #include <custom.h>
+#include "syscalls.h"
 
 int a[10];
 
