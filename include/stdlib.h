@@ -8,4 +8,6 @@
 #define malloc(s) pvPortMalloc(s)
 #define free(p) vPortFree(p)
 
+#define alloca(size) __builtin_alloca(size)
+
 #endif /* !_STDLIB_H_ */

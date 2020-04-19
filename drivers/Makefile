@@ -1,6 +1,7 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = \
+	  amigahunk.c \
 	  blt-copy.c \
 	  blt-line.c \
 	  bootcons.c \
