@@ -213,7 +213,7 @@ static void FloppyReader(__unused void *ptr) {
   }
 }
 
-void ReadFloppyTrack(void *aTrack, uint16_t aTrackNum) {
+void ReadTrack(void *aTrack, uint16_t aTrackNum) {
   FloppyIO_t fio = {.origin = xTaskGetCurrentTaskHandle(),
                     .track = aTrack,
                     .trackNum = aTrackNum};

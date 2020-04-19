@@ -13,21 +13,18 @@
  * 832 bytes between the end of sector #10 and beginning of sector #0.
  */
 
-#define TRACK_NSECTORS 11
+#define SECTOR_COUNT 11
+#define SECTOR_SIZE 512
+#define TRACK_COUNT 160
 #define TRACK_SIZE 12800
+#define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
 
 void FloppyInit(unsigned aFloppyIOTaskPrio);
 void FloppyKill(void);
 
-#define AllocFloppyTrack() pvPortMallocChip(TRACK_SIZE)
+#define AllocTrack() pvPortMallocChip(TRACK_SIZE)
 
-void ReadFloppyTrack(void *aTrack, uint16_t aTrackNum);
-
-struct DiskSector;
-typedef struct DiskSector DiskSector_t;
-typedef DiskSector_t *DiskTrack_t[TRACK_NSECTORS];
-
-void ParseTrack(void *track, DiskTrack_t sectors);
-void DecodeSector(DiskSector_t *sector, void *data);
+void ReadTrack(void *aTrack, uint16_t aTrackNum);
+void DecodeTrack(void *aTrack, void *aData);
 
 #endif /* !_FLOPPY_H_ */

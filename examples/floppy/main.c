@@ -26,16 +26,12 @@ static void vMinusTask(__unused void *data) {
 }
 
 static void vReaderTask(__unused void *data) {
-  void *track = AllocFloppyTrack();
-  void *buf = pvPortMalloc(512);
+  void *track = AllocTrack();
+  void *buf = pvPortMalloc(SECTOR_SIZE * SECTOR_COUNT);
   for (;;) {
-    DiskTrack_t sectors;
-    for (int i = 0; i < 160; i++) {
-       ReadFloppyTrack(track, i);
-       ParseTrack(track, sectors);
-       for (int j = 0; j < TRACK_NSECTORS; j++) {
-         DecodeSector(sectors[j], buf);
-       }
+    for (int i = 0; i < TRACK_COUNT; i++) {
+       ReadTrack(track, i);
+       DecodeTrack(track, buf);
     }
     vTaskDelay(2000 / portTICK_PERIOD_MS);
   }
