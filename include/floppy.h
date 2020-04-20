@@ -1,7 +1,8 @@
 #ifndef _FLOPPY_H_
 #define _FLOPPY_H_
 
-#include <FreeRTOSConfig.h>
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/queue.h>
 #include <stdint.h>
 
 /*
@@ -13,21 +14,28 @@
  * 832 bytes between the end of sector #10 and beginning of sector #0.
  */
 
-#define TRACK_NSECTORS 11
+#define SECTOR_COUNT 11
+#define SECTOR_SIZE 512
+#define TRACK_COUNT 160
 #define TRACK_SIZE 12800
+#define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
+
+#define CMD_READ 1
+#define CMD_WRITE 2
+
+typedef struct FloppyIO {
+  uint16_t cmd;            /* command code */
+  uint16_t track;          /* track number to transfer */
+  void *buffer;            /* chip memory buffer */
+  xQueueHandle replyQueue; /* after request is handled it'll be replied here */
+} FloppyIO_t;
 
 void FloppyInit(unsigned aFloppyIOTaskPrio);
 void FloppyKill(void);
 
-#define AllocFloppyTrack() pvPortMallocChip(TRACK_SIZE)
+#define AllocTrack() pvPortMallocChip(TRACK_SIZE)
 
-void ReadFloppyTrack(void *aTrack, uint16_t aTrackNum);
-
-struct DiskSector;
-typedef struct DiskSector DiskSector_t;
-typedef DiskSector_t *DiskTrack_t[TRACK_NSECTORS];
-
-void ParseTrack(void *track, DiskTrack_t sectors);
-void DecodeSector(DiskSector_t *sector, void *data);
+void FloppySendIO(FloppyIO_t *io);
+void DecodeTrack(void *aTrack, void *aData);
 
 #endif /* !_FLOPPY_H_ */

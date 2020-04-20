@@ -1,5 +1,6 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
+#include <FreeRTOS/queue.h>
 
 #include <interrupt.h>
 #include <stdio.h>
@@ -25,18 +26,55 @@ static void vMinusTask(__unused void *data) {
   }
 }
 
+static void SendIO(FloppyIO_t *io, short track) {
+  io->track = track;
+  FloppySendIO(io);
+}
+
+static void WaitIO(QueueHandle_t replyQ, void *buf) {
+  FloppyIO_t *io = NULL;
+  (void)xQueueReceive(replyQ, &io, portMAX_DELAY);
+  DecodeTrack(io->buffer, buf);
+}
+
 static void vReaderTask(__unused void *data) {
-  void *track = AllocFloppyTrack();
-  void *buf = pvPortMalloc(512);
+  QueueHandle_t replyQ = xQueueCreate(2, sizeof(FloppyIO_t *));
+  void *buf = pvPortMalloc(SECTOR_SIZE * SECTOR_COUNT);
+
+  /*
+   * For double buffering we need (sic!) two track buffers:
+   *  - one track will be owned by floppy driver
+   *    which will set up a DMA transfer to it
+   *  - the track will be decoded from MFM format
+   *    and possibly read by this task
+   */
+  FloppyIO_t io[2];
+  for (short i = 0; i < 2; i++) {
+    io[i].cmd = CMD_READ;
+    io[i].buffer = AllocTrack();
+    io[i].replyQueue = replyQ;
+  }
+
   for (;;) {
-    DiskTrack_t sectors;
-    for (int i = 0; i < 160; i++) {
-       ReadFloppyTrack(track, i);
-       ParseTrack(track, sectors);
-       for (int j = 0; j < TRACK_NSECTORS; j++) {
-         DecodeSector(sectors[j], buf);
-       }
-    }
+    short track = 0;
+    short active = 0;
+
+    /* Initiate double buffered reads. */
+    SendIO(&io[active], track++);
+    active ^= 1;
+
+    do {
+      /* Request asynchronous read into second buffer. */
+      SendIO(&io[active], track++);
+      active ^= 1;
+      /* Wait for reply with first buffer and decode it. */
+      WaitIO(replyQ, buf);
+    } while (track < TRACK_COUNT);
+
+    /* Finish last track. */
+    WaitIO(replyQ, buf);
+
+    /* Wait two seconds and repeat. */
     vTaskDelay(2000 / portTICK_PERIOD_MS);
   }
 }

@@ -14,12 +14,6 @@
 
 #define FLOPPYIO_MAXNUM 8
 
-typedef struct FloppyIO {
-  xTaskHandle origin;  /* task waiting for this track to become available */
-  void *track;         /* chip memory buffer */
-  uint16_t trackNum;   /* track number to transfer */
-} FloppyIO_t;
-
 static CIATimer_t *FloppyTimer;
 static xTaskHandle FloppyIOTask;
 static QueueHandle_t FloppyIOQueue;
@@ -46,7 +40,7 @@ void FloppyInit(unsigned aFloppyIOTaskPrio) {
   /* Handler that will wake up track reader task. */
   SetIntVec(DSKBLK, TrackTransferDone, NULL);
 
-  FloppyIOQueue = xQueueCreate(FLOPPYIO_MAXNUM, sizeof(FloppyIO_t));
+  FloppyIOQueue = xQueueCreate(FLOPPYIO_MAXNUM, sizeof(FloppyIO_t *));
   configASSERT(FloppyIOQueue != NULL);
 
   xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, NULL,
@@ -77,7 +71,7 @@ void FloppyKill(void) {
 
 static int16_t MotorOn;
 static int16_t HeadDir;
-static int16_t TrackNum;
+static int16_t Track;
 
 #define STEP_SETTLE TIMER_MS(3)
 
@@ -87,7 +81,7 @@ static void StepHeads(void) {
 
   WaitTimerSleep(FloppyTimer, STEP_SETTLE);
 
-  TrackNum += HeadDir;
+  Track += HeadDir;
 }
 
 #define DIRECTION_REVERSE_SETTLE TIMER_MS(18)
@@ -107,10 +101,10 @@ static inline void HeadsStepDirection(int16_t inwards) {
 static inline void ChangeDiskSide(int16_t upper) {
   if (upper) {
     BCLR(ciab.ciaprb, CIAB_DSKSIDE);
-    TrackNum++;
+    Track++;
   } else {
     BSET(ciab.ciaprb, CIAB_DSKSIDE);
-    TrackNum--;
+    Track--;
   }
 }
 
@@ -156,23 +150,24 @@ static void FloppyReader(__unused void *ptr) {
     StepHeads();
   HeadsStepDirection(INWARDS);
   ChangeDiskSide(LOWER);
-  TrackNum = 0;
+  /* Now we are at well defined position */
+  Track = 0;
 
   for (;;) {
-    FloppyIO_t fio;
+    FloppyIO_t *io;
 
-    if (xQueueReceive(FloppyIOQueue, &fio, 1000 / portTICK_PERIOD_MS)) {
+    if (xQueueReceive(FloppyIOQueue, &io, 1000 / portTICK_PERIOD_MS)) {
       /* Turn the motor on. */
       FloppyMotorOn();
 
       /* Switch heads if needed. */
-      if ((fio.trackNum ^ TrackNum) & 1)
-        ChangeDiskSide(fio.trackNum & 1);
+      if ((io->track ^ Track) & 1)
+        ChangeDiskSide(io->track & 1);
 
       /* Travel to requested track. */
-      if (fio.trackNum != TrackNum) {
-        HeadsStepDirection(fio.trackNum > TrackNum);
-        while (fio.trackNum != TrackNum)
+      if (io->track != Track) {
+        HeadsStepDirection(io->track > Track);
+        while (io->track != Track)
           StepHeads();
       }
 
@@ -183,7 +178,7 @@ static void FloppyReader(__unused void *ptr) {
       custom.dsklen = 0;
 
 #if DEBUG
-      printf("[Floppy] Read track %d.\n", (int)fio.trackNum);
+      printf("[Floppy] Read track %d into %p.\n", (int)io->track, io->buffer);
 #endif
 
       /* Prepare for transfer. */
@@ -192,7 +187,7 @@ static void FloppyReader(__unused void *ptr) {
       EnableDMA(DMAF_DISK);
 
       /* Buffer in chip memory. */
-      custom.dskpt = (void *)fio.track;
+      custom.dskpt = io->buffer;
 
       /* Write track size twice to initiate DMA transfer. */
       custom.dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
@@ -206,18 +201,18 @@ static void FloppyReader(__unused void *ptr) {
       DisableDMA(DMAF_DISK);
 
       /* Wake up the task that requested transfer. */
-      xTaskNotifyGive(fio.origin);
+      xQueueSend(io->replyQueue, &io, portMAX_DELAY);
     } else {
       FloppyMotorOff();
     }
   }
 }
 
-void ReadFloppyTrack(void *aTrack, uint16_t aTrackNum) {
-  FloppyIO_t fio = {.origin = xTaskGetCurrentTaskHandle(),
-                    .track = aTrack,
-                    .trackNum = aTrackNum};
+void FloppySendIO(FloppyIO_t *io) {
+  configASSERT(io->cmd == CMD_READ);
+  configASSERT(io->track < TRACK_COUNT);
+  configASSERT(io->replyQueue != NULL);
+  configASSERT(io->buffer != NULL);
 
-  (void)xQueueSend(FloppyIOQueue, (void *)&fio, portMAX_DELAY);
-  (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+  xQueueSend(FloppyIOQueue, &io, portMAX_DELAY);
 }
