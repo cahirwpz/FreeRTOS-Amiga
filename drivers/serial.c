@@ -23,8 +23,12 @@ static void SendIntHandler(__unused void *ptr) {
 }
 
 static void RecvIntHandler(__unused void *ptr) {
+  /* serdatr contains both data and status bits! */
+  uint16_t code = custom.serdatr;
+  if ((code & SERDATF_RBF) == 0)
+    return;
   /* Send one byte to waiting task. */
-  char cRecv = custom.serdatr;
+  char cRecv = code;
   (void)xQueueSendFromISR(RecvQ, (void *)&cRecv, &xNeedRescheduleTask);
 }
 
