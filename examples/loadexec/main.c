@@ -14,13 +14,16 @@ static void vMainTask(__unused void *data) {
   File_t *exe = MemoryOpen(_binary_test_exe_start,
                            (size_t)_binary_test_exe_size);
 
-  Hunk_t *hunk = LoadHunkList(exe);
+  Hunk_t *first = LoadHunkList(exe);
 
-  while (hunk) {
+  for (Hunk_t *hunk = first; hunk; hunk = hunk->next)
     hexdump(hunk->data, hunk->size);
-    hunk = hunk->next;
-  }
-  
+
+  /* Assume first hunk is executable. */
+  void (*_start)(void) = (void *)first->data;
+  /* Call _start procedure which is assumed to be first. */
+  _start();
+
   for (;;) {
     custom.color[0] = 0xf00;
   }
