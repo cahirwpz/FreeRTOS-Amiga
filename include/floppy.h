@@ -1,7 +1,8 @@
 #ifndef _FLOPPY_H_
 #define _FLOPPY_H_
 
-#include <FreeRTOSConfig.h>
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/queue.h>
 #include <stdint.h>
 
 /*
@@ -19,12 +20,22 @@
 #define TRACK_SIZE 12800
 #define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
 
+#define CMD_READ 1
+#define CMD_WRITE 2
+
+typedef struct FloppyIO {
+  uint16_t cmd;            /* command code */
+  uint16_t track;          /* track number to transfer */
+  void *buffer;            /* chip memory buffer */
+  xQueueHandle replyQueue; /* after request is handled it'll be replied here */
+} FloppyIO_t;
+
 void FloppyInit(unsigned aFloppyIOTaskPrio);
 void FloppyKill(void);
 
 #define AllocTrack() pvPortMallocChip(TRACK_SIZE)
 
-void ReadTrack(void *aTrack, uint16_t aTrackNum);
+void FloppySendIO(FloppyIO_t *io);
 void DecodeTrack(void *aTrack, void *aData);
 
 #endif /* !_FLOPPY_H_ */
