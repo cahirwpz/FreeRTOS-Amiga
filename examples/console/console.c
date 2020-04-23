@@ -60,7 +60,7 @@ static void ConsoleDrawChar(short x, short y, uint8_t c) {
 void ConsoleDrawCursor(void) {
   unsigned char *dst = cons.bitmap->planes[0];
   short dwidth = cons.bitmap->bytesPerRow;
-  short h = cons.bitmap->height - 1;
+  short h = cons.font->height - 1;
 
   dst += cons.bitmap->width * cons.cursor.y + cons.cursor.x;
 
