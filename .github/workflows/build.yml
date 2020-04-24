@@ -1,0 +1,14 @@
+name: Build and test
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: cahirwpz/freertos-amiga:latest
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v2
+      with:
+        lfs: true
+
+    - name: FreeRTOS for Amiga 500
+      run: make
