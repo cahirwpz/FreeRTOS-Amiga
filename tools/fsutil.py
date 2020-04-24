@@ -18,14 +18,16 @@ from io import BytesIO
 #  ...    boot code
 #
 # sector 2..(n+1): directory entries (take n sectors)
-#  [WORD] #dirlen  : directory size in bytes
+#  [WORD] #namelen : size of file names in bytes (see STRTAB below)
 #  [WORD] #files   : number of file entries
 #  repeated #files times:
 #   [WORD] #name   : offset of file name determined from start of string table
-#   [WORD] #start  : sector position where the file begins
+#   [WORD] #start  : sector position where the file begins (**)
 #   [LONG] #length : size of the file
 #  [STRTAB] file names corresponding to file entries
 #           stored consecutively as strings with trailing '\0'
+#
+# (**) negative if file is executable
 #
 # sector (n+2)..(n+m+1): executable file in AmigaHunk format
 #  the file is assumed to be first in the directory
@@ -37,24 +39,20 @@ SECTOR = 512
 FLOPPY = SECTOR * 80 * 11 * 2
 
 
-def sectors(size):
-    return align(size, SECTOR) // SECTOR
-
-
 def align(size, alignment=None):
     if alignment is None:
         alignment = SECTOR
     return (size + alignment - 1) // alignment * alignment
 
 
-def skip_pad(fh, alignment=None):
-    pos = fh.tell()
-    fh.seek(align(pos, alignment) - pos, 1)
+def sectors(size):
+    return align(size, SECTOR) // SECTOR
 
 
 def write_pad(fh, alignment=None):
     pos = fh.tell()
-    fh.write(b'\0' * (align(pos, alignment) - pos))
+    pad = align(pos, alignment) - pos
+    fh.write(b'\0' * pad)
 
 
 def checksum(data):
@@ -112,27 +110,19 @@ def load(archive):
     with open(archive, 'rb') as fh:
         fh.seek(2 * SECTOR)
 
-        dirent_count, names_len = unpack('>HH', fh.read(4))
-        dirent = [list(unpack('>iI', fh.read(8))) for i in range(dirent_count)]
-        skip_pad(fh)
-
-        names = fh.read(names_len + 1)
-        skip_pad(fh)
-
-        pos = 0
-        for entry in dirent:
-            end = pos
-            while names[end]:
-                end += 1
-            entry.append(names[pos:end].decode())
-            pos = end + 1
+        names_len, dirent_count = unpack('>HH', fh.read(4))
+        dirent = [list(unpack('>HhI', fh.read(8)))
+                  for i in range(dirent_count)]
+        strtab = fh.read(names_len)
 
         entries = []
-        for offset, size, name in dirent:
+        for nameoff, offset, size in dirent:
             exe = bool(offset < 0)
             if exe:
                 offset = -offset
             fh.seek(offset)
+            namesz = strtab[nameoff:].index(b'\0')
+            name = strtab[nameoff:nameoff + namesz].decode()
             entries.append(FileEntry(name, fh.read(size), exe))
 
         return entries
@@ -167,11 +157,8 @@ def save(archive, entries, bootcode=None):
         files_off.append(files_len)
         files_len += align(len(entry.data))
 
-    # Add file names to directory
-    dir_len += names_len
-
     # Calculate starting position of files in the file system image
-    files_pos = align(dir_len) + 2 * SECTOR
+    files_pos = align(dir_len + names_len) + 2 * SECTOR
 
     with open(archive, 'wb') as fh:
         boot = BytesIO(bootcode)
@@ -190,11 +177,14 @@ def save(archive, entries, bootcode=None):
         fh.write(boot.getvalue())
 
         # Write directory header
-        fh.write(pack('>HH', dir_len, len(entries)))
+        fh.write(pack('>HH', names_len, len(entries)))
         # Write directory entries
         for entry, name_off, file_off in zip(entries, names_off, files_off):
             file_off += files_pos
-            fh.write(pack('>HHI', name_off, sectors(file_off), len(entry)))
+            start = sectors(file_off)
+            if entry.exe:
+                start = -start
+            fh.write(pack('>HhI', name_off, start, len(entry)))
         # Write file names
         for entry in entries:
             fh.write(entry.name.encode() + b'\0')
@@ -216,7 +206,7 @@ def extract(archive, patterns, force):
             if fnmatch(entry.name, pattern):
                 if os.path.exists(entry.name) and not force:
                     print(f'extract: skipping {entry.name} '
-                           '- file is present on disk')
+                          '- file is present on disk')
                 else:
                     print(f'extracting {entry.name}')
                     with open(entry.name, 'wb') as fh:
