@@ -6,10 +6,42 @@
 
 #include "filesys.h"
 
+typedef enum {
+  FS_MOUNT,
+  FS_UNMOUNT,
+  FS_DIRENT,
+  FS_OPEN,
+  FS_CLOSE,
+  FS_READ
+} FsCmd_t;
+
+/* The type of message send to file system task. */
+typedef struct FsMsg {
+  FsCmd_t cmd;
+  union {
+    struct {} mount;
+    struct {} umount;
+    struct {} dirent;
+    struct {} open;
+    struct {} close;
+    struct {} read;
+  };
+} FsMsg_t;
+
 typedef struct FsFile {
   File_t f;
   DirEntry_t *de;
 } FsFile_t;
+
+static long FsRead(FsFile_t *f, void *buf, size_t nbyte);
+static long FsSeek(FsFile_t *f, long offset, int whence);
+static void FsClose(FsFile_t *f);
+
+__unused static FileOps_t FsOps = {
+  .read = (FileRead_t)FsRead,
+  .seek = (FileSeek_t)FsSeek,
+  .close = (FileClose_t)FsClose
+};
 
 static void SendIO(FloppyIO_t *io, short track) {
   io->track = track;
@@ -68,17 +100,42 @@ static void vFileSysTask(__unused void *data) {
   }
 }
 
-void FsMount(void) {
+bool FsMount(void) {
+  return false;
 }
 
 /* Remember to free memory used up by a directory! */
 int FsUnMount(void) {
-  return true;
+  return 0;
 }
 
 const DirEntry_t *FsListDir(void **base_p) {
   (void)base_p;
   return NULL;
+}
+
+File_t *FsOpen(const char *name) {
+  (void)name;
+  return NULL;
+}
+
+static void FsClose(FsFile_t *ff) {
+  (void)ff;
+}
+
+static long FsRead(FsFile_t *ff, void *buf, size_t nbyte) {
+  (void)ff;
+  (void)buf;
+  (void)nbyte;
+  return -1;
+}
+
+/* Does not involve direct interaction with the filesystem. */
+static long FsSeek(FsFile_t *ff, long offset, int whence) {
+  (void)ff;
+  (void)offset;
+  (void)whence;
+  return -1;
 }
 
 static xTaskHandle filesys_handle;
@@ -90,41 +147,4 @@ void FsInit(void) {
   FloppyInit(FLOPPY_TASK_PRIO);
   xTaskCreate(vFileSysTask, "filesys", configMINIMAL_STACK_SIZE, NULL,
               FILESYS_TASK_PRIO, &filesys_handle);
-}
-
-static long FsRead(FsFile_t *f, void *buf, size_t nbyte);
-static long FsSeek(FsFile_t *f, long offset, int whence);
-static void FsClose(FsFile_t *f);
-
-static FileOps_t FsOps = {
-  .read = (FileRead_t)FsRead,
-  .seek = (FileSeek_t)FsSeek,
-  .close = (FileClose_t)FsClose
-};
-
-File_t *FsOpen(__unused const char *name) {
-  FsFile_t *ff = pvPortMalloc(sizeof(FsFile_t));
-  ff->f.ops = &FsOps;
-  ff->f.usecount = 1;
-  ff->f.offset = 0;
-  return &ff->f;
-}
-
-static void FsClose(FsFile_t *ff) {
-  if (--ff->f.usecount == 0)
-    vPortFree(ff);
-}
-
-static long FsRead(FsFile_t *ff, void *buf, size_t nbyte) {
-  (void)ff;
-  (void)buf;
-  (void)nbyte;
-  return -1;
-}
-
-static long FsSeek(FsFile_t *ff, long offset, int whence) {
-  (void)ff;
-  (void)offset;
-  (void)whence;
-  return -1;
 }

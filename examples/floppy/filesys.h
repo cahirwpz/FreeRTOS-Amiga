@@ -16,8 +16,9 @@ typedef struct DirEntry {
 
 void FsInit(void);
 
-/* Reads in a directory and allows user to perform FsOpen(...) */
-void FsMount(void);
+/* Reads in a directory and allows user to perform FsOpen(...). Returns false if
+ * file system has already been mounted or other error occurred. */
+bool FsMount(void);
 
 /* Returns 0 if there're no files opened and filesystem state was reset.
  * Otherwise unmount was unsuccessful and returns number of opened files. */
