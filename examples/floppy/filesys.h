@@ -10,6 +10,8 @@ typedef struct DirEntry {
   uint16_t start;    /* sector where the file begins (0..1759) */
   uint32_t size;     /* file size in bytes (up to 1MiB) */
   char     name[];   /* name of the file (NUL terminated) */
-} DirEntry_t
+} DirEntry_t;
+
+void FileSysInit(void);
 
 #endif /* !_DIRENT_H_ */
