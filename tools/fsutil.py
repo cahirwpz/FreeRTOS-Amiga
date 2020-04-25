@@ -18,14 +18,13 @@ from io import BytesIO
 #  ...    boot code
 #
 # sector 2..(n+1): directory entries (take n sectors)
-#  [WORD] #dirlen  : directory size in bytes
-#  [WORD] #files   : number of file entries
-#  repeated #files times:
-#   [WORD] #name   : offset of file name determined from start of string table
-#   [WORD] #start  : sector position where the file begins
-#   [LONG] #length : size of the file
-#  [STRTAB] file names corresponding to file entries
-#           stored consecutively as strings with trailing '\0'
+#  [WORD] dirsize : total size of directory entries in bytes
+#  for each directory entry (2-byte aligned):
+#   [BYTE] #reclen : total size of this record
+#   [BYTE] #type   : type of file (1: executable, 0: regular)
+#   [WORD] #start  : sector where the file begins (0..1759)
+#   [LONG] #length : size of the file in bytes (up to 1MiB)
+#   [STRING] #name : name of the file (NUL terminated)
 #
 # sector (n+2)..(n+m+1): executable file in AmigaHunk format
 #  the file is assumed to be first in the directory
@@ -37,24 +36,20 @@ SECTOR = 512
 FLOPPY = SECTOR * 80 * 11 * 2
 
 
-def sectors(size):
-    return align(size, SECTOR) // SECTOR
-
-
 def align(size, alignment=None):
     if alignment is None:
         alignment = SECTOR
     return (size + alignment - 1) // alignment * alignment
 
 
-def skip_pad(fh, alignment=None):
-    pos = fh.tell()
-    fh.seek(align(pos, alignment) - pos, 1)
+def sectors(size):
+    return align(size, SECTOR) // SECTOR
 
 
 def write_pad(fh, alignment=None):
     pos = fh.tell()
-    fh.write(b'\0' * (align(pos, alignment) - pos))
+    pad = align(pos, alignment) - pos
+    fh.write(b'\0' * pad)
 
 
 def checksum(data):
@@ -112,28 +107,19 @@ def load(archive):
     with open(archive, 'rb') as fh:
         fh.seek(2 * SECTOR)
 
-        dirent_count, names_len = unpack('>HH', fh.read(4))
-        dirent = [list(unpack('>iI', fh.read(8))) for i in range(dirent_count)]
-        skip_pad(fh)
-
-        names = fh.read(names_len + 1)
-        skip_pad(fh)
-
-        pos = 0
-        for entry in dirent:
-            end = pos
-            while names[end]:
-                end += 1
-            entry.append(names[pos:end].decode())
-            pos = end + 1
+        dir_len = unpack('>H', fh.read(2))[0]
+        dirents = []
+        while dir_len > 0:
+            reclen, exe, offset, size = unpack('>BBHI', fh.read(8))
+            name = fh.read(reclen - 8).decode().rstrip('\0')
+            dir_len -= reclen
+            dirents.append((offset * SECTOR, size, exe, name))
 
         entries = []
-        for offset, size, name in dirent:
-            exe = bool(offset < 0)
-            if exe:
-                offset = -offset
+        for offset, size, exe, name in dirents:
             fh.seek(offset)
-            entries.append(FileEntry(name, fh.read(size), exe))
+            data = fh.read(size)
+            entries.append(FileEntry(name, data, exe))
 
         return entries
 
@@ -153,22 +139,16 @@ def save(archive, entries, bootcode=None):
     else:
         bootcode = ''
 
-    dir_len = 4 + 8 * len(entries)
-    names_len = 0
-    names_off = []
+    dir_len = 0
     files_len = 0
     files_off = []
 
     for entry in entries:
-        # Determine file names position
-        names_off.append(names_len)
-        names_len += len(entry.name) + 1
+        # Determine dirent size
+        dir_len += align(8 + len(entry.name) + 1, 2)
         # Determine file position
         files_off.append(files_len)
         files_len += align(len(entry.data))
-
-    # Add file names to directory
-    dir_len += names_len
 
     # Calculate starting position of files in the file system image
     files_pos = align(dir_len) + 2 * SECTOR
@@ -190,14 +170,16 @@ def save(archive, entries, bootcode=None):
         fh.write(boot.getvalue())
 
         # Write directory header
-        fh.write(pack('>HH', dir_len, len(entries)))
+        fh.write(pack('>H', dir_len))
         # Write directory entries
-        for entry, name_off, file_off in zip(entries, names_off, files_off):
+        for entry, file_off in zip(entries, files_off):
             file_off += files_pos
-            fh.write(pack('>HHI', name_off, sectors(file_off), len(entry)))
-        # Write file names
-        for entry in entries:
-            fh.write(entry.name.encode() + b'\0')
+            start = sectors(file_off)
+            reclen = align(8 + len(entry.name) + 1, 2)
+            name = entry.name.encode('ascii') + b'\0'
+            fh.write(pack('>BBHI%ds' % len(name),
+                          reclen, int(entry.exe), start, len(entry), name))
+            write_pad(fh, 2)
         # Finish off directory by aligning it to sector boundary
         write_pad(fh)
 
@@ -216,7 +198,7 @@ def extract(archive, patterns, force):
             if fnmatch(entry.name, pattern):
                 if os.path.exists(entry.name) and not force:
                     print(f'extract: skipping {entry.name} '
-                           '- file is present on disk')
+                          '- file is present on disk')
                 else:
                     print(f'extracting {entry.name}')
                     with open(entry.name, 'wb') as fh:
