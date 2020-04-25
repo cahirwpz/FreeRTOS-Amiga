@@ -18,16 +18,13 @@ from io import BytesIO
 #  ...    boot code
 #
 # sector 2..(n+1): directory entries (take n sectors)
-#  [WORD] #namelen : size of file names in bytes (see STRTAB below)
-#  [WORD] #files   : number of file entries
-#  repeated #files times:
-#   [WORD] #name   : offset of file name determined from start of string table
-#   [WORD] #start  : sector position where the file begins (**)
-#   [LONG] #length : size of the file
-#  [STRTAB] file names corresponding to file entries
-#           stored consecutively as strings with trailing '\0'
-#
-# (**) negative if file is executable
+#  [WORD] dirsize : total size of directory entries in bytes
+#  for each directory entry (2-byte aligned):
+#   [BYTE] #reclen : total size of this record
+#   [BYTE] #type   : type of file (1: executable, 0: regular)
+#   [WORD] #start  : sector where the file begins (0..1759)
+#   [LONG] #length : size of the file in bytes (up to 1MiB)
+#   [STRING] #name : name of the file (NUL terminated)
 #
 # sector (n+2)..(n+m+1): executable file in AmigaHunk format
 #  the file is assumed to be first in the directory
@@ -110,20 +107,19 @@ def load(archive):
     with open(archive, 'rb') as fh:
         fh.seek(2 * SECTOR)
 
-        names_len, dirent_count = unpack('>HH', fh.read(4))
-        dirent = [list(unpack('>HhI', fh.read(8)))
-                  for i in range(dirent_count)]
-        strtab = fh.read(names_len)
+        dir_len = unpack('>H', fh.read(2))[0]
+        dirents = []
+        while dir_len > 0:
+            reclen, exe, offset, size = unpack('>BBHI', fh.read(8))
+            name = fh.read(reclen - 8).decode().rstrip('\0')
+            dir_len -= reclen
+            dirents.append((offset * SECTOR, size, exe, name))
 
         entries = []
-        for nameoff, offset, size in dirent:
-            exe = bool(offset < 0)
-            if exe:
-                offset = -offset
+        for offset, size, exe, name in dirents:
             fh.seek(offset)
-            namesz = strtab[nameoff:].index(b'\0')
-            name = strtab[nameoff:nameoff + namesz].decode()
-            entries.append(FileEntry(name, fh.read(size), exe))
+            data = fh.read(size)
+            entries.append(FileEntry(name, data, exe))
 
         return entries
 
@@ -143,22 +139,19 @@ def save(archive, entries, bootcode=None):
     else:
         bootcode = ''
 
-    dir_len = 4 + 8 * len(entries)
-    names_len = 0
-    names_off = []
+    dir_len = 0
     files_len = 0
     files_off = []
 
     for entry in entries:
-        # Determine file names position
-        names_off.append(names_len)
-        names_len += len(entry.name) + 1
+        # Determine dirent size
+        dir_len += align(8 + len(entry.name) + 1, 2)
         # Determine file position
         files_off.append(files_len)
         files_len += align(len(entry.data))
 
     # Calculate starting position of files in the file system image
-    files_pos = align(dir_len + names_len) + 2 * SECTOR
+    files_pos = align(dir_len) + 2 * SECTOR
 
     with open(archive, 'wb') as fh:
         boot = BytesIO(bootcode)
@@ -177,17 +170,16 @@ def save(archive, entries, bootcode=None):
         fh.write(boot.getvalue())
 
         # Write directory header
-        fh.write(pack('>HH', names_len, len(entries)))
+        fh.write(pack('>H', dir_len))
         # Write directory entries
-        for entry, name_off, file_off in zip(entries, names_off, files_off):
+        for entry, file_off in zip(entries, files_off):
             file_off += files_pos
             start = sectors(file_off)
-            if entry.exe:
-                start = -start
-            fh.write(pack('>HhI', name_off, start, len(entry)))
-        # Write file names
-        for entry in entries:
-            fh.write(entry.name.encode() + b'\0')
+            reclen = align(8 + len(entry.name) + 1, 2)
+            name = entry.name.encode('ascii') + b'\0'
+            fh.write(pack('>BBHI%ds' % len(name),
+                          reclen, int(entry.exe), start, len(entry), name))
+            write_pad(fh, 2)
         # Finish off directory by aligning it to sector boundary
         write_pad(fh)
 
