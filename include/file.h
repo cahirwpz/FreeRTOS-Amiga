@@ -36,5 +36,6 @@ void FileClose(File_t *f);
 
 void FilePutChar(File_t *f, char c);
 void FilePrintf(File_t *f, const char *fmt, ...);
+void FileHexDump(File_t *f, void *ptr, size_t length);
 
 #endif /* !_FILE_H_ */

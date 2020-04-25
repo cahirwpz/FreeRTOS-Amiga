@@ -7,7 +7,6 @@ SOURCES = \
 	gen/mulsi3.S \
 	gen/udivsi3.S \
 	gen/umodsi3.S \
-	stdio/hexdump.c \
 	stdio/kvprintf.c \
 	stdlib/strtol.c \
 	stdlib/strtoul.c \
