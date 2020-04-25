@@ -15,4 +15,8 @@ char *strncpy(char *dst, const char *src, size_t len);
 char *strrchr(const char *s, int c);
 size_t strlen(const char *s);
 
+size_t strcspn(const char *s1, const char *s2);
+size_t strspn(const char *s1, const char *s2);
+char *strtok_r(char *s, const char *delim, char **last);
+
 #endif /* !_STRING_H_ */

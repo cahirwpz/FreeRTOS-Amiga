@@ -1,6 +1,7 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = \
+	ctype/ctype.c \
 	gen/divsi3.S \
 	gen/modsi3.S \
 	gen/mulsi3.S \
@@ -8,6 +9,8 @@ SOURCES = \
 	gen/umodsi3.S \
 	stdio/hexdump.c \
 	stdio/kvprintf.c \
+	stdlib/strtol.c \
+	stdlib/strtoul.c \
 	string/bzero.S \
 	string/ffs.S \
 	string/memcpy.S \
@@ -16,10 +19,13 @@ SOURCES = \
 	string/strchr.S \
 	string/strcmp.S \
 	string/strcpy.S \
+	string/strcspn.c \
 	string/strlen.S \
 	string/strncmp.S \
 	string/strncpy.S \
-	string/strrchr.S
+	string/strrchr.S \
+	string/strspn.c \
+	string/strtok_r.c
 
 LIBNAME = c.lib
 
