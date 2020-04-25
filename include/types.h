@@ -2,6 +2,7 @@
 #define _TYPES_H_
 
 #include <cdefs.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef unsigned char u_char;
