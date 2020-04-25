@@ -72,11 +72,12 @@ void FsMount(void) {
 }
 
 /* Remember to free memory used up by a directory! */
-bool FsUnMount(void) {
+int FsUnMount(void) {
   return true;
 }
 
 const DirEntry_t *FsListDir(void **base_p) {
+  (void)base_p;
   return NULL;
 }
 
