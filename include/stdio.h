@@ -14,7 +14,7 @@ void kvprintf(putchar_t, const char *fmt, va_list ap);
 #define putchar(c) FilePutChar(KernCons, (c))
 #define printf(...) FilePrintf(KernCons, __VA_ARGS__)
 
-void hexdump(void *ptr, size_t length);
+#define hexdump(ptr, len) FileHexDump(KernCons, (ptr), (len))
 #define hexdump_s(ptr) hexdump(ptr, sizeof(*ptr))
 
 #endif /* !_STDIO_H_ */
