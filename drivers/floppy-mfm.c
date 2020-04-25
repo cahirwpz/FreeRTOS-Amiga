@@ -28,14 +28,12 @@ typedef struct DiskSector {
   uint8_t data[2][SECTOR_PAYLOAD];
 } DiskSector_t;
 
-typedef DiskSector_t *DiskTrack_t[SECTOR_COUNT];
-
 #define MASK 0x55555555
 #define DECODE(odd, even) (((odd) & MASK) << 1) | ((even) & MASK)
 
-static void ParseTrack(void *track, DiskTrack_t sectors) {
+void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   int16_t secnum = SECTOR_COUNT;
-  DiskSector_t *maybeSector = track;
+  DiskSector_t *maybeSector = (DiskSector_t *)track;
 
   do {
     uint16_t *data = (uint16_t *)maybeSector;
@@ -68,8 +66,7 @@ static void ParseTrack(void *track, DiskTrack_t sectors) {
   } while (--secnum);
 }
 
-static void DecodeSector(DiskSector_t *sector, void *data) {
-  uint32_t *dst = data;
+void DecodeSector(DiskSector_t *sector, uint32_t *buf) {
   uint32_t *odd = (uint32_t *)sector->data[0];
   uint32_t *even = (uint32_t *)sector->data[1];
   int16_t n = SECTOR_PAYLOAD / sizeof(uint32_t) / 2;
@@ -79,16 +76,7 @@ static void DecodeSector(DiskSector_t *sector, void *data) {
     uint32_t odd1 = *odd++;
     uint32_t even0 = *even++;
     uint32_t even1 = *even++;
-    *dst++ = DECODE(odd0, even0);
-    *dst++ = DECODE(odd1, even1);
+    *buf++ = DECODE(odd0, even0);
+    *buf++ = DECODE(odd1, even1);
   } while (--n);
-}
-
-void DecodeTrack(void *aTrack, void *aData) {
-  DiskTrack_t sectors;
-
-  ParseTrack(aTrack, sectors);
-  for (int j = 0; j < SECTOR_COUNT; j++) {
-    DecodeSector(sectors[j], aData + j * SECTOR_SIZE);
-  }
 }

@@ -15,15 +15,13 @@
 static File_t *ser = NULL;
 
 static void vPlusTask(__unused void *data) {
-  for (;;) {
+  for (;;)
     FilePutChar(ser, '-');
-  }
 }
 
 static void vMinusTask(__unused void *data) {
-  for (;;) {
+  for (;;)
     FilePutChar(ser, '+');
-  }
 }
 
 static void SendIO(FloppyIO_t *io, short track) {
@@ -34,7 +32,11 @@ static void SendIO(FloppyIO_t *io, short track) {
 static void WaitIO(QueueHandle_t replyQ, void *buf) {
   FloppyIO_t *io = NULL;
   (void)xQueueReceive(replyQ, &io, portMAX_DELAY);
-  DecodeTrack(io->buffer, buf);
+
+  DiskSector_t *sectors[SECTOR_COUNT];
+  DecodeTrack(io->buffer, sectors);
+  for (int j = 0; j < SECTOR_COUNT; j++)
+    DecodeSector(sectors[j], buf + j * SECTOR_SIZE);
 }
 
 static void vReaderTask(__unused void *data) {

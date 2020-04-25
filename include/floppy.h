@@ -20,13 +20,16 @@
 #define TRACK_SIZE 12800
 #define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
 
+typedef uint16_t DiskTrack_t[TRACK_SIZE/sizeof(uint16_t)];
+typedef struct DiskSector DiskSector_t;
+
 #define CMD_READ 1
 #define CMD_WRITE 2
 
 typedef struct FloppyIO {
   uint16_t cmd;            /* command code */
   uint16_t track;          /* track number to transfer */
-  void *buffer;            /* chip memory buffer */
+  DiskTrack_t *buffer;     /* chip memory buffer */
   xQueueHandle replyQueue; /* after request is handled it'll be replied here */
 } FloppyIO_t;
 
@@ -36,6 +39,7 @@ void FloppyKill(void);
 #define AllocTrack() pvPortMallocChip(TRACK_SIZE)
 
 void FloppySendIO(FloppyIO_t *io);
-void DecodeTrack(void *aTrack, void *aData);
+void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
+void DecodeSector(DiskSector_t *sector, uint32_t *buf);
 
 #endif /* !_FLOPPY_H_ */
