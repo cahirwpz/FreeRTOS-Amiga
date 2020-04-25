@@ -1,7 +1,9 @@
 #ifndef _DIRENT_H_
 #define _DIRENT_H_
 
-#include <stdint.h>
+#include <types.h>
+#include <floppy.h>
+#include <file.h>
 
 /* On disk directory entries are always aligned to 2-byte boundary. */
 typedef struct DirEntry {
@@ -12,6 +14,19 @@ typedef struct DirEntry {
   char     name[];   /* name of the file (NUL terminated) */
 } DirEntry_t;
 
-void FileSysInit(void);
+void FsInit(void);
+
+/* Reads in a directory and allows user to perform FsOpen(...) */
+void FsMount(void);
+
+/* Makes further FsOpen(...) to fail ? */
+void FsUnMount(void);
+
+/* To start listing directory entries the value of `*base_p` must be NULL.
+ * Do not modify `*base_p` as it points to internal filesystem buffer.
+ * When FsListDir returns NULL there're no more entries to read! */
+const DirEntry_t *FsListDir(void **base_p);
+
+File_t *FsOpen(const char *name);
 
 #endif /* !_DIRENT_H_ */

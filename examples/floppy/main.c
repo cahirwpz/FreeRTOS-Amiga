@@ -45,7 +45,7 @@ int main(void) {
   xTaskCreate((TaskFunction_t)vBackgroundTask, "background",
               configMINIMAL_STACK_SIZE, ser, BACKGROUND_TASK_PRIO, &bg_handle);
 
-  FileSysInit();
+  FsInit();
 
   vTaskStartScheduler();
 

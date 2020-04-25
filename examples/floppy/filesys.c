@@ -6,8 +6,10 @@
 
 #include "filesys.h"
 
-#define FLOPPY_TASK_PRIO 3
-#define FILESYS_TASK_PRIO 2
+typedef struct FsFile {
+  File_t f;
+  DirEntry_t *de;
+} FsFile_t;
 
 static void SendIO(FloppyIO_t *io, short track) {
   io->track = track;
@@ -68,8 +70,48 @@ static void vFileSysTask(__unused void *data) {
 
 static xTaskHandle filesys_handle;
 
-void FileSysInit(void) {
+#define FLOPPY_TASK_PRIO 3
+#define FILESYS_TASK_PRIO 2
+
+void FsInit(void) {
   FloppyInit(FLOPPY_TASK_PRIO);
   xTaskCreate(vFileSysTask, "filesys", configMINIMAL_STACK_SIZE, NULL,
               FILESYS_TASK_PRIO, &filesys_handle);
+}
+
+static long FsRead(FsFile_t *f, void *buf, size_t nbyte);
+static long FsSeek(FsFile_t *f, long offset, int whence);
+static void FsClose(FsFile_t *f);
+
+static FileOps_t FsOps = {
+  .read = (FileRead_t)FsRead,
+  .seek = (FileSeek_t)FsSeek,
+  .close = (FileClose_t)FsClose
+};
+
+File_t *FsOpen(__unused const char *name) {
+  FsFile_t *ff = pvPortMalloc(sizeof(FsFile_t));
+  ff->f.ops = &FsOps;
+  ff->f.usecount = 1;
+  ff->f.offset = 0;
+  return &ff->f;
+}
+
+static void FsClose(FsFile_t *ff) {
+  if (--ff->f.usecount == 0)
+    vPortFree(ff);
+}
+
+static long FsRead(FsFile_t *ff, void *buf, size_t nbyte) {
+  (void)ff;
+  (void)buf;
+  (void)nbyte;
+  return -1;
+}
+
+static long FsSeek(FsFile_t *ff, long offset, int whence) {
+  (void)ff;
+  (void)offset;
+  (void)whence;
+  return -1;
 }
