@@ -38,8 +38,11 @@
 #define configSUPPORT_DYNAMIC_ALLOCATION 1
 #define configUSE_MALLOC_FAILED_HOOK     1
 
-/* Set the following definitions to 1 to include the API function, or zero
-to exclude the API function. */
+/* Some examples use a TLS pointer to store message reply queue. */
+#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1
+
+/* Set the following definitions to 1 to include the API function, or zero to
+ * exclude the API function. */
 
 #define INCLUDE_xTaskGetCurrentTaskHandle       1
 #define INCLUDE_vTaskPrioritySet                0

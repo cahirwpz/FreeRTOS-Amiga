@@ -11,13 +11,21 @@
 #define BACKGROUND_TASK_PRIO 0
 
 static void vForegroundTask(File_t *ser) {
+  CreateFsReplyQueue();
+
   for (;;)
     FilePutChar(ser, '-');
+
+  DeleteFsReplyQueue();
 }
 
 static void vBackgroundTask(File_t *ser) {
+  CreateFsReplyQueue();
+
   for (;;)
     FilePutChar(ser, '+');
+  
+  DeleteFsReplyQueue();
 }
 
 static void SystemClockTickHandler(__unused void *data) {
