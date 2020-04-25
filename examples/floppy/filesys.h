@@ -19,8 +19,9 @@ void FsInit(void);
 /* Reads in a directory and allows user to perform FsOpen(...) */
 void FsMount(void);
 
-/* Makes further FsOpen(...) to fail ? */
-void FsUnMount(void);
+/* Returns 0 if there're no files opened and filesystem state was reset.
+ * Otherwise unmount was unsuccessful and returns number of opened files. */
+int FsUnMount(void);
 
 /* To start listing directory entries the value of `*base_p` must be NULL.
  * Do not modify `*base_p` as it points to internal filesystem buffer.

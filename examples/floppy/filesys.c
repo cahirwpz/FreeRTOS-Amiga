@@ -68,6 +68,18 @@ static void vFileSysTask(__unused void *data) {
   }
 }
 
+void FsMount(void) {
+}
+
+/* Remember to free memory used up by a directory! */
+bool FsUnMount(void) {
+  return true;
+}
+
+const DirEntry_t *FsListDir(void **base_p) {
+  return NULL;
+}
+
 static xTaskHandle filesys_handle;
 
 #define FLOPPY_TASK_PRIO 3
