@@ -8,6 +8,7 @@ SOURCES = \
 	gen/udivsi3.S \
 	gen/umodsi3.S \
 	stdio/kvprintf.c \
+	stdlib/rand_r.c \
 	stdlib/strtol.c \
 	stdlib/strtoul.c \
 	string/bzero.S \

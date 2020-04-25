@@ -7,6 +7,8 @@
 #define NULL ((void *)0)
 #endif
 
+int rand_r(unsigned *seed);
+
 long strtol(const char *restrict str, char **restrict endptr, int base);
 u_long strtoul(const char *restrict str, char **restrict endptr, int base);
 
