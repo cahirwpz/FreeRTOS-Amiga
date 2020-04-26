@@ -73,7 +73,7 @@ StackType_t *pxPortInitialiseStack(StackType_t *pxTopOfStack,
   PUSHL(pxCode);
   PUSHW(portINITIAL_STATUS_REGISTER);
 
-  sp -= 15 * sizeof(uint32_t); /* A6 to D0. */
+  sp -= 16 * sizeof(uint32_t); /* A6 to D0 and USP */
 
   return (StackType_t *)sp;
 }
