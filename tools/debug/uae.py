@@ -189,24 +189,18 @@ class UaeCommandsMixin():
     async def insert_watchpoint(self, addr, size, kind='I'):
         # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]] (read/write/opcode/freeze/mustchange).
         #                    Add/remove memory watchpoints.
-        key = (addr,size,kind)
-        index = self.watchpoints_r.index(None)
-        self.watchpoints[key] = index
-        self.watchpoints_r[index] = key
-        if index == len(self.watchpoints_r):
-          self.watchpoints_r.append(None)
+
+        # Watchpoints are deleted by numbers, so we need to maintain the <num> for every watchpoint.
+        index = max(self.watchpoints.values()) + 1
+        self.watchpoints[addr, size, kind] = index
         lines = await self.communicate('w %d %X %d %s' % (index, addr, size, kind))
-        print(repr(lines))
         assert lines and lines[-1] == 'Memwatch %d added' % index
 
     async def remove_watchpoint(self, addr, size, kind='I'):
         # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]] (read/write/opcode/freeze/mustchange).
         #                    Add/remove memory watchpoints.
-        key = (addr,size,kind)
-        index = self.watchpoints[key]
+        index = self.watchpoints.pop((addr, size, kind))
         lines = await self.communicate('w %d' % index)
-        print(repr(lines))
-        self.watchpoints_r[index] = None
         assert lines and lines[-1] == 'Memwatch %d removed' % index
 
     async def entry_point(self):
@@ -225,7 +219,6 @@ class UaeCommandsMixin():
         if lines[0].startswith('Memwatch'):
             line = lines.pop(0)
             data['watch'] = int(line.split()[4].split('.')[0], 16)
-            data['cause'] = 'watch:%x' % data['watch']
         # Breakpoint at 00C04EB0
         if lines[0].startswith('Breakpoint'):
             line = lines.pop(0)
@@ -276,7 +269,6 @@ class UaeProcess(UaeCommandsMixin):
     def __init__(self, proc):
         self.proc = proc
         self.watchpoints = {}
-        self.watchpoints_r = [None]
 
     @property
     def reader(self):

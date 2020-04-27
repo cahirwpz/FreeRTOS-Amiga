@@ -186,6 +186,8 @@ class GdbStub():
 
     @staticmethod
     def binary_decode(data):
+        # Decode GDB binary stream.
+        # See https://sourceware.org/gdb/onlinedocs/gdb/Overview.html#Binary-Data
         escape = False
         result = bytearray()
         for x in data.encode():
@@ -370,7 +372,7 @@ class GdbStub():
             regs = stopdata['regs']
             dump = ';'.join('{:x}:{}'.format(num, regs.as_hex(name))
                             for num, name in enumerate(self.__regs__))
-            if 'cause' in stopdata:
-                dump += ';' + stopdata['cause']
+            if 'watch' in stopdata:
+                dump += ';watch:%x' % data['watch']
             self.gdb.send('T05;{};'.format(dump))
             await self.gdb.recv_ack()
