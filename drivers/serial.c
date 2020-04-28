@@ -13,7 +13,8 @@
 static QueueHandle_t SendQ;
 static QueueHandle_t RecvQ;
 
-#define SendByte(byte) { custom.serdat = (uint16_t)(byte) | (uint16_t)0x100; }
+#define SendByte(byte)                                                         \
+  { custom.serdat = (uint16_t)(byte) | (uint16_t)0x100; }
 
 static void SendIntHandler(__unused void *ptr) {
   /* Send one byte into the wire. */
@@ -43,12 +44,12 @@ void SerialInit(unsigned baud) {
   SetIntVec(TBE, SendIntHandler, NULL);
   SetIntVec(RBF, RecvIntHandler, NULL);
 
-  ClearIRQ(INTF_TBE|INTF_RBF);
-  EnableINT(INTF_TBE|INTF_RBF);
+  ClearIRQ(INTF_TBE | INTF_RBF);
+  EnableINT(INTF_TBE | INTF_RBF);
 }
 
 void SerialKill(void) {
-  DisableINT(INTF_TBE|INTF_RBF);
+  DisableINT(INTF_TBE | INTF_RBF);
   ResetIntVec(TBE);
   ResetIntVec(RBF);
 

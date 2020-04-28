@@ -5,11 +5,9 @@ static long SerialRead(File_t *f, char *buf, size_t nbyte);
 static long SerialWrite(File_t *f, const char *buf, size_t nbyte);
 static void SerialClose(File_t *f);
 
-static FileOps_t SerOps = {
-  .read = (FileRead_t)SerialRead,
-  .write = (FileWrite_t)SerialWrite,
-  .close = (FileClose_t)SerialClose
-};
+static FileOps_t SerOps = {.read = (FileRead_t)SerialRead,
+                           .write = (FileWrite_t)SerialWrite,
+                           .close = (FileClose_t)SerialClose};
 
 File_t *SerialOpen(unsigned baud) {
   static File_t f = {.ops = &SerOps};

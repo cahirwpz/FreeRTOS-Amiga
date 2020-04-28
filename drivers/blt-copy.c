@@ -2,13 +2,11 @@
 
 static uint16_t FirstWordMask[16] = {
   0xFFFF, 0x7FFF, 0x3FFF, 0x1FFF, 0x0FFF, 0x07FF, 0x03FF, 0x01FF,
-  0x00FF, 0x007F, 0x003F, 0x001F, 0x000F, 0x0007, 0x0003, 0x0001
-};
+  0x00FF, 0x007F, 0x003F, 0x001F, 0x000F, 0x0007, 0x0003, 0x0001};
 
 static uint16_t LastWordMask[16] = {
   0xFFFF, 0x8000, 0xC000, 0xE000, 0xF000, 0xF800, 0xFC00, 0xFE00,
-  0xFF00, 0xFF80, 0xFFC0, 0xFFE0, 0xFFF0, 0xFFF8, 0xFFFC, 0xFFFE
-};
+  0xFF00, 0xFF80, 0xFFC0, 0xFFE0, 0xFFF0, 0xFFF8, 0xFFFC, 0xFFFE};
 
 #define srcstride (bc->src.bm->bytesPerRow)
 #define mask (bc->src.bm->mask)
@@ -31,7 +29,7 @@ static uint16_t LastWordMask[16] = {
 
 /* This routine assumes following conditions:
  *  - there's always enough space in `dst` to copy area from `src`
- *  - `sx` is aligned to word boundary 
+ *  - `sx` is aligned to word boundary
  */
 void BltCopySetup(bltcopy_t *bc) {
   uint16_t xo = dx & 15;
@@ -52,7 +50,7 @@ void BltCopySetup(bltcopy_t *bc) {
   WaitBlitter();
 
   if (mask) {
-    custom.bltcon0 = 
+    custom.bltcon0 =
       bltshift | (SRCA | SRCB | SRCC | DEST) | (ABC | NABC | ABNC | NANBC);
     custom.bltafwm = -1;
     custom.bltalwm = bltshift ? 0 : -1;

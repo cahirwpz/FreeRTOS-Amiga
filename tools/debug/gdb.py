@@ -45,7 +45,8 @@ feature_xml = """<?xml version="1.0"?>
 </target>"""
 
 memory_map_xml = """<?xml version="1.0"?>
-<!DOCTYPE memory-map PUBLIC "+//IDN gnu.org//DTD GDB Memory Map V1.0//EN" "http://sourceware.org/gdb/gdb-memory-map.dtd">
+<!DOCTYPE memory-map PUBLIC "+//IDN gnu.org//DTD GDB Memory Map V1.0//EN"
+ "http://sourceware.org/gdb/gdb-memory-map.dtd">
 <memory-map>
 {}
 </memory-map>"""

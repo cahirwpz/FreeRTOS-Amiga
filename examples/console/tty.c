@@ -4,10 +4,7 @@
 static long TtyWrite(File_t *f, const char *buf, size_t nbyte);
 static void TtyClose(File_t *f);
 
-static FileOps_t TtyOps = {
-  .write = (FileWrite_t)TtyWrite,
-  .close = TtyClose
-};
+static FileOps_t TtyOps = {.write = (FileWrite_t)TtyWrite, .close = TtyClose};
 
 File_t *TtyOpen(void) {
   static File_t f = {.ops = &TtyOps};

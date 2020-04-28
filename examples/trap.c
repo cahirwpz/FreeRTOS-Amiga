@@ -15,8 +15,7 @@ static const char *const trapname[T_NTRAPS] = {
   [T_PRIVINST] = "Privileged Instruction",
   [T_TRACE] = "Trace",
   [T_FMTERR] = "Stack Format Error",
-  [T_TRAPINST] = "Trap Instruction"
-};
+  [T_TRAPINST] = "Trap Instruction"};
 
 void vPortDefaultTrapHandler(struct TrapFrame *frame) {
   int memflt = frame->trapnum == T_BUSERR || frame->trapnum == T_ADDRERR;
@@ -29,6 +28,7 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
     frame->sp += memflt ? sizeof(frame->m68000_memacc) : sizeof(frame->m68000);
   }
 
+  /* clang-format off */
   printf("Exception: %s!\n"
          " D0: %08x D1: %08x D2: %08x D3: %08x\n"
          " D4: %08x D5: %08x D6: %08x D7: %08x\n"
@@ -39,6 +39,7 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
          frame->d4, frame->d5, frame->d6, frame->d7,
          frame->a0, frame->a1, frame->a2, frame->a3,
          frame->a4, frame->a5, frame->a6, frame->sp);
+  /* clang-format on */
 
   uint32_t pc;
   uint16_t sr;

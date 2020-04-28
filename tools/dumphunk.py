@@ -101,6 +101,7 @@ def hexdump(data):
 
 
 class Hunk(object):
+
     def __init__(self, type_):
         self.type = type_
 
@@ -119,6 +120,7 @@ class Hunk(object):
 
 
 class HunkSep(Hunk):
+
     @classmethod
     def parse(cls, hf):
         type_, _ = hf.readHunk('HUNK_END', 'HUNK_BREAK')
@@ -129,6 +131,7 @@ class HunkSep(Hunk):
 
 
 class HunkStr(Hunk):
+
     def __init__(self, type_, name=''):
         Hunk.__init__(self, type_)
         self.name = name
@@ -148,6 +151,7 @@ class HunkStr(Hunk):
 
 
 class HunkBinary(Hunk):
+
     def __init__(self, type_, flags=None, data=''):
         Hunk.__init__(self, type_)
         self.flags = flags or []
@@ -168,6 +172,7 @@ class HunkBinary(Hunk):
 
 
 class HunkOverlay(Hunk):
+
     def __init__(self):
         Hunk.__init__(self, 'HUNK_OVERLAY')
 
@@ -179,6 +184,7 @@ class HunkOverlay(Hunk):
 
 
 class HunkBss(Hunk):
+
     def __init__(self, flags=None, size=0):
         Hunk.__init__(self, 'HUNK_BSS')
         self.flags = flags or []
@@ -195,6 +201,7 @@ class HunkBss(Hunk):
 
 
 class HunkLib(Hunk):
+
     def __init__(self, size=0):
         Hunk.__init__(self, 'HUNK_LIB')
         self.size = size
@@ -209,6 +216,7 @@ class HunkLib(Hunk):
 
 
 class HunkReloc(Hunk):
+
     def __init__(self, type_, relocs=None):
         Hunk.__init__(self, type_)
         self.relocs = relocs or {}
@@ -230,12 +238,14 @@ class HunkReloc(Hunk):
         print(self.type)
         for k, nums in self.relocs.items():
             prefix = '  %d: ' % k
-            print(textwrap.fill('[' + ', '.join(str(n) for n in sorted(nums)) + ']',
-                                width=68, initial_indent=prefix,
-                                subsequent_indent=' ' * (len(prefix) + 1)))
+            print(textwrap.fill(
+                '[' + ', '.join(str(n) for n in sorted(nums)) + ']',
+                width=68, initial_indent=prefix,
+                subsequent_indent=' ' * (len(prefix) + 1)))
 
 
 class HunkSymbol(Hunk):
+
     def __init__(self, symbols=None):
         Hunk.__init__(self, 'HUNK_SYMBOL')
         self.symbols = symbols or []
@@ -248,13 +258,14 @@ class HunkSymbol(Hunk):
     def dump(self):
         print(self.type)
 
-        l = max(len(s.name) for s in self.symbols) + 1
+        maxlen = max(len(s.name) for s in self.symbols) + 1
 
         for s in sorted(self.symbols, key=lambda s: s.name):
-            print('  {0}: {1}'.format(s.name.ljust(l, ' '), s.refs))
+            print('  {0}: {1}'.format(s.name.ljust(maxlen, ' '), s.refs))
 
 
 class HunkHeader(Hunk):
+
     def __init__(self, residents=None, hunks=0, first=0, last=0,
                  specifiers=None):
         Hunk.__init__(self, 'HUNK_HEADER')
@@ -293,6 +304,7 @@ class HunkHeader(Hunk):
 
 
 class HunkExt(Hunk):
+
     def __init__(self, hunks=None):
         Hunk.__init__(self, 'HUNK_EXT')
         self.hunks = hunks or defaultdict(list)
@@ -356,6 +368,7 @@ class HunkExt(Hunk):
 
 
 class HunkIndex(Hunk):
+
     def __init__(self, units=None):
         Hunk.__init__(self, 'HUNK_INDEX')
         self.units = units or []
@@ -437,13 +450,14 @@ class HunkIndex(Hunk):
                         print('       ', s)
                 if h[4]:
                     print('     ', 'DEFS')
-                    l = max(len(s[0]) for s in h[4])
+                    maxlen = max(len(s[0]) for s in h[4])
                     for s in sorted(h[4], key=lambda x: x[1]):
-                        print('       ', s[0].ljust(l), '=', s[1])
+                        print('       ', s[0].ljust(maxlen), '=', s[1])
             print('')
 
 
 class HunkFile(io.FileIO):
+
     def __init__(self, *args, **kwargs):
         super(HunkFile, self).__init__(*args, **kwargs)
 

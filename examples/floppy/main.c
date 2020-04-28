@@ -24,7 +24,7 @@ static void vBackgroundTask(File_t *ser) {
 
   for (;;)
     FilePutChar(ser, '+');
-  
+
   DeleteFsReplyQueue();
 }
 
@@ -60,4 +60,6 @@ int main(void) {
   return 0;
 }
 
-void vApplicationIdleHook(void) { custom.color[0] = 0; }
+void vApplicationIdleHook(void) {
+  custom.color[0] = 0;
+}

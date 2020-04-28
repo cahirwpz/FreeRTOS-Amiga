@@ -109,7 +109,8 @@ static inline void ChangeDiskSide(int16_t upper) {
 }
 
 static inline void WaitDiskReady(void) {
-  while (ciaa.ciapra & CIAF_DSKRDY);
+  while (ciaa.ciapra & CIAF_DSKRDY)
+    continue;
 }
 
 static inline int HeadsAtTrack0() {

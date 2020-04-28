@@ -40,7 +40,7 @@ class Registers():
 
 def ParseStatusRegister(line):
     T, S, M, X, N, Z, V, C, IMASK, STP = \
-            [f.split('=')[1] for f in line.split()]
+        [f.split('=')[1] for f in line.split()]
     SR_HI = '{:02b}{}{}0{:03b}'.format(int(T), S, M, int(IMASK))
     SR_LO = '000{}{}{}{}{}'.format(X, N, Z, V, C)
     return int(SR_HI + SR_LO, 2)
@@ -58,8 +58,8 @@ def ParseProcessorState(lines):
     # 'A4 00D00000   A5 00FC0208   A6 00C00276   A7 00040000'
     # 'USP  00000000 ISP  00040000'
     while not lines[0].startswith('T='):
-        l = lines.pop(0).split()
-        for n, v in zip(l[0::2], l[1::2]):
+        fs = lines.pop(0).split()
+        for n, v in zip(fs[0::2], fs[1::2]):
             regs[n] = int(v, 16)
 
     # We are at line starting with 'T=' so read Status Register.
@@ -94,6 +94,7 @@ def ParseProcessorState(lines):
 
 
 class UaeCommandsMixin():
+
     def resume(self, addr=None):
         # {g [<address>]} Start execution at the current address or <address>.
         cmd = 'g'
@@ -105,7 +106,7 @@ class UaeCommandsMixin():
         # {t [<instructions>]} Step one or more <instructions>.
         cmd = 't'
         if insn:
-            cmd +=  ' ' + str(insn)
+            cmd += ' ' + str(insn)
         self.send(cmd)
 
     def break_opcode(self, opcode):
@@ -147,14 +148,15 @@ class UaeCommandsMixin():
             for line in lines:
                 print(line)
         hexlines = [''.join(line.strip().split()[1:9]) for line in lines]
-        return ''.join(hexlines)[:length*2]
+        return ''.join(hexlines)[:length * 2]
 
     async def read_long(self, addr):
         longword = await self.read_memory(addr, 4)
         return int(longword, 16)
 
     async def write_memory(self, addr, data):
-        # {W <address> <values[.x] separated by space>} Write into Amiga memory.
+        # {W <address> <values[.x] separated by space>}
+        # Write into Amiga memory.
         # Assume _data_ is a string of hexadecimal digits.
         hexbytes = []
         while data:
@@ -163,8 +165,9 @@ class UaeCommandsMixin():
         await self.communicate('W ' + ' '.join(hexbytes))
 
     # W <address> <values[.x] separated by space> Write into Amiga memory.
-    # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]] (read/write/opcode/freeze/mustchange).
-    #                    Add/remove memory watchpoints.
+    # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]]
+    #   (read/write/opcode/freeze/mustchange).
+    # Add/remove memory watchpoints.
 
     async def read_registers(self):
         # {r} Dump state of the CPU.
@@ -253,6 +256,7 @@ async def UaeDebugger(uaedbg):
 
 
 class UaeProcess(UaeCommandsMixin):
+
     def __init__(self, proc):
         self.proc = proc
 

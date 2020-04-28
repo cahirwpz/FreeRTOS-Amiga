@@ -9,6 +9,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         lfs: true
-
-    - name: FreeRTOS for Amiga 500
+    - name: Verify formatting (C & Python)
+      run: bash verify-format.sh
+    - name: Build FreeRTOS for Amiga 500
       run: make

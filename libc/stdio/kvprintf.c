@@ -106,101 +106,101 @@ void kvprintf(putchar_t put, const char *fmt, va_list ap) {
     width = 0;
   reswitch:
     switch (ch = *fmt++) {
-    case '#':
-      lflag |= ALT;
-      goto reswitch;
-    case ' ':
-      lflag |= SPACE;
-      goto reswitch;
-    case '-':
-      lflag |= LADJUST;
-      goto reswitch;
-    case '+':
-      lflag |= SIGN;
-      goto reswitch;
-    case '0':
-      lflag |= ZEROPAD;
-      goto reswitch;
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-      for (;;) {
-        width *= 10;
-        width += ch - '0';
-        ch = *fmt;
-        if ((unsigned)ch - '0' > 9)
-          break;
-        ++fmt;
-      }
-    case 'l':
-      lflag |= LONG;
-      goto reswitch;
-    case 'j':
-      if (sizeof(intmax_t) == sizeof(long))
+      case '#':
+        lflag |= ALT;
+        goto reswitch;
+      case ' ':
+        lflag |= SPACE;
+        goto reswitch;
+      case '-':
+        lflag |= LADJUST;
+        goto reswitch;
+      case '+':
+        lflag |= SIGN;
+        goto reswitch;
+      case '0':
+        lflag |= ZEROPAD;
+        goto reswitch;
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+        for (;;) {
+          width *= 10;
+          width += ch - '0';
+          ch = *fmt;
+          if ((unsigned)ch - '0' > 9)
+            break;
+          ++fmt;
+        }
+      case 'l':
         lflag |= LONG;
-      goto reswitch;
-    case 't':
-      if (sizeof(PTRDIFF_T) == sizeof(long))
-        lflag |= LONG;
-      goto reswitch;
-    case 'z':
-      if (sizeof(ssize_t) == sizeof(long))
-        lflag |= LONG;
-      goto reswitch;
-    case 'c':
-      ch = va_arg(ap, int);
-      --width;
-      RADJUSTPAD();
-      put(ch & 0xFF);
-      LADJUSTPAD();
-      break;
-    case 's':
-      p = va_arg(ap, char *);
-      for (q = p; *q != '\0'; ++q)
-        continue;
-      width -= q - p;
-      RADJUSTPAD();
-      while ((ch = (unsigned char)*p++))
+        goto reswitch;
+      case 'j':
+        if (sizeof(intmax_t) == sizeof(long))
+          lflag |= LONG;
+        goto reswitch;
+      case 't':
+        if (sizeof(PTRDIFF_T) == sizeof(long))
+          lflag |= LONG;
+        goto reswitch;
+      case 'z':
+        if (sizeof(ssize_t) == sizeof(long))
+          lflag |= LONG;
+        goto reswitch;
+      case 'c':
+        ch = va_arg(ap, int);
+        --width;
+        RADJUSTPAD();
+        put(ch & 0xFF);
+        LADJUSTPAD();
+        break;
+      case 's':
+        p = va_arg(ap, char *);
+        for (q = p; *q != '\0'; ++q)
+          continue;
+        width -= q - p;
+        RADJUSTPAD();
+        while ((ch = (unsigned char)*p++))
+          put(ch);
+        LADJUSTPAD();
+        break;
+      case 'd':
+        ul = (lflag & LONG) ? va_arg(ap, long) : va_arg(ap, int);
+        if ((INTMAX_T)ul < 0) {
+          ul = -(INTMAX_T)ul;
+          lflag |= NEGATIVE;
+        }
+        KPRINTN(10);
+        break;
+      case 'o':
+        KPRINT(8);
+        break;
+      case 'u':
+        KPRINT(10);
+        break;
+      case 'p':
+        lflag |= (LONG | ALT);
+        /* FALLTHROUGH */
+      case 'x':
+        KPRINT(16);
+        break;
+      default:
+        if (ch == '\0')
+          return;
         put(ch);
-      LADJUSTPAD();
-      break;
-    case 'd':
-      ul = (lflag & LONG) ? va_arg(ap, long) : va_arg(ap, int);
-      if ((INTMAX_T)ul < 0) {
-        ul = -(INTMAX_T)ul;
-        lflag |= NEGATIVE;
-      }
-      KPRINTN(10);
-      break;
-    case 'o':
-      KPRINT(8);
-      break;
-    case 'u':
-      KPRINT(10);
-      break;
-    case 'p':
-      lflag |= (LONG | ALT);
-      /* FALLTHROUGH */
-    case 'x':
-      KPRINT(16);
-      break;
-    default:
-      if (ch == '\0')
-        return;
-      put(ch);
-      break;
+        break;
     }
   }
 }
 
-static void kprintn(putchar_t put, UINTMAX_T ul, int base, int lflag, int width)
-{
+static void kprintn(putchar_t put, UINTMAX_T ul, int base, int lflag,
+                    int width) {
   /* hold a INTMAX_T in base 8 */
   char *p, buf[(sizeof(INTMAX_T) * NBBY / 3) + 1 + 2 /* ALT + SIGN */];
   char *q;

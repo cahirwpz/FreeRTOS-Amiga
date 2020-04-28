@@ -30,17 +30,15 @@ static void CIATimerHandler(CIATimer_t *timer) {
 
 /* Statically allocated CIA timers. */
 #define TIMER(CIA, TIMER)                                                      \
-  [TIMER_##CIA##_##TIMER] = {                                                  \
-    .num = TIMER_##CIA##_##TIMER, .cia = CIA, .icr = CIAICRF_T##TIMER,         \
-    .server = INTSERVER(0, (ISR_t)CIATimerHandler,                             \
-                        &Timers[TIMER_##CIA##_##TIMER])}
+  [TIMER_##CIA##_##                                                            \
+    TIMER] = {.num = TIMER_##CIA##_##TIMER,                                    \
+              .cia = CIA,                                                      \
+              .icr = CIAICRF_T##TIMER,                                         \
+              .server = INTSERVER(0, (ISR_t)CIATimerHandler,                   \
+                                  &Timers[TIMER_##CIA##_##TIMER])}
 
-CIATimer_t Timers[4] = {
-  TIMER(CIAA, A),
-  TIMER(CIAA, B),
-  TIMER(CIAB, A),
-  TIMER(CIAB, B)
-};
+CIATimer_t Timers[4] = {TIMER(CIAA, A), TIMER(CIAA, B), TIMER(CIAB, A),
+                        TIMER(CIAB, B)};
 
 /* Implementation of procedures declared in header file. */
 
@@ -103,7 +101,8 @@ void WaitTimerGeneric(CIATimer_t *timer, uint16_t delay, bool spin) {
 
   if (spin || (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED)) {
     /* The scheduler is not active or we were requested to busy wait. */
-    while (!SampleICR(cia, icr));
+    while (!SampleICR(cia, icr))
+      continue;
   } else {
     /* Must not sleep while in interrupt context! */
     configASSERT((portGetSR() & 0x0700) == 0);

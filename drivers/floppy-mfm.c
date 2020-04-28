@@ -29,7 +29,7 @@ typedef struct DiskSector {
 } DiskSector_t;
 
 #define MASK 0x55555555
-#define DECODE(odd, even) (((odd) & MASK) << 1) | ((even) & MASK)
+#define DECODE(odd, even) (((odd)&MASK) << 1) | ((even)&MASK)
 
 void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   int16_t secnum = SECTOR_COUNT;
@@ -51,10 +51,10 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
       data++;
 
     DiskSector_t *sec =
-        (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
+      (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
 
     *(uint32_t *)&info =
-        DECODE(*(uint32_t *)&sec->info[0], *(uint32_t *)&sec->info[1]);
+      DECODE(*(uint32_t *)&sec->info[0], *(uint32_t *)&sec->info[1]);
 
 #if DEBUG
     printf("[MFM] SectorInfo: sector=%x, #sector=%d, #track=%d\n",

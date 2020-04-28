@@ -7,25 +7,31 @@
 #include "filesys.h"
 
 typedef enum {
-  FS_MOUNT,             /* mount filesystem */
-  FS_UNMOUNT,           /* unmount filesystem */
-  FS_DIRENT,            /* fetch one directory entry */
-  FS_OPEN,              /* open a file */
-  FS_CLOSE,             /* close the file */
-  FS_READ               /* read some bytes from the file */
+  FS_MOUNT,   /* mount filesystem */
+  FS_UNMOUNT, /* unmount filesystem */
+  FS_DIRENT,  /* fetch one directory entry */
+  FS_OPEN,    /* open a file */
+  FS_CLOSE,   /* close the file */
+  FS_READ     /* read some bytes from the file */
 } FsCmd_t;
 
 /* The type of message send to file system task. */
 typedef struct FsMsg {
-  FsCmd_t cmd;          /* request type */
-  QueueHandle_t rq;     /* where to return a reply */
-  union {               /* data specific to given request type */
-    struct {} mount;
-    struct {} umount;
-    struct {} dirent;
-    struct {} open;
-    struct {} close;
-    struct {} read;
+  FsCmd_t cmd;      /* request type */
+  QueueHandle_t rq; /* where to return a reply */
+  union {           /* data specific to given request type */
+    struct {
+    } mount;
+    struct {
+    } umount;
+    struct {
+    } dirent;
+    struct {
+    } open;
+    struct {
+    } close;
+    struct {
+    } read;
   };
 } FsMsg_t;
 
@@ -40,11 +46,9 @@ static long FsRead(FsFile_t *f, void *buf, size_t nbyte);
 static long FsSeek(FsFile_t *f, long offset, int whence);
 static void FsClose(FsFile_t *f);
 
-__unused static FileOps_t FsOps = {
-  .read = (FileRead_t)FsRead,
-  .seek = (FileSeek_t)FsSeek,
-  .close = (FileClose_t)FsClose
-};
+__unused static FileOps_t FsOps = {.read = (FileRead_t)FsRead,
+                                   .seek = (FileSeek_t)FsSeek,
+                                   .close = (FileClose_t)FsClose};
 
 static void SendIO(FloppyIO_t *io, short track) {
   io->track = track;
@@ -158,7 +162,7 @@ void FsInit(void) {
 /* Use first pointer in thread local storage
  * as a reply queue for the filesystem */
 static QueueHandle_t GetFsReplyQueue(void) {
-	return pvTaskGetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle(), 0);
+  return pvTaskGetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle(), 0);
 }
 
 static void SetFsReplyQueue(QueueHandle_t rq) {
