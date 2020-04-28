@@ -187,8 +187,8 @@ class GdbStub():
 
     @staticmethod
     def binary_decode(data):
-        # Decode GDB binary stream.
-        # See https://sourceware.org/gdb/onlinedocs/gdb/Overview.html#Binary-Data
+        # Decode GDB binary stream. See:
+        # https://sourceware.org/gdb/onlinedocs/gdb/Overview.html#Binary-Data
         escape = False
         result = bytearray()
         for x in data.encode():
@@ -312,7 +312,8 @@ class GdbStub():
             payload = self.binary_decode(payload)
             addr, length = map(lambda x: int(x, 16), packet[1:].split(','))
             assert length == len(payload)
-            await self.uae.write_memory(addr, ''.join('%02x' % c for c in payload))
+            hexstr = ''.join('%02x' % c for c in payload)
+            await self.uae.write_memory(addr, hexstr)
             self.gdb.send_ack('OK')
         elif packet[0] == 'R':
             # Restart the program being debugged. The XX is ignored.

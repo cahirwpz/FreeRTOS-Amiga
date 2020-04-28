@@ -190,18 +190,22 @@ class UaeCommandsMixin():
         assert lines and lines[0] == 'Breakpoint removed'
 
     async def insert_watchpoint(self, addr, size, kind='I'):
-        # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]] (read/write/opcode/freeze/mustchange).
-        #                    Add/remove memory watchpoints.
+        # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]]
+        #   (read/write/opcode/freeze/mustchange).
+        # Add/remove memory watchpoints.
 
-        # Watchpoints are deleted by numbers, so we need to maintain the <num> for every watchpoint.
+        # Watchpoints are deleted by numbers, so we need to maintain the <num>
+        # for every watchpoint.
         index = max(self.watchpoints.values()) + 1
         self.watchpoints[addr, size, kind] = index
-        lines = await self.communicate('w %d %X %d %s' % (index, addr, size, kind))
+        lines = await self.communicate('w %d %X %d %s' %
+                                       (index, addr, size, kind))
         assert lines and lines[-1] == 'Memwatch %d added' % index
 
     async def remove_watchpoint(self, addr, size, kind='I'):
-        # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]] (read/write/opcode/freeze/mustchange).
-        #                    Add/remove memory watchpoints.
+        # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]]
+        #   (read/write/opcode/freeze/mustchange).
+        # Add/remove memory watchpoints.
         index = self.watchpoints.pop((addr, size, kind))
         lines = await self.communicate('w %d' % index)
         assert lines and lines[-1] == 'Memwatch %d removed' % index
