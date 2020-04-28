@@ -185,6 +185,22 @@ class GdbStub():
 
         return True
 
+    @staticmethod
+    def binary_decode(data):
+        # Decode GDB binary stream.
+        # See https://sourceware.org/gdb/onlinedocs/gdb/Overview.html#Binary-Data
+        escape = False
+        result = bytearray()
+        for x in data.encode():
+            if escape:
+                result.append(x ^ 0x20)
+                escape = False
+            elif x == 0x7d:  # '}' escape
+                escape = True
+            else:
+                result.append(x)
+        return result
+
     async def handle_packet(self, packet):
         if packet == '?':
             # Indicate the reason the target halted.
@@ -227,8 +243,9 @@ class GdbStub():
             self.gdb.send_ack('DEAD{:04X}'.format(int(packet[1:], 16)))
         elif packet[0] == 'P':
             # Write register n… with value r….
-            # TODO {P n…=r…}
-            self.gdb.send_ack('E00')
+            reg, val = map(lambda x: int(x, 16), packet[1:].split('='))
+            await self.uae.write_register(self.__regs__[reg], val)
+            self.gdb.send_ack('OK')
         elif packet[0] == 'm':
             # Read length addressable memory units starting at address
             # addr.
@@ -291,7 +308,11 @@ class GdbStub():
         elif packet[0] == 'X':
             # Write data to memory. Memory is specified by its address addr and
             # number of addressable memory units length.
-            # TODO
+            packet, payload = packet.split(':', 1)
+            payload = self.binary_decode(payload)
+            addr, length = map(lambda x: int(x, 16), packet[1:].split(','))
+            assert length == len(payload)
+            await self.uae.write_memory(addr, ''.join('%02x' % c for c in payload))
             self.gdb.send_ack('OK')
         elif packet[0] == 'R':
             # Restart the program being debugged. The XX is ignored.
@@ -352,5 +373,7 @@ class GdbStub():
             regs = stopdata['regs']
             dump = ';'.join('{:x}:{}'.format(num, regs.as_hex(name))
                             for num, name in enumerate(self.__regs__))
+            if 'watch' in stopdata:
+                dump += ';watch:%x' % data['watch']
             self.gdb.send('T05;{};'.format(dump))
             await self.gdb.recv_ack()
