@@ -1,0 +1,24 @@
+{
+  "tests": [
+    {
+      "name": "Verify code is formatted",
+      "setup": "",
+      "run": "bash verify-format.sh",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": null
+    },
+    {
+      "name": "Compile source code",
+      "setup": "",
+      "run": "make",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": null
+    }
+  ]
+}

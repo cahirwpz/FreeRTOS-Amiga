@@ -1,0 +1,14 @@
+name: FreeRTOS build
+
+on: [push,pull_request]
+
+jobs:
+  build:
+    name: Autograding
+    runs-on: ubuntu-latest
+    container: cahirwpz/freertos-amiga:latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          lfs: true
+      - uses: education/autograding@v1
