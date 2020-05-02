@@ -44,6 +44,8 @@
 #define BCLR(x, b) ((x) &= ~BIT(b))
 
 #define __noinline __attribute__((noinline))
+#define __noreturn __attribute__((noreturn))
+#define __returns_twice __attribute__((returns_twice))
 #define __packed __attribute__((packed))
 #define __unused __attribute__((unused))
 #define __datachip __attribute__((section(".datachip")))
