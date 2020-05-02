@@ -11,21 +11,13 @@
 #define BACKGROUND_TASK_PRIO 0
 
 static void vForegroundTask(File_t *ser) {
-  CreateFsReplyQueue();
-
   for (;;)
     FilePutChar(ser, '-');
-
-  DeleteFsReplyQueue();
 }
 
 static void vBackgroundTask(File_t *ser) {
-  CreateFsReplyQueue();
-
   for (;;)
     FilePutChar(ser, '+');
-
-  DeleteFsReplyQueue();
 }
 
 static void SystemClockTickHandler(__unused void *data) {
@@ -37,8 +29,8 @@ static void SystemClockTickHandler(__unused void *data) {
 
 INTSERVER_DEFINE(SystemClockTick, 10, SystemClockTickHandler, NULL);
 
-static xTaskHandle fg_handle;
-static xTaskHandle bg_handle;
+static TaskHandle_t fg_handle;
+static TaskHandle_t bg_handle;
 
 int main(void) {
   portNOP(); /* Breakpoint for simulator. */

@@ -32,14 +32,12 @@
 #define configUSE_RECURSIVE_MUTEXES     0
 #define configQUEUE_REGISTRY_SIZE       0
 #define configUSE_COUNTING_SEMAPHORES   0
+#define configUSE_POSIX_ERRNO           0
 
 #define configMAX_PRIORITIES            (4)
 #define configSUPPORT_STATIC_ALLOCATION  0
 #define configSUPPORT_DYNAMIC_ALLOCATION 1
 #define configUSE_MALLOC_FAILED_HOOK     1
-
-/* Some examples use a TLS pointer to store message reply queue. */
-#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1
 
 /* Set the following definitions to 1 to include the API function, or zero to
  * exclude the API function. */
