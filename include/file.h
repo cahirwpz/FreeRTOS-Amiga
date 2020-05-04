@@ -24,7 +24,7 @@ typedef struct {
 
 typedef struct File {
   FileOps_t *ops;
-  short usecount;
+  uint32_t usecount;
   long offset;
 } File_t;
 

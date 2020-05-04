@@ -28,6 +28,8 @@ typedef uint32_t TickType_t;
 #define portMAX_DELAY (TickType_t)0xffffffffUL
 #endif
 
+#define portFORCE_INLINE __always_inline inline
+
 /* VBCC does not understand common way to mark unused variables,
  * i.e. "(void)x", and it complains about efectless statement.
  * Following macros invocations silence out those warnings. */
