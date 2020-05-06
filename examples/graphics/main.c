@@ -21,7 +21,7 @@ static void vMainTask(__unused void *data) {
 
   /* Uses double buffering! */
   for (int buffer = 1;; buffer ^= 1) {
-    bitmap_t *screen = buffer ? &screen1_bm : &screen0_bm;
+    const bitmap_t *screen = buffer ? &screen1_bm : &screen0_bm;
 
     BltCopySetSrc(&bc, &simpsons_bm, 0, 0, -1, -1);
     BltCopySetDst(&bc, screen, 0, 0);
