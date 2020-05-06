@@ -4,18 +4,11 @@
 #include <interrupt.h>
 #include <stdio.h>
 
-#include <copper.h>
-#include <palette.h>
-#include <bitmap.h>
-#include <sprite.h>
-#include <font.h>
 #include <file.h>
 
 #include "console.h"
 #include "event.h"
 #include "tty.h"
-#include "data/lat2-08.c"
-#include "data/pointer.c"
 
 #define mainINPUT_TASK_PRIORITY 3
 
@@ -28,7 +21,7 @@ static void vInputTask(void *data) {
     if (ev.type == EV_MOUSE) {
       FilePrintf(tty, "MOUSE: x = %d, y = %d, button = %x\n", ev.mouse.x,
                  ev.mouse.y, ev.mouse.button);
-      SpriteUpdatePos(&pointer_spr, HP(ev.mouse.x), VP(ev.mouse.y));
+      ConsoleMovePointer(ev.mouse.x, ev.mouse.y);
     } else if (ev.type == EV_KEY) {
       FilePrintf(tty, "KEY: ascii = '%c', code = %02x, modifier = %02x\n",
                  ev.key.ascii, ev.key.code, ev.key.modifier);
@@ -47,48 +40,13 @@ INTSERVER_DEFINE(SystemClockTick, 10, SystemClockTickHandler, NULL);
 
 static xTaskHandle input_handle;
 
-#include "data/screen.c"
-
-static COPLIST(cp, 40);
-
 int main(void) {
   portNOP(); /* Breakpoint for simulator. */
 
   /* Configure system clock. */
   AddIntServer(VertBlankChain, SystemClockTick);
 
-  /*
-   * Copper configures hardware each frame (50Hz in PAL) to:
-   *  - set video mode to HIRES (640x256),
-   *  - display one bitplane,
-   *  - set background color to black, and foreground to white,
-   *  - set up mouse pointer palette,
-   *  - set sprite 0 to mouse pointer graphics,
-   *  - set other sprites to empty graphics,
-   */
-  CopSetupScreen(cp, &screen_bm, MODE_HIRES, HP(0), VP(0));
-  CopSetupBitplanes(cp, &screen_bm, NULL);
-  CopLoadColor(cp, 0, 0x000);
-  CopLoadColor(cp, 1, 0xfff);
-  CopLoadPal(cp, &pointer_pal, 16);
-  CopLoadSprite(cp, 0, &pointer_spr);
-  for (int i = 1; i < 8; i++)
-    CopLoadSprite(cp, i, NULL);
-  CopEnd(cp);
-
-  /* Set sprite position in upper-left corner of display window. */
-  SpriteUpdatePos(&pointer_spr, HP(0), VP(0));
-
-  /* Tell copper where the copper list begins and enable copper DMA. */
-  CopListActivate(cp);
-
-  /* Enable bitplane and sprite fetchers' DMA. */
-  EnableDMA(DMAF_RASTER | DMAF_SPRITE);
-
-  EventQueueInit();
-  MouseInit(PushMouseEventFromISR, 0, 0, 319, 255);
-  KeyboardInit(PushKeyEventFromISR);
-  ConsoleInit(&screen_bm, &console_font);
+  ConsoleInit();
 
   xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, TtyOpen(),
               mainINPUT_TASK_PRIORITY, &input_handle);
