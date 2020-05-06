@@ -16,7 +16,7 @@
 
 #define cons_width (screen_bm.width / 8)
 #define cons_height (screen_bm.height / console_font.height)
-#define cons_rowsize (screen_bm.bytesPerRow * console_font.height)
+#define cons_rowsize ((short)(screen_bm.bytesPerRow * console_font.height))
 
 static struct {
   unsigned char *here;
@@ -69,8 +69,7 @@ void ConsoleInit(void) {
 }
 
 static inline void UpdateHere(void) {
-  cursor.here = screen_bm.planes[0] +
-    (short)cons_rowsize * cursor.y + cursor.x;
+  cursor.here = screen_bm.planes[0] + cons_rowsize * cursor.y + cursor.x;
 }
 
 void ConsoleMovePointer(short x, short y) {
@@ -101,7 +100,7 @@ void ConsoleGetCursor(short *xp, short *yp) {
 }
 
 #pragma GCC push_options
-#pragma GCC optimize ("-O3")
+#pragma GCC optimize("-O3")
 
 static void ConsoleDrawChar(int c) {
   unsigned char *src = console_font_glyphs + (c - 32) * console_font.height;
