@@ -59,6 +59,7 @@ static void *_pvPortMalloc(int size, memory_t m) {
           /* Insert the block on free list. */
           succ->next = curr->next;
           curr->next = succ;
+          curr->size = size;
         }
         /* Decrease the amount of available memory. */
         m->totalFree -= size + BLOCK_SIZE;
