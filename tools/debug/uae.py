@@ -196,7 +196,7 @@ class UaeCommandsMixin():
 
         # Watchpoints are deleted by numbers, so we need to maintain the <num>
         # for every watchpoint.
-        index = max(self.watchpoints.values()) + 1
+        index = max(self.watchpoints.values(), default=0) + 1
         self.watchpoints[addr, size, kind] = index
         lines = await self.communicate('w %d %X %d %s' %
                                        (index, addr, size, kind))
