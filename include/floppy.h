@@ -41,5 +41,7 @@ void FloppyKill(void);
 void FloppySendIO(FloppyIO_t *io);
 void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
 void DecodeSector(DiskSector_t *sector, uint32_t *buf);
+void EncodeTrack(uint32_t *decodedTrack, DiskSector_t *sectors[SECTOR_COUNT]);
+void EncodeSector(uint32_t *decodedSector, DiskSector_t *sector);
 
 #endif /* !_FLOPPY_H_ */
