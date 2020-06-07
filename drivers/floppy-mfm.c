@@ -29,7 +29,7 @@ typedef struct DiskSector {
 } DiskSector_t;
 
 #define MASK 0x55555555
-#define DECODE(odd, even) (((odd)&MASK) << 1) | ((even)&MASK)
+#define DECODE(odd, even) ((((odd)&MASK) << 1) | ((even)&MASK))
 
 void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   int16_t secnum = SECTOR_COUNT;
@@ -38,17 +38,16 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   if ((*track)[0] == DSK_SYNC)
     maybeSector += sizeof(uint16_t);
 
-  for (;;) {
-    uint16_t *data = (uint16_t *)maybeSector;
+  DiskSector_t *sec =
+    (DiskSector_t *)((uintptr_t)maybeSector - offsetof(DiskSector_t, info[0]));
+
+  do {
     struct {
       uint8_t format;
       uint8_t trackNum;
       uint8_t sectorNum;
       uint8_t sectors;
     } info = {0};
-
-    DiskSector_t *sec =
-      (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
 
     *(uint32_t *)&info =
       DECODE(*(uint32_t *)&sec->info[0], *(uint32_t *)&sec->info[1]);
@@ -58,23 +57,10 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
            (intptr_t)sec, (int)info.sectorNum, (int)info.trackNum);
 #endif
 
-    sectors[info.sectorNum] = sec;
-    maybeSector = sec + 1;
+    sectors[info.sectorNum] = sec++;
     if (info.sectors == 1)
-      maybeSector += GAP_SIZE;
-
-    if (--secnum) {
-      /* Find synchronization marker and move to first location after it. */
-      uint16_t *data = maybeSector;
-      while (*data != DSK_SYNC)
-        data++;
-      while (*data == DSK_SYNC)
-        data++;
-      maybeSector = data;
-    } else {
-      break;
-    }
-  }
+      sec = (void *)sec + GAP_SIZE;
+  } while (--secnum);
 }
 
 void DecodeSector(DiskSector_t *sector, uint32_t *buf) {
