@@ -8,6 +8,8 @@
 #include <floppy.h>
 #include <file.h>
 
+#define DRYTEST 0
+
 int rand(void);
 
 static inline void SendIO(FloppyIO_t *io, uint16_t cmd, uint16_t track) {
@@ -42,7 +44,7 @@ static char sequence[] = {
 #define SECTOR(track, i) ((void *)(track) + (i) * SECTOR_SIZE)
 
 static void vTask(File_t *f) {
-  DiskTrack_t * chipbuf = AllocTrack();
+  DiskTrack_t *chipbuf = AllocTrack();
   configASSERT(chipbuf);
 
   QueueHandle_t replyQ = xQueueCreate(1, sizeof(FloppyIO_t *));;
@@ -68,7 +70,7 @@ static void vTask(File_t *f) {
       uint16_t offset = rand() % (SECTOR_SIZE - sizeof(sequence));
       void *sector = SECTOR(data, secnum);
       memcpy(sector + offset, sequence, sizeof(sequence));
-      EncodeSector(sector, sectors[secnum]);
+      EncodeTrack((uint32_t *)data, sectors);
 #if DRYTEST
       DecodeTrack(chipbuf, sectors);
       for (int j = 0; j < SECTOR_COUNT; j++)

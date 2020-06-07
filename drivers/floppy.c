@@ -142,6 +142,7 @@ static void FloppyMotorOff(void) {
 }
 
 #define DISK_SETTLE TIMER_MS(15)
+#define WRITE_SETTLE TIMER_US(1300)
 
 static void FloppyReader(__unused void *ptr) {
   /* Move head to track 0 */
@@ -207,6 +208,10 @@ static void FloppyReader(__unused void *ptr) {
         dsklen |= DSK_WRITE;
       custom.dsklen = dsklen;
       custom.dsklen = dsklen;
+
+      if (io->cmd == CMD_WRITE)
+        WaitTimerSleep(FloppyTimer, WRITE_SETTLE);
+
       (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
       /* Disable DMA & interrupts. */

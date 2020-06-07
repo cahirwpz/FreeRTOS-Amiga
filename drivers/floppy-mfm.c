@@ -28,40 +28,20 @@ typedef struct DiskSector {
   uint8_t data[2][SECTOR_PAYLOAD];
 } DiskSector_t;
 
-#if DEBUG
-#define GET_2BITS(lw, n) (((lw) >> (n)*2) & 3)
-
-static int CheckEncodingLW(uint32_t lw, uint32_t prev) {
-  uint8_t pbit = prev & 1;
-  for (int16_t i = 15; i > -1; i--) {
-    uint8_t triple = GET_2BITS(lw, i) | (pbit << 2);
-    if (!triple || triple > 5)
-      return 0;
-    pbit = triple & 1;
-  }
-  return 1;
-}
-
-static int CheckEncoding(const uint32_t *code, uint32_t len, uint32_t prev) {
-  for (uint32_t i = 0; i < len; i++) {
-    uint32_t lw = *code++;
-    if (!CheckEncodingLW(lw, prev))
-      return 0;
-    prev = lw;
-  }
-  return 1;
-}
-#endif
-
 #define MASK 0x55555555
 #define DECODE(odd, even) ((((odd)&MASK) << 1) | ((even)&MASK))
 
 void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   int16_t secnum = SECTOR_COUNT;
-  DiskSector_t *maybeSector = (DiskSector_t *)track;
+  void *maybeSector = (DiskSector_t *)track;
+
+  if ((*track)[0] == DSK_SYNC)
+    maybeSector += sizeof(uint16_t);
+
+  DiskSector_t *sec =
+    (DiskSector_t *)((uintptr_t)maybeSector - offsetof(DiskSector_t, info[0]));
 
   do {
-    uint16_t *data = (uint16_t *)maybeSector;
     struct {
       uint8_t format;
       uint8_t trackNum;
@@ -69,29 +49,17 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
       uint8_t sectors;
     } info = {0};
 
-    /* Find synchronization marker and move to first location after it. */
-    while (*data != DSK_SYNC)
-      data++;
-    while (*data == DSK_SYNC)
-      data++;
-
-    DiskSector_t *sec =
-      (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
-
     *(uint32_t *)&info =
       DECODE(*(uint32_t *)&sec->info[0], *(uint32_t *)&sec->info[1]);
 
 #if DEBUG
     printf("[MFM] SectorInfo: sector=%x, #sector=%d, #track=%d\n",
            (intptr_t)sec, (int)info.sectorNum, (int)info.trackNum);
-
-    configASSERT(CheckEncoding(sec->checksum,
-                               (SECTOR_PAYLOAD / sizeof(uint32_t)) * 2 + 2,
-                               sec->checksumHeader[1]));
 #endif
 
-    sectors[info.sectorNum] = sec;
-    maybeSector = sec + 1;
+    sectors[info.sectorNum] = sec++;
+    if (info.sectors == 1)
+      sec = (void *)sec + GAP_SIZE;
   } while (--secnum);
 }
 
@@ -129,12 +97,7 @@ static inline uint32_t Encode(uint32_t lw, uint32_t prevOdd, uint32_t prevEven,
   return lwOdd ^ lwEven;
 }
 
-void EncodeTrack(uint32_t *decodedTrack, DiskSector_t *sectors[SECTOR_COUNT]) {
-  for (int16_t i = 0; i < SECTOR_COUNT; i++)
-    EncodeSector(SECTOR(decodedTrack, i), sectors[i]);
-}
-
-void EncodeSector(uint32_t *decodedSector, DiskSector_t *sector) {
+static void EncodeSector(uint32_t *decodedSector, DiskSector_t *sector) {
   uint32_t *odd = (uint32_t *)sector->data[0];
   uint32_t *even = (uint32_t *)sector->data[1];
   uint32_t checksum = 0;
@@ -156,9 +119,53 @@ void EncodeSector(uint32_t *decodedSector, DiskSector_t *sector) {
 
   (void)Encode(first, checksum, prev >> 1, (uint32_t *)sector->data[0],
                (uint32_t *)sector->data[1]);
+}
 
-#if DEBUG
-  configASSERT(
-    CheckEncoding(sector->checksum, (n + 1) * 2 + 2, checksumHeader));
-#endif
+static inline void UpdateMSB(uint32_t *lw, uint32_t prev) {
+  if (!((*lw >> 30) & 1)) {
+    *lw &= 0x7fffffff;
+    *lw |= (~prev << 31);
+  }
+}
+
+#define LAST_BIT(es) (*((uint8_t *)(es + 1) - 1) & 1)
+
+void EncodeTrack(uint32_t *decodedTrack, DiskSector_t *sectors[SECTOR_COUNT]) {
+  int16_t minIdx, maxIdx;
+  minIdx = maxIdx = 0;
+
+  for (int16_t i = 1; i < SECTOR_COUNT; i++)
+    if (sectors[i] < sectors[minIdx])
+      minIdx = i;
+    else if (sectors[i] > sectors[maxIdx])
+      maxIdx = i;
+  EncodeSector(SECTOR(decodedTrack, minIdx), sectors[minIdx]);
+
+  uint32_t prev = LAST_BIT(sectors[minIdx]);
+
+  for (int16_t i = minIdx + 1; i < SECTOR_COUNT; i++) {
+    DiskSector_t *sec = sectors[i];
+    EncodeSector(SECTOR(decodedTrack, i), sec);
+    UpdateMSB(&sec->magic, prev);
+    prev = LAST_BIT(sec);
+  }
+
+  uint32_t *lastMagic = NULL;
+  uint32_t *gap = (uint32_t *)(sectors[SECTOR_COUNT - 1] + 1);
+  UpdateMSB(gap, prev);
+
+  if (minIdx != 0) {
+    prev = *((uint8_t *)sectors[0] - 1) & 1;
+    for (int16_t i = 0; i < minIdx; i++) {
+      DiskSector_t *sec = sectors[i];
+      EncodeSector(SECTOR(decodedTrack, i), sec);
+      UpdateMSB(&sec->magic, prev);
+      prev = LAST_BIT(sec);
+    }
+    lastMagic = (uint32_t *)(sectors[minIdx - 1] + 1);
+  } else {
+    lastMagic = (void *)gap + GAP_SIZE;
+    prev =  *((uint8_t *)lastMagic - 1) & 1;
+  }
+  UpdateMSB(lastMagic, prev);
 }
