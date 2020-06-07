@@ -165,7 +165,7 @@ void EncodeTrack(uint32_t *decodedTrack, DiskSector_t *sectors[SECTOR_COUNT]) {
     lastMagic = (uint32_t *)(sectors[minIdx - 1] + 1);
   } else {
     lastMagic = (void *)gap + GAP_SIZE;
-    prev =  *((uint8_t *)lastMagic - 1) & 1;
+    prev = *((uint8_t *)lastMagic - 1) & 1;
   }
   UpdateMSB(lastMagic, prev);
 }
