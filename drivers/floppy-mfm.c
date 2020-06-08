@@ -44,6 +44,8 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   int16_t secnum = SECTOR_COUNT;
   uint16_t *data = (uint16_t *)track;
 
+  /* We always start after the DSK_SYNC word
+  /* but the first one may be corrupted.
   /* In case we start with the sync marker
    * move to the sector header. */
   if (*data == DSK_SYNC)
