@@ -49,6 +49,7 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
 
   uint32_t sp = supervisor ? frame->sp : frame->usp;
 
+  /* clang-format off */
   printf("Exception (in %s mode): %s!\n"
          " D0: %08x D1: %08x D2: %08x D3: %08x\n"
          " D4: %08x D5: %08x D6: %08x D7: %08x\n"
@@ -60,6 +61,7 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
          frame->d4, frame->d5, frame->d6, frame->d7,
          frame->a0, frame->a1, frame->a2, frame->a3,
          frame->a4, frame->a5, frame->a6, sp, pc, sr);
+  /* clang-format on */
 
   if (memflt) {
     uint32_t addr;
