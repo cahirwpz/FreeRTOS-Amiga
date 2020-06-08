@@ -37,6 +37,10 @@ static uint16_t *FindSectorHeader(uint16_t *data) {
   return data;
 }
 
+static inline DiskSector_t *Header2Sector(uint16_t *header) {
+  return (DiskSector_t *)((uintptr_t)header - offsetof(DiskSector_t, info[0]));
+}
+
 #define MASK 0x55555555
 #define DECODE(odd, even) ((((odd)&MASK) << 1) | ((even)&MASK))
 
@@ -51,8 +55,7 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   if (*data == DSK_SYNC)
     data++;
 
-  DiskSector_t *sec =
-    (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
+  DiskSector_t *sec = Header2Sector(data);
 
   do {
     struct {
@@ -75,7 +78,7 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
     if (info.gapDist == 1 && secnum != 1) {
       /* Move to the first sector behind the gap. */
       data = FindSectorHeader((uint16_t *)sec);
-      sec = (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
+      sec = Header2Sector(data);
     }
   } while (--secnum);
 }
