@@ -17,6 +17,8 @@ static void vMainTask(__unused void *data) {
   int rv = RunProgram(exe, 2048);
 
   printf("Program returned: %d\n", rv);
+
+  vTaskDelete(NULL);
 }
 
 static xTaskHandle handle;

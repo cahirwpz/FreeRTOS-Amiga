@@ -13,9 +13,11 @@ ENTRY(EnterUserMode)
         rte                             /* finally, enter user mode */
 END(EnterUserMode)
 
-ENTRY(DropUserMode)
+ENTRY(ExitUserMode)
+        move.l  8(sp),d0                /* return value */
+        move.l  4(sp),sp                /* context address */
         movem.l (sp)+,d2-d7/a2-a6
         rts
-END(DropUserMode)
+END(ExitUserMode)
 
 # vim: ft=gas:ts=8:sw=8:noet

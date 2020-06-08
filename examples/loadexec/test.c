@@ -23,4 +23,6 @@ void _start(void) {
     write(ser, lastName, lastLen - 1);
     write(ser, MSG("!\n"));
   }
+
+  exit(10);
 }

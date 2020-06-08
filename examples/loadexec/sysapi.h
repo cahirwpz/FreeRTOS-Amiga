@@ -4,8 +4,6 @@
 #include <cdefs.h>
 #include <stddef.h>
 
-#include "syscall.h"
-
 typedef struct File File_t;
 
 void exit(int status);
