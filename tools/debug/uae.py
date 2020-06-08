@@ -40,7 +40,7 @@ class Registers():
 
 def ParseStatusRegister(line):
     T, S, M, X, N, Z, V, C, IMASK, STP = \
-            [f.split('=')[1] for f in line.split()]
+        [f.split('=')[1] for f in line.split()]
     SR_HI = '{:02b}{}{}0{:03b}'.format(int(T), S, M, int(IMASK))
     SR_LO = '000{}{}{}{}{}'.format(X, N, Z, V, C)
     return int(SR_HI + SR_LO, 2)
@@ -58,8 +58,8 @@ def ParseProcessorState(lines):
     # 'A4 00D00000   A5 00FC0208   A6 00C00276   A7 00040000'
     # 'USP  00000000 ISP  00040000'
     while not lines[0].startswith('T='):
-        l = lines.pop(0).split()
-        for n, v in zip(l[0::2], l[1::2]):
+        fs = lines.pop(0).split()
+        for n, v in zip(fs[0::2], fs[1::2]):
             regs[n] = int(v, 16)
 
     # We are at line starting with 'T=' so read Status Register.
@@ -94,6 +94,7 @@ def ParseProcessorState(lines):
 
 
 class UaeCommandsMixin():
+
     def resume(self, addr=None):
         # {g [<address>]} Start execution at the current address or <address>.
         cmd = 'g'
@@ -105,7 +106,7 @@ class UaeCommandsMixin():
         # {t [<instructions>]} Step one or more <instructions>.
         cmd = 't'
         if insn:
-            cmd +=  ' ' + str(insn)
+            cmd += ' ' + str(insn)
         self.send(cmd)
 
     def break_opcode(self, opcode):
@@ -147,24 +148,28 @@ class UaeCommandsMixin():
             for line in lines:
                 print(line)
         hexlines = [''.join(line.strip().split()[1:9]) for line in lines]
-        return ''.join(hexlines)[:length*2]
+        return ''.join(hexlines)[:length * 2]
 
     async def read_long(self, addr):
         longword = await self.read_memory(addr, 4)
         return int(longword, 16)
 
     async def write_memory(self, addr, data):
-        # {W <address> <values[.x] separated by space>} Write into Amiga memory.
+        # {W <address> <values[.x] separated by space>}
+        # Write into Amiga memory.
         # Assume _data_ is a string of hexadecimal digits.
-        hexbytes = []
+        if not data:
+            return
+        hexbytes = ['%x' % addr]
         while data:
             byte, data = data[:2], data[2:]
             hexbytes.append(byte)
         await self.communicate('W ' + ' '.join(hexbytes))
 
     # W <address> <values[.x] separated by space> Write into Amiga memory.
-    # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]] (read/write/opcode/freeze/mustchange).
-    #                    Add/remove memory watchpoints.
+    # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]]
+    #   (read/write/opcode/freeze/mustchange).
+    # Add/remove memory watchpoints.
 
     async def read_registers(self):
         # {r} Dump state of the CPU.
@@ -172,7 +177,7 @@ class UaeCommandsMixin():
 
     async def write_register(self, regname, value):
         # {r <reg> <value>} Modify CPU registers (Dx,Ax,USP,ISP,VBR,...).
-        await self.communicate('r {} {:x}'.format(regname, value))
+        self.send('r {} {:x}'.format(regname, value))
 
     async def insert_breakpoint(self, addr):
         # {f <address>} Add/remove breakpoint.
@@ -184,15 +189,26 @@ class UaeCommandsMixin():
         lines = await self.communicate('f %X' % addr)
         assert lines and lines[0] == 'Breakpoint removed'
 
-    async def insert_watchpoint(self, addr, size, kind=''):
-        # {f <address>} Add/remove breakpoint.
-        lines = await self.communicate('f %X' % addr)
-        assert lines and lines[0] == 'Breakpoint added'
+    async def insert_watchpoint(self, addr, size, kind='I'):
+        # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]]
+        #   (read/write/opcode/freeze/mustchange).
+        # Add/remove memory watchpoints.
 
-    async def remove_watchpoint(self, addr):
-        # {f <address>} Add/remove breakpoint.
-        lines = await self.communicate('f %X' % addr)
-        assert lines and lines[0] == 'Breakpoint removed'
+        # Watchpoints are deleted by numbers, so we need to maintain the <num>
+        # for every watchpoint.
+        index = max(self.watchpoints.values(), default=0) + 1
+        self.watchpoints[addr, size, kind] = index
+        lines = await self.communicate('w %d %X %d %s' %
+                                       (index, addr, size, kind))
+        assert lines and lines[-1] == 'Memwatch %d added' % index
+
+    async def remove_watchpoint(self, addr, size, kind='I'):
+        # w <num> <address> <length> <R/W/I/F/C> [<value>[.x]]
+        #   (read/write/opcode/freeze/mustchange).
+        # Add/remove memory watchpoints.
+        index = self.watchpoints.pop((addr, size, kind))
+        lines = await self.communicate('w %d' % index)
+        assert lines and lines[-1] == 'Memwatch %d removed' % index
 
     async def entry_point(self):
         # assume for now that VBR is at 0
@@ -206,6 +222,10 @@ class UaeCommandsMixin():
     async def prologue(self):
         lines = await self.recv()
         data = {}
+        # Memwatch 2: break at 00C7FDC0.W  W  0000000F PC=00C7BFEC CPUDW (000)
+        if lines[0].startswith('Memwatch'):
+            line = lines.pop(0)
+            data['watch'] = int(line.split()[4].split('.')[0], 16)
         # Breakpoint at 00C04EB0
         if lines[0].startswith('Breakpoint'):
             line = lines.pop(0)
@@ -253,8 +273,10 @@ async def UaeDebugger(uaedbg):
 
 
 class UaeProcess(UaeCommandsMixin):
+
     def __init__(self, proc):
         self.proc = proc
+        self.watchpoints = {}
 
     @property
     def reader(self):

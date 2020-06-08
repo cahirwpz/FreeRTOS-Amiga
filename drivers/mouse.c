@@ -103,8 +103,8 @@ static void MouseIntHandler(void *data) {
 
 INTSERVER_DEFINE(MouseInterrupt, -5, MouseIntHandler, (void *)&MouseData);
 
-void MouseInit(MouseEventNotify_t notify,
-               int16_t minX, int16_t minY, int16_t maxX, int16_t maxY) {
+void MouseInit(MouseEventNotify_t notify, int16_t minX, int16_t minY,
+               int16_t maxX, int16_t maxY) {
   printf("[Init] Mouse driver!\n");
 
   /* Register notification procedure called from ISR */

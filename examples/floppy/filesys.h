@@ -16,14 +16,6 @@ typedef struct DirEntry {
 
 void FsInit(void);
 
-/* Each task that wishes to use filesystem MUST create a queue for reply
- * messages from the filesystem task. */
-void CreateFsReplyQueue(void);
-
-/* Filesystem reply queue is not automatically freed before a task finishes.
- * You're reponsible for doing that manually! */
-void DeleteFsReplyQueue(void);
-
 /* Reads in a directory and allows user to perform FsOpen(...). Returns false if
  * file system has already been mounted or other error occurred. */
 bool FsMount(void);

@@ -7,6 +7,8 @@ SOURCES = \
 	gen/mulsi3.S \
 	gen/udivsi3.S \
 	gen/umodsi3.S \
+	gen/longjmp.S \
+	gen/setjmp.S \
 	stdio/kvprintf.c \
 	stdlib/rand_r.c \
 	stdlib/strtol.c \

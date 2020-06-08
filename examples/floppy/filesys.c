@@ -7,26 +7,35 @@
 #include "filesys.h"
 
 typedef enum {
-  FS_MOUNT,             /* mount filesystem */
-  FS_UNMOUNT,           /* unmount filesystem */
-  FS_DIRENT,            /* fetch one directory entry */
-  FS_OPEN,              /* open a file */
-  FS_CLOSE,             /* close the file */
-  FS_READ               /* read some bytes from the file */
+  FS_MOUNT,   /* mount filesystem */
+  FS_UNMOUNT, /* unmount filesystem */
+  FS_DIRENT,  /* fetch one directory entry */
+  FS_OPEN,    /* open a file */
+  FS_CLOSE,   /* close the file */
+  FS_READ     /* read some bytes from the file */
 } FsCmd_t;
 
 /* The type of message send to file system task. */
 typedef struct FsMsg {
-  FsCmd_t cmd;          /* request type */
-  QueueHandle_t rq;     /* where to return a reply */
-  union {               /* data specific to given request type */
-    struct {} mount;
-    struct {} umount;
-    struct {} dirent;
-    struct {} open;
-    struct {} close;
-    struct {} read;
-  };
+  FsCmd_t cmd; /* request type */
+  union {      /* data specific to given request type */
+    struct {
+    } mount;
+    struct {
+    } umount;
+    struct {
+    } dirent;
+    struct {
+    } open;
+    struct {
+    } close;
+    struct {
+    } read;
+  } request;
+  struct {
+    long *replyp;      /* store result here before task wakeup */
+    TaskHandle_t task; /* notify this task when reponse is ready */
+  } response;
 } FsMsg_t;
 
 typedef struct FsFile {
@@ -34,17 +43,13 @@ typedef struct FsFile {
   DirEntry_t *de;
 } FsFile_t;
 
-static QueueHandle_t GetFsReplyQueue(void);
-
 static long FsRead(FsFile_t *f, void *buf, size_t nbyte);
 static long FsSeek(FsFile_t *f, long offset, int whence);
 static void FsClose(FsFile_t *f);
 
-__unused static FileOps_t FsOps = {
-  .read = (FileRead_t)FsRead,
-  .seek = (FileSeek_t)FsSeek,
-  .close = (FileClose_t)FsClose
-};
+__unused static FileOps_t FsOps = {.read = (FileRead_t)FsRead,
+                                   .seek = (FileSeek_t)FsSeek,
+                                   .close = (FileClose_t)FsClose};
 
 static void SendIO(FloppyIO_t *io, short track) {
   io->track = track;
@@ -104,9 +109,6 @@ static void vFileSysTask(__unused void *data) {
 }
 
 bool FsMount(void) {
-  QueueHandle_t rq = GetFsReplyQueue();
-  configASSERT(rq != NULL);
-
   return false;
 }
 
@@ -144,7 +146,7 @@ static long FsSeek(FsFile_t *ff, long offset, int whence) {
   return -1;
 }
 
-static xTaskHandle filesys_handle;
+static TaskHandle_t filesys_handle;
 
 #define FLOPPY_TASK_PRIO 3
 #define FILESYS_TASK_PRIO 2
@@ -153,23 +155,4 @@ void FsInit(void) {
   FloppyInit(FLOPPY_TASK_PRIO);
   xTaskCreate(vFileSysTask, "filesys", configMINIMAL_STACK_SIZE, NULL,
               FILESYS_TASK_PRIO, &filesys_handle);
-}
-
-/* Use first pointer in thread local storage
- * as a reply queue for the filesystem */
-static QueueHandle_t GetFsReplyQueue(void) {
-	return pvTaskGetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle(), 0);
-}
-
-static void SetFsReplyQueue(QueueHandle_t rq) {
-  vTaskSetThreadLocalStoragePointer(xTaskGetCurrentTaskHandle(), 0, rq);
-}
-
-void CreateFsReplyQueue(void) {
-  SetFsReplyQueue(xQueueCreate(1, sizeof(FsMsg_t)));
-}
-
-void DeleteFsReplyQueue(void) {
-  vQueueDelete(GetFsReplyQueue());
-  SetFsReplyQueue(NULL);
 }

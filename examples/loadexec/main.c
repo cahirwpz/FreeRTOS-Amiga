@@ -11,8 +11,8 @@ extern char _binary_test_exe_size[];
 extern char _binary_test_exe_start[];
 
 static void vMainTask(__unused void *data) {
-  File_t *exe = MemoryOpen(_binary_test_exe_start,
-                           (size_t)_binary_test_exe_size);
+  File_t *exe =
+    MemoryOpen(_binary_test_exe_start, (size_t)_binary_test_exe_size);
 
   Hunk_t *first = LoadHunkList(exe);
 
@@ -41,4 +41,6 @@ int main(void) {
   return 0;
 }
 
-void vApplicationIdleHook(void) { custom.color[0] = 0x00f; }
+void vApplicationIdleHook(void) {
+  custom.color[0] = 0x00f;
+}

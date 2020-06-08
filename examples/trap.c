@@ -15,8 +15,7 @@ static const char *const trapname[T_NTRAPS] = {
   [T_PRIVINST] = "Privileged Instruction",
   [T_TRACE] = "Trace",
   [T_FMTERR] = "Stack Format Error",
-  [T_TRAPINST] = "Trap Instruction"
-};
+  [T_TRAPINST] = "Trap Instruction"};
 
 void vPortDefaultTrapHandler(struct TrapFrame *frame) {
   short memflt = frame->trapnum == T_BUSERR || frame->trapnum == T_ADDRERR;

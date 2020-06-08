@@ -24,5 +24,5 @@ void PushMouseEventFromISR(const MouseEvent_t *ev) {
 }
 
 bool PopEvent(Event_t *ev) {
-   return xQueueReceive(EventQueue, (void *)ev, portMAX_DELAY);
+  return xQueueReceive(EventQueue, (void *)ev, portMAX_DELAY);
 }

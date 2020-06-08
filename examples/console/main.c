@@ -26,8 +26,8 @@ static void vInputTask(void *data) {
     if (!PopEvent(&ev))
       continue;
     if (ev.type == EV_MOUSE) {
-      FilePrintf(tty, "MOUSE: x = %d, y = %d, button = %x\n",
-                 ev.mouse.x, ev.mouse.y, ev.mouse.button);
+      FilePrintf(tty, "MOUSE: x = %d, y = %d, button = %x\n", ev.mouse.x,
+                 ev.mouse.y, ev.mouse.button);
       SpriteUpdatePos(&pointer_spr, HP(ev.mouse.x), VP(ev.mouse.y));
     } else if (ev.type == EV_KEY) {
       FilePrintf(tty, "KEY: ascii = '%c', code = %02x, modifier = %02x\n",
@@ -83,7 +83,7 @@ int main(void) {
   CopListActivate(cp);
 
   /* Enable bitplane and sprite fetchers' DMA. */
-  EnableDMA(DMAF_RASTER|DMAF_SPRITE);
+  EnableDMA(DMAF_RASTER | DMAF_SPRITE);
 
   EventQueueInit();
   MouseInit(PushMouseEventFromISR, 0, 0, 319, 255);
@@ -98,4 +98,5 @@ int main(void) {
   return 0;
 }
 
-void vApplicationIdleHook(void) {}
+void vApplicationIdleHook(void) {
+}

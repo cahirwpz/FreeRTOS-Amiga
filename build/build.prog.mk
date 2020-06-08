@@ -20,7 +20,7 @@ $(PROGRAM).elf: $(OBJECTS) $(LIBS)
 	@echo "[LD] $(addprefix $(DIR),$(OBJECTS)) $(LIBS) -> $(DIR)$@"
 	$(LD) $(LDFLAGS) -Map $@.map -o $@ $^
 
-$(PROGRAM).adf: $(TOPDIR)/bootloader.bin $(PROGRAM).exe
+$(PROGRAM).adf: $(TOPDIR)/bootloader.bin $(PROGRAM).exe $(ADF-EXTRA)
 	@echo "[ADF] $(addprefix $(DIR),$(filter-out %bootloader.bin,$^)) -> $(DIR)$@"
 	$(FSUTIL) -b $(TOPDIR)/bootloader.bin create $@ \
 		$(filter-out %bootloader.bin,$^)

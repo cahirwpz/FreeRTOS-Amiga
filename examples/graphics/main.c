@@ -22,7 +22,7 @@ static void vMainTask(__unused void *data) {
   /* Uses double buffering! */
   for (int buffer = 1;; buffer ^= 1) {
     bitmap_t *screen = buffer ? &screen1_bm : &screen0_bm;
-    
+
     BltCopySetSrc(&bc, &simpsons_bm, 0, 0, -1, -1);
     BltCopySetDst(&bc, screen, 0, 0);
     BitmapCopy(&bc);
@@ -34,7 +34,7 @@ static void vMainTask(__unused void *data) {
     if (frame & 256) {
       x = 255 - x;
       anim += 8;
-    } 
+    }
 
     BltCopySetSrc(&bc, &bart_bm, 16 * anim, 0, 16, -1);
     BltCopySetDst(&bc, screen, 32 + x, 132);
@@ -73,7 +73,7 @@ int main(void) {
   CopEnd(cp);
 
   CopListActivate(cp);
-  EnableDMA(DMAF_RASTER|DMAF_BLITTER);
+  EnableDMA(DMAF_RASTER | DMAF_BLITTER);
 
   xTaskCreate(vMainTask, "main", configMINIMAL_STACK_SIZE, NULL, 0,
               &main_handle);
@@ -83,4 +83,5 @@ int main(void) {
   return 0;
 }
 
-void vApplicationIdleHook(void) {}
+void vApplicationIdleHook(void) {
+}

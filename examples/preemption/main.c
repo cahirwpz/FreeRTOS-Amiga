@@ -47,4 +47,6 @@ int main(void) {
   return 0;
 }
 
-void vApplicationIdleHook(void) { custom.color[0] = 0x00f; }
+void vApplicationIdleHook(void) {
+  custom.color[0] = 0x00f;
+}

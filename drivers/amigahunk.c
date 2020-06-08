@@ -36,8 +36,8 @@ static bool AllocHunks(File_t *fh, Hunk_t **hunkArray, short hunkCount) {
     /* size specifiers including memory attribute flags */
     uint32_t n = ReadLong(fh);
 
-    Hunk_t *hunk = ((n & HUNKF_CHIP) ? pvPortMallocChip : pvPortMalloc)
-      (sizeof(Hunk_t) + n * sizeof(int));
+    Hunk_t *hunk = ((n & HUNKF_CHIP) ? pvPortMallocChip : pvPortMalloc)(
+      sizeof(Hunk_t) + n * sizeof(int));
     *hunkArray++ = hunk;
 
     if (!hunk)
@@ -98,7 +98,7 @@ static bool LoadHunks(File_t *fh, Hunk_t **hunkArray) {
         } while (--n);
       }
     } else if (hunkId == HUNK_SYMBOL) {
-      while ((n = ReadLong(fh))) 
+      while ((n = ReadLong(fh)))
         SkipLongs(fh, n + 1);
     } else if (hunkId == HUNK_END) {
       if (hunkRoot) {

@@ -1,11 +1,13 @@
 #include <blitter.h>
 
+/* clang-format off */
 static uint16_t LineMode[4][2] = {
   {BC0F_LINE_OR, LINEMODE},
   {BC0F_LINE_EOR, LINEMODE},
   {BC0F_LINE_OR, LINEMODE | ONEDOT},
   {BC0F_LINE_EOR, LINEMODE | ONEDOT}
 };
+/* clang-format on */
 
 /*
  * Minterm is either:

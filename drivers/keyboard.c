@@ -6,6 +6,7 @@
 #define LO(K, V) [K] = V
 #define HI(K, V) [K | 0x80] = V
 
+/* clang-format off */
 static const char KeyMap[256] = {
   LO(KEY_BACKQUOTE, '`'),
   LO(KEY_1, '1'),
@@ -141,6 +142,7 @@ static const char KeyMap[256] = {
   [0xfe] = -1, /* Terminate power-up key stream. */
   [0xff] = -1  /* ??? */
 };
+/* clang-format on */
 
 static KeyEventNotify_t KeyEventNotify;
 static KeyEvent_t KeyEvent = {.type = EV_KEY};

@@ -83,7 +83,7 @@ void LineCounterWait(uint32_t lines) {
     uint32_t alarm = GetCounter() + lines;
     /* Insert currently running task onto waiting tasks list. */
     xTaskHandle owner = xTaskGetCurrentTaskHandle();
-    ListItem_t item = { .xItemValue = alarm, .pvOwner = owner };
+    ListItem_t item = {.xItemValue = alarm, .pvOwner = owner};
     vListInitialiseItem(&item);
     vListInsert(&WaitingTasks, &item);
     /* Reprogram TOD alarm if inserted task should be woken up as first. */

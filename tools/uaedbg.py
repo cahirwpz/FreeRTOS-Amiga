@@ -17,18 +17,18 @@ BREAK = 0xCF47  # no-op: 'exg.l d7,d7'
 async def UaeLaunch(loop, args):
     # Create the subprocess, redirect the standard I/O to respective pipes
     uaeproc = UaeProcess(
-            await asyncio.create_subprocess_exec(
-                args.emulator, *args.params,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.PIPE))
+        await asyncio.create_subprocess_exec(
+            args.emulator, *args.params,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE))
 
     gdbserver = None
 
     async def GdbClient(reader, writer):
         try:
             await GdbStub(GdbConnection(reader, writer), uaeproc).run()
-        except:
+        except Exception:
             traceback.print_exc()
 
     async def GdbListen():
@@ -36,7 +36,7 @@ async def UaeLaunch(loop, args):
         uaeproc.break_opcode('{:04x}'.format(BREAK))
         print('Listening for gdb connection at localhost:8888')
         gdbserver = await asyncio.start_server(
-                GdbClient, host='127.0.0.1', port=8888)
+            GdbClient, host='127.0.0.1', port=8888)
 
     # Terminate FS-UAE when connection with terminal is broken
     loop.add_signal_handler(signal.SIGHUP, uaeproc.terminate)
