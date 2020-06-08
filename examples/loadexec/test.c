@@ -1,5 +1,5 @@
 #include <custom.h>
-#include "syscalls.h"
+#include "syscall.h"
 
 #define MSG(x) x, (sizeof(x) - 1)
 

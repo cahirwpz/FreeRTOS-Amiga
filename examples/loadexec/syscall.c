@@ -1,4 +1,4 @@
-#include "syscalls.h"
+#include "syscall.h"
 
 #define SYS_exit 1
 #define SYS_open 2

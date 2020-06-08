@@ -55,7 +55,7 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
          " A0: %08x A1: %08x A2: %08x A3: %08x\n"
          " A4: %08x A5: %08x A6: %08x SP: %08x\n"
          " PC: %08x SR: %04x\n",
-         supervisor ? "supervisor" : "mode", trapname[trap],
+         supervisor ? "supervisor" : "user", trapname[trap],
          frame->d0, frame->d1, frame->d2, frame->d3,
          frame->d4, frame->d5, frame->d6, frame->d7,
          frame->a0, frame->a1, frame->a2, frame->a3,
