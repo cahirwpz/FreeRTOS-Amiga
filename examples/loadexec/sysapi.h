@@ -4,13 +4,11 @@
 #include <cdefs.h>
 #include <stddef.h>
 
-typedef struct File File_t;
-
 void exit(int status);
-long read(File_t *fh, void *buf, size_t nbyte);
-long write(File_t *fh, const void *buf, size_t nbyte);
-File_t *open(const char *path);
-void close(File_t *fh);
+long read(int fd, void *buf, size_t nbyte);
+long write(int fd, const void *buf, size_t nbyte);
+int open(const char *path);
+void close(int fd);
 void sleep(unsigned miliseconds);
 
 #endif /* !_SYSAPI_H_ */

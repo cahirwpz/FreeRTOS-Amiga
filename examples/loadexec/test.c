@@ -6,7 +6,7 @@
 /* WARNING! Since executable loader is very primitive _start procedure
  * MUST BE first one in .text section of the program! */
 void _start(void) {
-  File_t *ser = open("SER:");
+  int ser = open("SER:");
 
   for(;;) {
     static char firstName[80];
