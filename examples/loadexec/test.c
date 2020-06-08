@@ -1,5 +1,5 @@
 #include <custom.h>
-#include "syscalls.h"
+#include "sysapi.h"
 
 #define MSG(x) x, (sizeof(x) - 1)
 
@@ -23,4 +23,6 @@ void _start(void) {
     write(ser, lastName, lastLen - 1);
     write(ser, MSG("!\n"));
   }
+
+  exit(10);
 }

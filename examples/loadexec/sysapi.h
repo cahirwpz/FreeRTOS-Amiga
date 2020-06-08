@@ -1,5 +1,5 @@
-#ifndef _SYSCALLS_H_
-#define _SYSCALLS_H_
+#ifndef _SYSAPI_H_
+#define _SYSAPI_H_
 
 #include <cdefs.h>
 #include <stddef.h>
@@ -13,4 +13,4 @@ File_t *open(const char *path);
 void close(File_t *fh);
 void sleep(unsigned miliseconds);
 
-#endif /* !_SYSCALLS_H_ */
+#endif /* !_SYSAPI_H_ */

@@ -2,9 +2,9 @@
 #include <FreeRTOS/task.h>
 
 #include <custom.h>
-#include <amigahunk.h>
+#include <file.h>
 #include <stdio.h>
-#include "memory.h"
+#include "usermode.h"
 
 extern char _binary_test_exe_end[];
 extern char _binary_test_exe_size[];
@@ -14,19 +14,11 @@ static void vMainTask(__unused void *data) {
   File_t *exe =
     MemoryOpen(_binary_test_exe_start, (size_t)_binary_test_exe_size);
 
-  Hunk_t *first = LoadHunkList(exe);
+  int rv = RunProgram(exe, 2048);
 
-  for (Hunk_t *hunk = first; hunk; hunk = hunk->next)
-    hexdump(hunk->data, hunk->size);
+  printf("Program returned: %d\n", rv);
 
-  /* Assume first hunk is executable. */
-  void (*_start)(void) = (void *)first->data;
-  /* Call _start procedure which is assumed to be first. */
-  _start();
-
-  for (;;) {
-    custom.color[0] = 0xf00;
-  }
+  vTaskDelete(NULL);
 }
 
 static xTaskHandle handle;

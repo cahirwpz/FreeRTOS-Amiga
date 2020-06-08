@@ -15,6 +15,7 @@ SOURCES = \
 	  floppy-mfm.c \
 	  hexdump.c \
 	  keyboard.c \
+	  memory-file.c \
 	  mouse.c \
 	  serial.c \
 	  serial-file.c \
