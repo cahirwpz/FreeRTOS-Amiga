@@ -20,7 +20,7 @@ typedef struct DiskSector {
     uint8_t format;
     uint8_t trackNum;
     uint8_t sectorNum;
-    uint8_t sectors;
+    uint8_t gapDist; /* sectors until end of write */
   } info[2];
   uint8_t sectorLabel[2][16];
   uint32_t checksumHeader[2];
@@ -44,7 +44,8 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   int16_t secnum = SECTOR_COUNT;
   uint16_t *data = (uint16_t *)track;
 
-  /* Start with the header. */
+  /* In case we start with the sync marker
+   * move to the sector header. */
   if (*data == DSK_SYNC)
     data++;
 
@@ -56,7 +57,7 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
       uint8_t format;
       uint8_t trackNum;
       uint8_t sectorNum;
-      uint8_t sectors;
+      uint8_t gapDist;
     } info = {0};
 
     *(uint32_t *)&info =
@@ -69,7 +70,8 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
 
     sectors[info.sectorNum] = sec++;
     /* Handle the gap. */
-    if (info.sectors == 1 && secnum != 1) {
+    if (info.gapDist == 1 && secnum != 1) {
+      /* Move to the first sector behind the gap. */
       data = FindSectorHeader((uint16_t *)sec);
       sec = (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
     }
