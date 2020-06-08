@@ -20,7 +20,7 @@ typedef struct DiskSector {
     uint8_t format;
     uint8_t trackNum;
     uint8_t sectorNum;
-    uint8_t sectors;
+    uint8_t gapDist; /* sectors until end of write */
   } info[2];
   uint8_t sectorLabel[2][16];
   uint32_t checksumHeader[2];
@@ -28,30 +28,42 @@ typedef struct DiskSector {
   uint8_t data[2][SECTOR_PAYLOAD];
 } DiskSector_t;
 
+static uint16_t *FindSectorHeader(uint16_t *data) {
+  /* Find synchronization marker and move to first location after it. */
+  while (*data != DSK_SYNC)
+    data++;
+  while (*data == DSK_SYNC)
+    data++;
+  return data;
+}
+
+static inline DiskSector_t *Header2Sector(uint16_t *header) {
+  return (DiskSector_t *)((uintptr_t)header - offsetof(DiskSector_t, info[0]));
+}
+
 #define MASK 0x55555555
-#define DECODE(odd, even) (((odd)&MASK) << 1) | ((even)&MASK)
+#define DECODE(odd, even) ((((odd)&MASK) << 1) | ((even)&MASK))
 
 void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   int16_t secnum = SECTOR_COUNT;
-  DiskSector_t *maybeSector = (DiskSector_t *)track;
+  uint16_t *data = (uint16_t *)track;
+
+  /* We always start after the DSK_SYNC word
+   * but the first one may be corrupted.
+   * In case we start with the sync marker
+   * move to the sector header. */
+  if (*data == DSK_SYNC)
+    data++;
+
+  DiskSector_t *sec = Header2Sector(data);
 
   do {
-    uint16_t *data = (uint16_t *)maybeSector;
     struct {
       uint8_t format;
       uint8_t trackNum;
       uint8_t sectorNum;
-      uint8_t sectors;
+      uint8_t gapDist;
     } info = {0};
-
-    /* Find synchronization marker and move to first location after it. */
-    while (*data != DSK_SYNC)
-      data++;
-    while (*data == DSK_SYNC)
-      data++;
-
-    DiskSector_t *sec =
-      (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
 
     *(uint32_t *)&info =
       DECODE(*(uint32_t *)&sec->info[0], *(uint32_t *)&sec->info[1]);
@@ -61,8 +73,13 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
            (intptr_t)sec, (int)info.sectorNum, (int)info.trackNum);
 #endif
 
-    sectors[info.sectorNum] = sec;
-    maybeSector = sec + 1;
+    sectors[info.sectorNum] = sec++;
+    /* Handle the gap. */
+    if (info.gapDist == 1 && secnum != 1) {
+      /* Move to the first sector behind the gap. */
+      data = FindSectorHeader((uint16_t *)sec);
+      sec = Header2Sector(data);
+    }
   } while (--secnum);
 }
 
