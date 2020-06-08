@@ -8,10 +8,10 @@
 extern void vPortDefaultTrapHandler(struct TrapFrame *);
 
 __noreturn void SysExit(struct TrapFrame *frame) {
-  frame->sp += sizeof(frame->trapnum) +
+  uintptr_t ctx = frame->sp + sizeof(frame->trapnum) +
     (CpuModel > CF_68000 ? sizeof(frame->m68010) : sizeof(frame->m68000));
 
-  ExitUserMode(frame->sp, frame->d1);
+  ExitUserMode(ctx, frame->d1);
 }
 
 void vPortTrapHandler(struct TrapFrame *frame) {
