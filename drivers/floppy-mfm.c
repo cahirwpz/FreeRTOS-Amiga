@@ -28,18 +28,28 @@ typedef struct DiskSector {
   uint8_t data[2][SECTOR_PAYLOAD];
 } DiskSector_t;
 
+static uint16_t *FindSectorHeader(uint16_t *data) {
+  /* Find synchronization marker and move to first location after it. */
+  while (*data != DSK_SYNC)
+    data++;
+  while (*data == DSK_SYNC)
+    data++;
+  return data;
+}
+
 #define MASK 0x55555555
 #define DECODE(odd, even) ((((odd)&MASK) << 1) | ((even)&MASK))
 
 void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   int16_t secnum = SECTOR_COUNT;
-  void *maybeSector = (DiskSector_t *)track;
+  uint16_t *data = (uint16_t *)track;
 
-  if ((*track)[0] == DSK_SYNC)
-    maybeSector += sizeof(uint16_t);
+  /* Start with the header. */
+  if (*data == DSK_SYNC)
+    data++;
 
   DiskSector_t *sec =
-    (DiskSector_t *)((uintptr_t)maybeSector - offsetof(DiskSector_t, info[0]));
+    (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
 
   do {
     struct {
@@ -58,8 +68,11 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
 #endif
 
     sectors[info.sectorNum] = sec++;
-    if (info.sectors == 1)
-      sec = (void *)sec + GAP_SIZE;
+    /* Handle the gap. */
+    if (info.sectors == 1 && secnum != 1) {
+      data = FindSectorHeader((uint16_t *)sec);
+      sec = (DiskSector_t *)((uintptr_t)data - offsetof(DiskSector_t, info[0]));
+    }
   } while (--secnum);
 }
 

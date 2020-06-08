@@ -17,8 +17,7 @@
 #define SECTOR_COUNT 11
 #define SECTOR_SIZE 512
 #define TRACK_COUNT 160
-#define TRACK_SIZE 12666
-#define GAP_SIZE 698
+#define TRACK_SIZE 12800
 #define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
 
 typedef uint16_t DiskTrack_t[TRACK_SIZE/sizeof(uint16_t)];
