@@ -20,14 +20,6 @@ static const char *const trapname[T_NTRAPS] = {
 void vPortDefaultTrapHandler(struct TrapFrame *frame) {
   short memflt = frame->trapnum == T_BUSERR || frame->trapnum == T_ADDRERR;
 
-  /* We need to fix stack pointer, as processor pushes data on stack before it
-   * enters the trap handler. */
-  if (CpuModel > CF_68000) {
-    frame->sp += memflt ? sizeof(frame->m68010_memacc) : sizeof(frame->m68010);
-  } else {
-    frame->sp += memflt ? sizeof(frame->m68000_memacc) : sizeof(frame->m68000);
-  }
-
   uint32_t pc;
   uint16_t sr;
 
@@ -46,8 +38,21 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
 
   short supervisor = sr & SR_S;
   short trap = frame->trapnum;
+  uint32_t sp;
 
-  uint32_t sp = supervisor ? frame->sp : frame->usp;
+  if (supervisor) {
+    /* Determine real stack pointer value,
+     * as processor pushes data on stack before it enters the trap handler. */
+    sp = frame->sp + sizeof(frame->trapnum);
+
+    if (CpuModel > CF_68000) {
+      sp += memflt ? sizeof(frame->m68010_memacc) : sizeof(frame->m68010);
+    } else {
+      sp += memflt ? sizeof(frame->m68000_memacc) : sizeof(frame->m68000);
+    }
+  } else {
+    sp = frame->usp;
+  }
 
   /* clang-format off */
   printf("Exception (in %s mode): %s!\n"
