@@ -3,6 +3,7 @@
 
 #include <custom.h>
 #include <file.h>
+#include <stdio.h>
 #include "usermode.h"
 
 extern char _binary_test_exe_end[];
@@ -13,9 +14,9 @@ static void vMainTask(__unused void *data) {
   File_t *exe =
     MemoryOpen(_binary_test_exe_start, (size_t)_binary_test_exe_size);
 
-  RunProgram(exe, 2048);
+  int rv = RunProgram(exe, 2048);
 
-  __unreachable();
+  printf("Program returned: %d\n", rv);
 }
 
 static xTaskHandle handle;

@@ -1,16 +1,11 @@
 #ifndef _SYSCALL_H_
 #define _SYSCALL_H_
 
-#include <cdefs.h>
-#include <stddef.h>
-
-typedef struct File File_t;
-
-void exit(int status);
-long read(File_t *fh, void *buf, size_t nbyte);
-long write(File_t *fh, const void *buf, size_t nbyte);
-File_t *open(const char *path);
-void close(File_t *fh);
-void sleep(unsigned miliseconds);
+#define SYS_exit 1
+#define SYS_open 2
+#define SYS_close 3
+#define SYS_read 4
+#define SYS_write 5
+#define SYS_sleep 6
 
 #endif /* !_SYSCALL_H_ */
