@@ -23,7 +23,12 @@ void ProcFini(Proc_t *proc);
 int Execute(Proc_t *proc, File_t *exe, char *const *argv);
 
 /* Low-level internal interface. */
-int EnterUserMode(void *pc, void *sp);
-__noreturn void ExitUserMode(uintptr_t ctx, int status);
+typedef struct ProcFrame {
+  Proc_t *proc;
+  uint32_t _private[11];
+} ProcFrame_t;
+
+int EnterUserMode(void *pc, void *sp, Proc_t *proc);
+__noreturn void ExitUserMode(ProcFrame_t *pf, int exitcode);
 
 #endif /* !_PROC_H_ */

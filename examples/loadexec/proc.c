@@ -64,5 +64,5 @@ int Execute(Proc_t *proc, File_t *exe, char *const *argv) {
   PUSH(sp, NULL); /* argv = {NULL} */
   PUSH(sp, 0);    /* argc = 0 */
 
-  return EnterUserMode(pc, sp);
+  return EnterUserMode(pc, sp, proc);
 }
