@@ -6,13 +6,17 @@
 #include <stdio.h>
 #include "proc.h"
 
-extern char _binary_shell_exe_end[];
-extern char _binary_shell_exe_size[];
-extern char _binary_shell_exe_start[];
+extern char _binary_ushell_exe_end[];
+extern char _binary_ushell_exe_size[];
+extern char _binary_ushell_exe_start[];
+
+extern char _binary_ucat_exe_end[];
+extern char _binary_ucat_exe_size[];
+extern char _binary_ucat_exe_start[];
 
 static void vMainTask(__unused void *data) {
   File_t *shell =
-    MemoryOpen(_binary_shell_exe_start, (size_t)_binary_shell_exe_size);
+    MemoryOpen(_binary_ushell_exe_start, (size_t)_binary_ushell_exe_size);
 
   Proc_t p;
   ProcInit(&p, UPROC_STKSZ);

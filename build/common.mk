@@ -45,6 +45,6 @@ endif
 PHONY-TARGETS += all build clean format dummy
 
 .PHONY: $(PHONY-TARGETS)
-.PRECIOUS: $(PRECIOUS-FILES)
+.PRECIOUS: $(PRECIOUS-FILES) %.o %.elf %.exe
 
 include $(TOPDIR)/build/tools.mk
