@@ -1,13 +1,14 @@
 TOPDIR = $(realpath ../..)
 
 PROGRAM = loadexec
-SOURCES = main.c sysent.c usermode.c trampoline.S
-OBJECTS = ../startup.o ../fault.o ../trap.o test.exe.o
+SOURCES = main.c sysent.c proc.c trampoline.S
+OBJECTS = ../startup.o ../fault.o ../trap.o shell.exe.o
 
-CLEAN-FILES = test.o sysapi.o test.bin.o test.exe test.elf test.elf.map
+CLEAN-FILES = crt0.o sysapi.o 
+CLEAN-FILES += shell.o shell.bin.o shell.exe shell.elf shell.elf.map
 
 include $(TOPDIR)/build/build.prog.mk
 
-test.elf: test.o sysapi.o
+shell.elf: crt0.o shell.o sysapi.o $(TOPDIR)/libc/c.lib
 	@echo "[LD] $(addprefix $(DIR), $^) -> $(DIR)$@"
 	$(LD) $(LDFLAGS) -Map $@.map -o $@ $^

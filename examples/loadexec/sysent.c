@@ -3,7 +3,7 @@
 #include <trap.h>
 #include <stdio.h>
 #include "syscall.h"
-#include "usermode.h"
+#include "proc.h"
 
 extern void vPortDefaultTrapHandler(struct TrapFrame *);
 

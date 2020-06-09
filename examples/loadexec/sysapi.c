@@ -63,6 +63,24 @@ void close(int fd) {
   SYSCALL1_NR(SYS_close, fd);
 }
 
+int vfork(void) {
+  /* TODO: Implement system call wrapper. */
+  return -1;
+}
+
+int execv(const char *path, char *const argv[]) {
+  /* TODO: Implement system call wrapper. */
+  (void)path;
+  (void)argv;
+  return -1;
+}
+
+int wait(int *statusp) {
+  /* TODO: Implement system call wrapper. */
+  (void)statusp;
+  return -1;
+}
+
 void sleep(unsigned miliseconds) {
   SYSCALL1_NR(SYS_sleep, miliseconds);
 }
