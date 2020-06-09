@@ -4,6 +4,7 @@
 #include <amigahunk.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include "proc.h"
 
@@ -35,8 +36,41 @@ void ProcFini(Proc_t *proc) {
   free(proc->ustk);
 }
 
-#define PUSH(sp, x)                                                            \
-  { *(--(sp)) = (uint32_t)(x); }
+#define PUSH(sp, v)                                                            \
+  {                                                                            \
+    uint32_t *__sp = sp;                                                       \
+    *(--__sp) = (uint32_t)v;                                                   \
+    sp = __sp;                                                                 \
+  }
+
+static void *CopyArgVec(void *sp, char *const *argv) {
+  /* Copy argv contents to user stack and create argc and argv. */
+  char **uargv;
+  char *uargs;
+  int argc;
+
+  for (argc = 0, uargs = sp; argv[argc]; argc++)
+    uargs -= strlen(argv[argc]) + 1;
+
+  /* align stack pointer to long word boundary */
+  uargs = (void *)((intptr_t)uargs & ~3);
+  /* make space for NULL terminated pointer array */
+  uargv = (char **)uargs - (argc + 1);
+
+  for (int i = 0; i < argc; i++) {
+    int sz = strlen(argv[i]) + 1;
+    uargv[i] = memcpy(uargs, argv[i], sz);
+    uargs += sz;
+  }
+
+  uargv[argc] = NULL; /* argv terminator */
+
+  /* push pointer to uargv and argc on stack */
+  sp = uargv;
+  PUSH(sp, uargv);
+  PUSH(sp, argc);
+  return sp;
+}
 
 int Execute(Proc_t *proc, File_t *exe, char *const *argv) {
   Hunk_t *hunk = LoadHunkList(exe);
@@ -56,13 +90,7 @@ int Execute(Proc_t *proc, File_t *exe, char *const *argv) {
    * at the beginning of first hunk of executable file. */
   void *pc = hunk->data;
   /* Stack grows down. */
-  uint32_t *sp = proc->ustk + proc->ustksz;
-
-  /* TODO: copy argv contents to user stack and create argc and argv.
-   * Remember that elements on stack must be long word aligned! */
-  (void)argv;
-  PUSH(sp, NULL); /* argv = {NULL} */
-  PUSH(sp, 0);    /* argc = 0 */
+  void *sp = CopyArgVec(proc->ustk + proc->ustksz, argv);
 
   return EnterUserMode(pc, sp, proc);
 }
