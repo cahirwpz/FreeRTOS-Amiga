@@ -162,6 +162,8 @@ void kvprintf(putchar_t put, const char *fmt, va_list ap) {
         break;
       case 's':
         p = va_arg(ap, char *);
+        if (p == NULL)
+          p = "(null)";
         for (q = p; *q != '\0'; ++q)
           continue;
         width -= q - p;

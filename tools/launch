@@ -151,6 +151,6 @@ if __name__ == '__main__':
     finally:
         try:
             session.kill_session()
-        except:
+        except Exception:
             pass
         server.kill_server()

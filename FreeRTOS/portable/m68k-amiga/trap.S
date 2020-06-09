@@ -23,9 +23,13 @@ HANDLER(TrapInstTrap,T_TRAPINST)
 
 ENTRY(EnterTrap)
         movem.l d0-a7,-(sp)     /* save all registers */
+        move.l  usp,a0
+        move.l  a0,-(sp)        /* save user stack pointer */
         move.l  sp,-(sp)        /* pass trap frame as an argument */
         jsr     vPortTrapHandler
         addq.l  #4,sp
+        move.l  (sp)+,a0
+        move.l  a0,usp          /* restore user stack pointer */
         movem.l (sp)+,d0-a7     /* restore all registers */
         addq.l  #2,sp           /* pop trap number */
         rte

@@ -375,6 +375,6 @@ class GdbStub():
             dump = ';'.join('{:x}:{}'.format(num, regs.as_hex(name))
                             for num, name in enumerate(self.__regs__))
             if 'watch' in stopdata:
-                dump += ';watch:%x' % data['watch']
+                dump += ';watch:%x' % stopdata['watch']
             self.gdb.send('T05;{};'.format(dump))
             await self.gdb.recv_ack()
