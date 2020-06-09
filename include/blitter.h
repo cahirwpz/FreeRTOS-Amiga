@@ -75,11 +75,11 @@ static inline void WaitBlitter(void) {
 typedef struct {
   /* public fields */
   struct {
-    bitmap_t *bm; /* destination bitmap */
+    const bitmap_t *bm; /* destination bitmap */
     short x, y;
   } dst;
   struct {
-    bitmap_t *bm; /* source bitmap */
+    const bitmap_t *bm; /* source bitmap */
     short x, y;   /* x must be 16 pixels aligned */
     short w, h;   /* w must be 16 pixels aligned */
   } src;
@@ -94,7 +94,7 @@ typedef struct {
 void BltCopySetup(bltcopy_t *bc);
 void BltCopy(bltcopy_t *bc, void *dstbpl, void *srcbpl, void *mskbpl);
 
-static inline void BltCopySetSrc(bltcopy_t *bc, bitmap_t *bm,
+static inline void BltCopySetSrc(bltcopy_t *bc, const bitmap_t *bm,
                                  short x, short y, short w, short h)
 {
   bc->src.bm = bm;
@@ -104,7 +104,7 @@ static inline void BltCopySetSrc(bltcopy_t *bc, bitmap_t *bm,
   bc->src.h = h < 0 ? bm->height : h;
 }
 
-static inline void BltCopySetDst(bltcopy_t *bc, bitmap_t *bm, short x, short y)
+static inline void BltCopySetDst(bltcopy_t *bc, const bitmap_t *bm, short x, short y)
 {
   bc->dst.bm = bm;
   bc->dst.x = x;

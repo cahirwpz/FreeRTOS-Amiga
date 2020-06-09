@@ -124,7 +124,7 @@ def convert(path, name):
     print('};')
     print('')
 
-    print('font_t %s_font = {' % name)
+    print('const font_t %s_font = {' % name)
     print('  .height = %d,' % font.height)
     print('  .glyphs = %s_font_glyphs,' % name)
     print('  .offset = {')
