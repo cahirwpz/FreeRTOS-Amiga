@@ -7,16 +7,20 @@
 
 #define MSG(x) x, (sizeof(x) - 1)
 
-static int spawn(char *argv[]) {
+static void spawn(char *argv[], int bg) {
   int pid = vfork();
   if (pid == 0) {
     /* Child runs user job */
     if (execv(argv[0], argv) < 0) {
       write(STDOUT_FILENO, MSG("Command not found!\n"));
-      exit(0);
+      exit(1);
     }
   }
-  return pid;
+  /* Parent waits for foreground job to terminate */
+  if (!bg) {
+    int status;
+    wait(&status);
+  }
 }
 
 /* If first arg is a builtin command, run it and return true */
@@ -61,32 +65,24 @@ static int parseline(char *buf, char **argv) {
 
 /* eval - Evaluate a command line */
 static void eval(char *cmdline) {
-  char *argv[MAXARGS]; /* Argument list execv() */
-  char buf[MAXLINE];   /* Holds modified command line */
+  static char *argv[MAXARGS]; /* Argument list execv() */
+  static char buf[MAXLINE];   /* Holds modified command line */
 
   strcpy(buf, cmdline);
   int bg = parseline(buf, argv);
   if (argv[0] == NULL) /* Ignore empty lines */
     return;
-
-  if (!builtin_command(argv)) {
-    spawn(argv);
-
-    /* Parent waits for foreground job to terminate */
-    if (!bg) {
-      int status;
-      wait(&status);
-    }
-  }
+  if (builtin_command(argv))
+    return;
+  spawn(argv, bg);
 }
 
 int main(void) {
-  char cmdline[MAXLINE];
-  int res;
+  static char cmdline[MAXLINE];
 
-  while (1) {
+  for (;;) {
     write(STDOUT_FILENO, "> ", 2);
-    res = read(STDIN_FILENO, cmdline, MAXLINE);
+    int res = read(STDIN_FILENO, cmdline, MAXLINE);
     if (res == 0)
       break;
     eval(cmdline);
