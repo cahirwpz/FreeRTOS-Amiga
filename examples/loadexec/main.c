@@ -14,7 +14,7 @@ static void vMainTask(__unused void *data) {
   File_t *exe =
     MemoryOpen(_binary_test_exe_start, (size_t)_binary_test_exe_size);
 
-  int rv = RunProgram(exe, 2048);
+  int rv = RunProgram(exe, USERMODE_STACK_SIZE);
 
   printf("Program returned: %d\n", rv);
 
@@ -26,7 +26,7 @@ static xTaskHandle handle;
 int main(void) {
   portNOP(); /* Breakpoint for simulator. */
 
-  xTaskCreate(vMainTask, "main", configMINIMAL_STACK_SIZE, NULL, 0, &handle);
+  xTaskCreate(vMainTask, "main", KERNMODE_STACK_SIZE, NULL, 0, &handle);
 
   vTaskStartScheduler();
 
