@@ -1,6 +1,6 @@
 TOPDIR = $(realpath ../..)
 
-PROGRAM = twrft6
+PROGRAM = diskwrite
 SOURCES = main.c rand.c
 OBJECTS = ../startup.o ../fault.o ../trap.o 
 LAUNCHOPTS = --window serial

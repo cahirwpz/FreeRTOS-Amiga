@@ -169,7 +169,7 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
 
   int16_t afterGapNum = TORANGE(last - gapSecnum);
   /* Move all the sectors behind the gap
-   * to the gap position (e.g. remove an inner gap). */
+   * to the gap position (i.e. remove an inner gap). */
   if (afterGapNum) {
     gap = sectors[gapSecnum] + 1;
     leftSize = afterGapNum * sizeof(DiskSector_t);
