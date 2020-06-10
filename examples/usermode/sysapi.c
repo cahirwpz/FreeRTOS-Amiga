@@ -25,7 +25,7 @@
                : "i"(nr), "rm"(arg1)                                           \
                : "memory", "cc", "d0", "d1")
 
-#define SYSCALL3(ret, nr, arg1, arg2, arg3)                                    \
+#define SYSCALL3(res, nr, arg1, arg2, arg3)                                    \
   asm volatile("moveq.l %1,%%d0\n"                                             \
                "move.l  %2,%%d1\n"                                             \
                "move.l  %3,%%d2\n"                                             \
