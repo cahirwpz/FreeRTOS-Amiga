@@ -1,4 +1,5 @@
 #include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/task.h>
 #include <custom.h>
 #include <file.h>
 #include <amigahunk.h>
@@ -10,6 +11,10 @@
 
 #define DEBUG 0
 
+Proc_t *GetCurrentProc(void) {
+  return pvTaskGetThreadLocalStoragePointer(NULL, TLS_PROC);
+}
+
 void ProcInit(Proc_t *proc, size_t ustksz) {
   bzero(proc, sizeof(Proc_t));
 
@@ -18,6 +23,8 @@ void ProcInit(Proc_t *proc, size_t ustksz) {
   proc->ustksz = ustksz;
   proc->ustk = malloc(ustksz);
   bzero(proc->ustk, ustksz);
+
+  vTaskSetThreadLocalStoragePointer(NULL, TLS_PROC, (void *)proc);
 }
 
 void ProcFini(Proc_t *proc) {
@@ -92,5 +99,7 @@ int Execute(Proc_t *proc, File_t *exe, char *const *argv) {
   /* Stack grows down. */
   void *sp = CopyArgVec(proc->ustk + proc->ustksz, argv);
 
-  return EnterUserMode(pc, sp, proc);
+  if (!setjmp(proc->retctx))
+    EnterUserMode(pc, sp);
+  return 0;
 }

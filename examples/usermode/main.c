@@ -20,10 +20,9 @@ static void vMainTask(__unused void *data) {
 
   Proc_t p;
   ProcInit(&p, UPROC_STKSZ);
-  int rv = Execute(&p, shell, (char *[]){"shell", NULL});
+  if (!Execute(&p, shell, (char *[]){"shell", NULL}))
+    printf("Program returned: %d\n", p.exitcode);
   ProcFini(&p);
-
-  printf("Program returned: %d\n", rv);
 
   vTaskDelete(NULL);
 }
