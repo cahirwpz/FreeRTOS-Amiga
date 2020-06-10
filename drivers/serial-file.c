@@ -15,14 +15,15 @@ static FileOps_t SerOps = {.read = (FileRead_t)SerialRead,
 File_t *SerialOpen(unsigned baud) {
   static File_t f = {.ops = &SerOps};
 
-  if (Atomic_Increment_u32(&f.usecount) == 0)
-    SerialInit(baud);
+  uint32_t old = Atomic_Increment_u32(&f.usecount);
+  configASSERT(old == 0);
+  SerialInit(baud);
   return &f;
 }
 
 static void SerialClose(File_t *f) {
-  if (Atomic_Decrement_u32(&f->usecount) == 1)
-    SerialKill();
+  configASSERT(f->usecount == 0);
+  SerialKill();
 }
 
 static long SerialWrite(__unused File_t *f, const char *buf, size_t nbyte) {

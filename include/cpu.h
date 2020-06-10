@@ -1,6 +1,8 @@
 #ifndef _CPU_H_
 #define _CPU_H_
 
+#include <stdint.h>
+
 #define CB_68010 0
 #define CB_68020 1
 #define CB_68030 2

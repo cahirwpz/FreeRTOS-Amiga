@@ -1,21 +1,41 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
-#include <custom.h>
-#include <file.h>
 #include <amigahunk.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+
 #include "proc.h"
 
-#define DEBUG 0
-
-Proc_t *GetCurrentProc(void) {
+Proc_t *TaskGetProc(void) {
   return pvTaskGetThreadLocalStoragePointer(NULL, TLS_PROC);
 }
 
+void TaskSetProc(Proc_t *proc) {
+  vTaskSetThreadLocalStoragePointer(NULL, TLS_PROC, (void *)proc);
+}
+
+int ProcLoadImage(Proc_t *proc, File_t *exe) {
+  Hunk_t *hunk = LoadHunkList(exe);
+  FileClose(exe);
+
+  if (hunk == NULL)
+    return 0;
+  proc->hunk = hunk;
+  return 1;
+}
+
+void ProcFreeImage(Proc_t *proc) {
+  Hunk_t *next;
+  for (Hunk_t *hunk = proc->hunk; hunk != NULL; hunk = next) {
+    next = hunk->next;
+    free(hunk);
+  }
+}
+
 void ProcInit(Proc_t *proc, size_t ustksz) {
+  static int pid = 1; /* let's assume it will never overflow */
+
   bzero(proc, sizeof(Proc_t));
 
   /* Align to long word size. */
@@ -24,15 +44,11 @@ void ProcInit(Proc_t *proc, size_t ustksz) {
   proc->ustk = malloc(ustksz);
   bzero(proc->ustk, ustksz);
 
-  vTaskSetThreadLocalStoragePointer(NULL, TLS_PROC, (void *)proc);
+  proc->pid = pid++;
 }
 
 void ProcFini(Proc_t *proc) {
-  Hunk_t *next;
-  for (Hunk_t *hunk = proc->hunk; hunk != NULL; hunk = next) {
-    next = hunk->next;
-    free(hunk);
-  }
+  ProcFreeImage(proc);
 
   for (int i = 0; i < MAXFILES; i++) {
     File_t *f = proc->fdtab[i];
@@ -79,27 +95,29 @@ static void *CopyArgVec(void *sp, char *const *argv) {
   return sp;
 }
 
-int Execute(Proc_t *proc, File_t *exe, char *const *argv) {
-  Hunk_t *hunk = LoadHunkList(exe);
-  FileClose(exe);
-
-  if (hunk == NULL)
-    return -1;
-
-  proc->hunk = hunk;
-
-#if DEBUG
-  for (Hunk_t *h = hunk; h != NULL; h = h->next)
-    hexdump(h->data, h->size);
-#endif
-
+void ProcExecute(Proc_t *proc, char *const *argv) {
   /* Execute assumes that _start procedure is placed
    * at the beginning of first hunk of executable file. */
-  void *pc = hunk->data;
+  void *pc = proc->hunk->data;
   /* Stack grows down. */
   void *sp = CopyArgVec(proc->ustk + proc->ustksz, argv);
 
   if (!setjmp(proc->retctx))
     EnterUserMode(pc, sp);
-  return 0;
+}
+
+__noreturn void ExitUserMode(Proc_t *proc, int exitcode) {
+  proc->exitcode = exitcode;
+  longjmp(proc->retctx, 1);
+}
+
+int ProcFileInstall(Proc_t *proc, int fd, File_t *file) {
+  if (fd < 0 || fd >= MAXFILES)
+    return 0;
+
+  File_t **fp = &proc->fdtab[fd];
+  if (*fp)
+    FileClose(*fp);
+  *fp = file;
+  return 1;
 }

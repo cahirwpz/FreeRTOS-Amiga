@@ -28,6 +28,9 @@ typedef struct File {
   long offset;
 } File_t;
 
+/* Increase reference counter. */
+File_t *FileHold(File_t *f);
+
 /* These behave like read/write/lseek known from UNIX */
 long FileRead(File_t *f, void *buf, size_t nbyte);
 long FileWrite(File_t *f, const void *buf, size_t nbyte);

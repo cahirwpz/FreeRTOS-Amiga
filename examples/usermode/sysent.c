@@ -1,7 +1,6 @@
-#include <cdefs.h>
 #include <cpu.h>
 #include <trap.h>
-#include <stdio.h>
+
 #include "syscall.h"
 #include "proc.h"
 
@@ -12,13 +11,13 @@ void vPortTrapHandler(TrapFrame_t *frame) {
 
   /* Trap instruction from user-space ? */
   if (frame->trapnum == T_TRAPINST && (sr & SR_S) == 0) {
-    Proc_t *p = GetCurrentProc();
+    Proc_t *p = TaskGetProc();
 
-    if (frame->d0 == SYS_exit) {
-      p->exitcode = frame->d1;
-      longjmp(p->retctx, 1);
-    }
+    /* Handle known system calls! */
+    if (frame->d0 == SYS_exit)
+      ExitUserMode(p, frame->d1);
   }
 
+  /* Everything else goes to default trap handler. */
   vPortDefaultTrapHandler(frame);
 }
