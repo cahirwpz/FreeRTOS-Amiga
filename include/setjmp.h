@@ -14,7 +14,7 @@
 #define _JB_A4 8
 #define _JB_A5 9
 #define _JB_A6 10
-#define _JB_A6 11
+#define _JB_SP 11
 #define _JB_PC 12
 
 #define _JBLEN 13

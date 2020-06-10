@@ -20,7 +20,6 @@ static void TtyClose(File_t *f) {
 }
 
 static long TtyWrite(__unused File_t *f, const char *buf, size_t nbyte) {
-  for (size_t i = 0; i < nbyte; i++)
-    ConsolePutChar(*buf++);
+  ConsoleWrite(buf, nbyte);
   return nbyte;
 }

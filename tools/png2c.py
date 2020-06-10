@@ -122,7 +122,7 @@ def do_bitmap(im, desc):
         print('};')
         print('')
 
-    print('bitmap_t %s = {' % name)
+    print('const bitmap_t %s = {' % name)
     print('  .width = %d,' % width)
     print('  .height = %d,' % height)
     print('  .depth = %s,' % depth)

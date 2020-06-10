@@ -1,25 +1,42 @@
 #include <file.h>
+#include <custom.h>
 
 static const char hex2char[16] = "0123456789abcdef";
 
+#pragma GCC push_options
+#pragma GCC optimize("-O2")
+
 void FileHexDump(File_t *f, void *ptr, size_t length) {
   unsigned char *data = ptr;
-  char buf[5];
+  char buf[80];
+  char *s = buf;
 
   for (size_t i = 0; i < length; i++) {
-    if ((i & 15) == 0)
-      FilePrintf(f, "%08x:", (intptr_t)data);
-    /* optimize the common case */
-    unsigned byte = *data++;
-    unsigned len = 3;
-    buf[0] = ' ';
-    buf[1] = hex2char[byte >> 4];
-    buf[2] = hex2char[byte & 15];
+    if ((i & 15) == 0) {
+      uintptr_t p = (uintptr_t)data;
+      for (int k = 7; k >= 0; k--) {
+        s[k] = hex2char[p & 15];
+        p >>= 4;
+      }
+      s += 8;
+      *s++ = ':';
+    }
+    int byte = *data++;
+    *s++ = ' ';
+    *s++ = hex2char[byte >> 4];
+    *s++ = hex2char[byte & 15];
     if ((i & 3) == 3)
-      buf[len++] = ' ';
-    if ((i & 15) == 15)
-      buf[len++] = '\n';
-    FileWrite(f, buf, len);
+      *s++ = ' ';
+    if ((i & 15) == 15) {
+      *s++ = '\n';
+      FileWrite(f, buf, s - buf);
+      s = buf;
+    }
   }
-  FilePutChar(f, '\n');
+  if (s > buf) {
+    *s++ = '\n';
+    FileWrite(f, buf, s - buf);
+  }
 }
+
+#pragma GCC pop_options

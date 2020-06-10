@@ -1,6 +1,15 @@
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/atomic.h>
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <file.h>
+
+File_t *FileHold(File_t *f) {
+  uint32_t old = Atomic_Increment_u32(&f->usecount);
+  configASSERT(old > 0);
+  return f;
+}
 
 long FileRead(File_t *f, void *buf, size_t nbyte) {
   return f->ops->read ? f->ops->read(f, buf, nbyte) : -1;
@@ -15,6 +24,8 @@ long FileSeek(File_t *f, long offset, int whence) {
 }
 
 void FileClose(File_t *f) {
+  if (Atomic_Decrement_u32(&f->usecount) > 1)
+    return;
   if (f->ops->close)
     f->ops->close(f);
 }

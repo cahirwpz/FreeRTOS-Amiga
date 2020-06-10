@@ -34,7 +34,7 @@ static void RecvIntHandler(__unused void *ptr) {
 }
 
 void SerialInit(unsigned baud) {
-  printf("[Init] Serial port driver!\n");
+  printf("[Serial] Initializing driver!\n");
 
   custom.serper = CLOCK / baud - 1;
 
@@ -55,6 +55,8 @@ void SerialKill(void) {
 
   vQueueDelete(RecvQ);
   vQueueDelete(SendQ);
+
+  printf("[Serial] Driver deactivated!\n");
 }
 
 static void TriggerSend(uint8_t cSend) {

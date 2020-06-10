@@ -17,14 +17,14 @@ typedef struct bitmap {
   void *planes[MAXDEPTH];
 } bitmap_t;
 
-static inline void CopSetupScreen(coplist_t *list, bitmap_t *bm,
+static inline void CopSetupScreen(coplist_t *list, const bitmap_t *bm,
                                   uint16_t mode, uint16_t xs, uint16_t ys) {
   CopSetupMode(list, mode, bm->depth);
   CopSetupDisplayWindow(list, mode, xs, ys, bm->width, bm->height);
   CopSetupBitplaneFetch(list, mode, xs, bm->width);
 }
 
-static inline void CopSetupBitplanes(coplist_t *list, bitmap_t *bm,
+static inline void CopSetupBitplanes(coplist_t *list, const bitmap_t *bm,
                                      copins_t **bplptr)
 {
   for (int i = 0; i < bm->depth; i++) {

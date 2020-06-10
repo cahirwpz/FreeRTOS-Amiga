@@ -73,6 +73,7 @@ typedef struct {
 
 #pragma pack(2)
 typedef struct TrapFrame {
+  uint32_t usp;
   uint32_t d0, d1, d2, d3, d4, d5, d6, d7;
   uint32_t a0, a1, a2, a3, a4, a5, a6, sp;
   uint16_t trapnum;
@@ -81,13 +82,8 @@ typedef struct TrapFrame {
     trap_stk_000_memacc_t m68000_memacc;
     trap_stk_010_t m68010;
     trap_stk_010_memacc_t m68010_memacc;
-  } u;
+  };
 } TrapFrame_t;
-
-#define m68000 u.m68000
-#define m68000_memacc u.m68000_memacc
-#define m68010 u.m68010
-#define m68010_memacc u.m68010_memacc
 
 void BadTrap(void);
 void BusErrTrap(void);

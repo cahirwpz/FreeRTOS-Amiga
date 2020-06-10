@@ -1,3 +1,6 @@
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/atomic.h>
+
 #include <serial.h>
 #include <file.h>
 
@@ -12,14 +15,15 @@ static FileOps_t SerOps = {.read = (FileRead_t)SerialRead,
 File_t *SerialOpen(unsigned baud) {
   static File_t f = {.ops = &SerOps};
 
-  if (++f.usecount == 1)
-    SerialInit(baud);
+  uint32_t old = Atomic_Increment_u32(&f.usecount);
+  configASSERT(old == 0);
+  SerialInit(baud);
   return &f;
 }
 
 static void SerialClose(File_t *f) {
-  if (--f->usecount == 0)
-    SerialKill();
+  configASSERT(f->usecount == 0);
+  SerialKill();
 }
 
 static long SerialWrite(__unused File_t *f, const char *buf, size_t nbyte) {

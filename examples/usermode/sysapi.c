@@ -1,4 +1,4 @@
-#include "syscalls.h"
+#include "sysapi.h"
 
 #define SYS_exit 1
 #define SYS_open 2
@@ -25,7 +25,7 @@
                : "i"(nr), "rm"(arg1)                                           \
                : "memory", "cc", "d0", "d1")
 
-#define SYSCALL3(ret, nr, arg1, arg2, arg3)                                    \
+#define SYSCALL3(res, nr, arg1, arg2, arg3)                                    \
   asm volatile("moveq.l %1,%%d0\n"                                             \
                "move.l  %2,%%d1\n"                                             \
                "move.l  %3,%%d2\n"                                             \
@@ -41,26 +41,44 @@ void exit(int status) {
   for(;;);
 }
 
-long read(File_t *fh, void *buf, size_t nbyte) {
+long read(int fd, void *buf, size_t nbyte) {
   long res;
-  SYSCALL3(res, SYS_read, fh, buf, nbyte);
+  SYSCALL3(res, SYS_read, fd, buf, nbyte);
   return res;
 }
 
-long write(File_t *fh, const void *buf, size_t nbyte) {
+long write(int fd, const void *buf, size_t nbyte) {
   long res;
-  SYSCALL3(res, SYS_write, fh, buf, nbyte);
+  SYSCALL3(res, SYS_write, fd, buf, nbyte);
   return res;
 }
 
-File_t *open(const char *path) {
-  File_t *fh;
-  SYSCALL1(fh, SYS_open, path);
-  return fh;
+int open(const char *path) {
+  int fd;
+  SYSCALL1(fd, SYS_open, path);
+  return fd;
 }
 
-void close(File_t *fh) {
-  SYSCALL1_NR(SYS_close, fh);
+void close(int fd) {
+  SYSCALL1_NR(SYS_close, fd);
+}
+
+int vfork(void) {
+  /* TODO: Implement system call wrapper. */
+  return -1;
+}
+
+int execv(const char *path, char *const argv[]) {
+  /* TODO: Implement system call wrapper. */
+  (void)path;
+  (void)argv;
+  return -1;
+}
+
+int wait(int *statusp) {
+  /* TODO: Implement system call wrapper. */
+  (void)statusp;
+  return -1;
 }
 
 void sleep(unsigned miliseconds) {

@@ -3,12 +3,16 @@
 #define portSAVE_CONTEXT()                                              \
         or.w    #0x0700,sr;             /* mask all interrupts */       \
         movem.l d0-a6,-(sp);            /* save D0-A6 registers */      \
+        move.l  usp,a0;                 /* save USP register */         \
+        move.l  a0,-(sp);                                               \
         move.l  pxCurrentTCB,a0;        /* load current task pointer */ \
         move.l  sp,(a0);                /* save stack pointer */
 
 #define portRESTORE_CONTEXT()                                           \
         move.l  pxCurrentTCB,a0;        /* load current task pointer */ \
         move.l  (a0),sp;                /* restore stack pointer */     \
+        move.l  (sp)+,a0;               /* restore USP register */      \
+        move.l  a0,usp;                                                 \
         movem.l (sp)+,d0-a6;            /* restore D0-A6 registers */   \
         rte;                            /* restore SR and PC */
 
