@@ -18,12 +18,12 @@ static inline void SendIO(FloppyIO_t *io, uint16_t cmd, uint16_t track) {
   FloppySendIO(io);
 }
 
-static void WaitIO(QueueHandle_t replyQ, void *buf, 
+static void WaitIO(QueueHandle_t replyQ, void *buf,
                    DiskSector_t *sectors[SECTOR_COUNT]) {
   FloppyIO_t *io = NULL;
   (void)xQueueReceive(replyQ, &io, portMAX_DELAY);
   if (io->cmd == CMD_READ) {
-    DecodeTrack(io->buffer, sectors);
+    RealignTrack(io->buffer, sectors);
     for (int j = 0; j < SECTOR_COUNT; j++)
       DecodeSector(sectors[j], buf + j * SECTOR_SIZE);
   }
@@ -36,27 +36,25 @@ static int MemEqual(const char *m0, const char *m1, size_t len) {
   return 1;
 }
 
-static char sequence[] = {
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-  9, 8, 7, 6, 5, 4, 3, 2, 1, 0
-};
+static char sequence[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                          9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
 
-#define SECTOR(track, i) ((void *)(track) + (i) * SECTOR_SIZE)
+#define SECTOR(track, i) ((void *)(track) + (i)*SECTOR_SIZE)
 
-static void vTask(File_t *f) {
+static void vTask(__unused File_t *f) {
   DiskTrack_t *chipbuf = AllocTrack();
   configASSERT(chipbuf);
 
-  QueueHandle_t replyQ = xQueueCreate(1, sizeof(FloppyIO_t *));;
+  QueueHandle_t replyQ = xQueueCreate(1, sizeof(FloppyIO_t *));
+  ;
   configASSERT(replyQ);
 
-  FloppyIO_t io = {.buffer = chipbuf,
-                   .replyQueue = replyQ};
+  FloppyIO_t io = {.buffer = chipbuf, .replyQueue = replyQ};
 
   char *data = pvPortMalloc(SECTOR_COUNT * SECTOR_SIZE);
   configASSERT(data);
 
-  DiskSector_t **sectors = pvPortMalloc(SECTOR_COUNT * sizeof(DiskSector_t*));
+  DiskSector_t **sectors = pvPortMalloc(SECTOR_COUNT * sizeof(DiskSector_t *));
   configASSERT(sectors);
 
   uint32_t good = 0, bad = 0;
@@ -70,9 +68,9 @@ static void vTask(File_t *f) {
       uint16_t offset = rand() % (SECTOR_SIZE - sizeof(sequence));
       void *sector = SECTOR(data, secnum);
       memcpy(sector + offset, sequence, sizeof(sequence));
-      EncodeTrack((uint32_t *)data, sectors);
+      EncodeSector(sector, sectors[secnum]);
 #if DRYTEST
-      DecodeTrack(chipbuf, sectors);
+      FixTrackEncoding(chipbuf);
       for (int j = 0; j < SECTOR_COUNT; j++)
         DecodeSector(sectors[j], SECTOR(data, j));
 #else
@@ -88,9 +86,6 @@ static void vTask(File_t *f) {
         FilePutChar(f, '-');
         bad++;
         printf("good = %u, bad = %u\n", good, bad);
-        FilePutChar(f, '\n');
-        for (uint16_t i = 0; i < sizeof(sequence); i++)
-          FilePrintf(f, "%d ", ((uint8_t*)(sector + offset))[i]);
         FilePutChar(f, '\n');
       }
     }
@@ -114,8 +109,8 @@ int main(void) {
 
   File_t *ser = SerialOpen(9600);
 
-  xTaskCreate((TaskFunction_t)vTask, "task",
-              configMINIMAL_STACK_SIZE, ser, 0, &handle);
+  xTaskCreate((TaskFunction_t)vTask, "task", configMINIMAL_STACK_SIZE, ser, 0,
+              &handle);
 
   FloppyInit(3);
 
@@ -124,4 +119,5 @@ int main(void) {
   return 0;
 }
 
-void vApplicationIdleHook(void) {}
+void vApplicationIdleHook(void) {
+}

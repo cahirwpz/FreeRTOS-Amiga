@@ -17,8 +17,8 @@
 #define SECTOR_COUNT 11
 #define SECTOR_SIZE 512
 #define TRACK_COUNT 160
-#define TRACK_SIZE 12666
-#define GAP_SIZE 698
+#define TRACK_SIZE 12800
+#define GAP_SIZE 832
 #define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
 
 typedef uint16_t DiskTrack_t[TRACK_SIZE/sizeof(uint16_t)];
@@ -40,8 +40,10 @@ void FloppyKill(void);
 #define AllocTrack() pvPortMallocChip(TRACK_SIZE)
 
 void FloppySendIO(FloppyIO_t *io);
-void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
-void DecodeSector(DiskSector_t *sector, uint32_t *buf);
-void EncodeTrack(uint32_t *decodedTrack, DiskSector_t *sectors[SECTOR_COUNT]);
+int16_t DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
+void DecodeSector(const DiskSector_t *sector, uint32_t *buf);
+void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
+void EncodeSector(uint32_t *buf, DiskSector_t *sector);
+void FixTrackEncoding(DiskTrack_t *track);
 
 #endif /* !_FLOPPY_H_ */
