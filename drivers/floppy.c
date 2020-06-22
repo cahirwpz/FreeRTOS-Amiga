@@ -142,6 +142,7 @@ static void FloppyMotorOff(void) {
 }
 
 #define DISK_SETTLE TIMER_MS(15)
+#define WRITE_SETTLE TIMER_US(1300)
 
 static void FloppyReader(__unused void *ptr) {
   /* Move head to track 0 */
@@ -182,6 +183,17 @@ static void FloppyReader(__unused void *ptr) {
       printf("[Floppy] Read track %d into %p.\n", (int)io->track, io->buffer);
 #endif
 
+      uint16_t adkconSet = ADKF_SETCLR | ADKF_MFMPREC | ADKF_FAST;
+      uint16_t adkconClr = ADKF_WORDSYNC | ADKF_MSBSYNC;
+      if (io->cmd == CMD_READ)
+        adkconSet |= ADKF_WORDSYNC;
+      if (io->track / 2 < 40)
+        adkconClr |= ADKF_PRECOMP1 | ADKF_PRECOMP0;
+      else
+        adkconSet |= ADKF_PRECOMP0;
+      custom.adkcon = adkconClr;
+      custom.adkcon = adkconSet;
+
       /* Prepare for transfer. */
       ClearIRQ(INTF_DSKBLK);
       EnableINT(INTF_DSKBLK);
@@ -191,10 +203,16 @@ static void FloppyReader(__unused void *ptr) {
       custom.dskpt = io->buffer;
 
       /* Write track size twice to initiate DMA transfer. */
-      custom.dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
-      custom.dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
+      uint16_t dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
+      if (io->cmd == CMD_WRITE)
+        dsklen |= DSK_WRITE;
+      custom.dsklen = dsklen;
+      custom.dsklen = dsklen;
 
       (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+      if (io->cmd == CMD_WRITE)
+        WaitTimerSleep(FloppyTimer, WRITE_SETTLE);
 
       /* Disable DMA & interrupts. */
       custom.dsklen = 0;
@@ -210,7 +228,6 @@ static void FloppyReader(__unused void *ptr) {
 }
 
 void FloppySendIO(FloppyIO_t *io) {
-  configASSERT(io->cmd == CMD_READ);
   configASSERT(io->track < TRACK_COUNT);
   configASSERT(io->replyQueue != NULL);
   configASSERT(io->buffer != NULL);
