@@ -66,7 +66,7 @@ static int parseline(char *buf, char **argv) {
 /* eval - Evaluate a command line */
 static void eval(char *cmdline) {
   static char *argv[MAXARGS]; /* Argument list execv() */
-  static char buf[MAXLINE];   /* Holds modified command line */
+  static char buf[MAXLINE + 1];   /* Holds modified command line */
 
   strcpy(buf, cmdline);
   int bg = parseline(buf, argv);
@@ -78,13 +78,14 @@ static void eval(char *cmdline) {
 }
 
 int main(void) {
-  static char cmdline[MAXLINE];
+  static char cmdline[MAXLINE + 1];
 
   for (;;) {
     write(STDOUT_FILENO, "> ", 2);
     int res = read(STDIN_FILENO, cmdline, MAXLINE);
     if (res == 0)
       break;
+    cmdline[res] = '\0';
     eval(cmdline);
   }
 
