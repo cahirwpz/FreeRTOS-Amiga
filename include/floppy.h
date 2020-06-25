@@ -40,9 +40,12 @@ void FloppyKill(void);
 #define AllocTrack() pvPortMallocChip(TRACK_SIZE)
 
 void FloppySendIO(FloppyIO_t *io);
-int16_t DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
+void GenDecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT],
+                    int16_t *firstSecnum, int16_t *gapSecnum);
+void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
 void DecodeSector(const DiskSector_t *sector, uint32_t *buf);
-void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
+void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT],
+                  int16_t firstSecnum, int16_t gapSecnum);
 void EncodeSector(uint32_t *buf, DiskSector_t *sector);
 void FixTrackEncoding(DiskTrack_t *track);
 

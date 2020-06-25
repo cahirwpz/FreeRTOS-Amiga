@@ -5,7 +5,7 @@
 #include <custom.h>
 #include <floppy.h>
 
-#define DEBUG 0
+#define DEBUG 1
 
 /*
  * Amiga MFM track format:
@@ -31,6 +31,12 @@ typedef struct DiskSector {
   uint8_t data[2][SECTOR_PAYLOAD];
 } DiskSector_t;
 
+static inline int16_t NextSecnum(int16_t secnum) {
+  if (++secnum >= SECTOR_COUNT)
+    secnum = 0;
+  return secnum;
+}
+
 static uint16_t *FindSectorHeader(uint16_t *data) {
   /* Find synchronization marker and move to first location after it. */
   while (*data != DSK_SYNC)
@@ -53,22 +59,26 @@ static inline void GetDecodedHeader(const DiskSector_t *sec,
     DECODE(*(uint32_t *)&sec->info[0], *(uint32_t *)&sec->info[1]);
 }
 
-int16_t DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
+static inline bool IsSecondSyncOK(const void *track) {
+  return *(uint16_t *)track == DSK_SYNC;
+}
+
+void GenDecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT],
+                    int16_t *firstSecnum, int16_t *gapSecnum) {
   int16_t secnum = SECTOR_COUNT;
-  int16_t gapSecnum = -1;
   uint16_t *data = (uint16_t *)track;
 
   /* We always start after the DSK_SYNC word
    * but the first one may be corrupted.
    * In case we start with the sync marker
    * move to the sector header. */
-  if (*data == DSK_SYNC)
+  if (IsSecondSyncOK(track))
     data++;
 
   DiskSector_t *sec = Header2Sector(data);
+  SectorHeader_t info;
 
   do {
-    SectorHeader_t info;
     GetDecodedHeader(sec, &info);
 
 #if DEBUG
@@ -79,14 +89,20 @@ int16_t DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
     sectors[info.sectorNum] = sec++;
     /* Handle the gap. */
     if (info.gapDist == 1) {
-      gapSecnum = info.sectorNum;
+      if (gapSecnum)
+        *gapSecnum = info.sectorNum;
       /* Move to the first sector behind the gap. */
       data = FindSectorHeader((uint16_t *)sec);
       sec = Header2Sector(data);
     }
   } while (--secnum);
 
-  return gapSecnum;
+  if (firstSecnum)
+    *firstSecnum = NextSecnum(info.sectorNum);
+}
+
+void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
+  GenDecodeTrack(track, sectors, NULL, NULL);
 }
 
 static uint32_t ComputeChecksumHeader(const DiskSector_t *sector) {
@@ -135,68 +151,57 @@ void DecodeSector(const DiskSector_t *sector, uint32_t *buf) {
 /* Realign sector pointers. */
 static void RealignSectors(DiskSector_t *sectors[SECTOR_COUNT], int16_t start,
                            size_t n, size_t shift) {
-  size_t i = start;
-  for (size_t cnt = 0; cnt < n; cnt++) {
-    sectors[i] = (void *)sectors[i] + shift;
-    i = (i + 1) % SECTOR_COUNT;
+  int16_t i = start;
+  for (int16_t it = 0; it < 2; it++) {
+    for (; n && i < SECTOR_COUNT; i++, n--)
+      sectors[i] = (void *)sectors[i] + shift;
+    i = 0;
   }
 }
 
-static int16_t FirstSectorNumber(const DiskTrack_t *track) {
-  uint16_t *data = (uint16_t *)track;
-  if (*data == DSK_SYNC)
-    data++;
-  DiskSector_t *sec = Header2Sector(data);
-  SectorHeader_t info;
-  GetDecodedHeader(sec, &info);
-  return info.sectorNum;
+/* Obtain number of sectors between the two given sectors. */
+static inline int16_t SectorDist(int16_t s1, int16_t s2) {
+  int16_t dist = s1 - s2 + 1;
+  if (dist < 0)
+    dist += SECTOR_COUNT;
+  return dist;
 }
 
-#define TORANGE(d) (((d) + SECTOR_COUNT) % SECTOR_COUNT)
+static inline uintptr_t PtrDiff(const void *p1, const void *p2) {
+  return p1 - p2;
+}
 
-void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
-  bool isFirstSyncOK = (*(uint16_t *)track == DSK_SYNC);
-  int16_t first = FirstSectorNumber(track);
-  int16_t last = TORANGE(first + SECTOR_COUNT - 1);
-  int16_t gapSecnum, gapNextSecnum;
-  size_t leftSize, rightSize;
-  void *gap = NULL;
+void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT],
+                  int16_t firstSecnum, int16_t gapSecnum) {
+  int16_t beforeGap = SectorDist(gapSecnum, firstSecnum);
+  int16_t afterGap = SECTOR_COUNT - beforeGap;
+  int16_t afterGapSecnum = NextSecnum(gapSecnum);
+  size_t afterGapOff = PtrDiff(sectors[afterGapSecnum], track);
+  size_t leftOff, leftSize, rightOff, rightSize;
 
-  /* Last sector before the gap, and first
-   * sector behind the gap. */
-  gapSecnum = DecodeTrack(track, sectors);
-  gapNextSecnum = (gapSecnum + 1) % SECTOR_COUNT;
+  leftOff = GAP_SIZE + sizeof(uint32_t) + sizeof(uint16_t);
+  if (!IsSecondSyncOK(track))
+    leftOff += sizeof(uint16_t);
+  leftSize = beforeGap * sizeof(DiskSector_t);
 
-  int16_t afterGapNum = TORANGE(last - gapSecnum);
-  /* Move all the sectors behind the gap
-   * to the gap position (i.e. remove an inner gap). */
-  if (afterGapNum) {
-    gap = sectors[gapSecnum] + 1;
-    leftSize = afterGapNum * sizeof(DiskSector_t);
-    memmove(gap, sectors[gapNextSecnum], leftSize);
+  /* Shift sectors behind the gap. */
+  if (afterGap) {
+    rightOff = leftSize + GAP_SIZE /*- gapSize*/;
+    rightSize = afterGap * sizeof(DiskSector_t);
+    memmove((void *)track + rightOff, sectors[afterGapSecnum], rightSize);
+    RealignSectors(sectors, afterGapSecnum, afterGap, rightOff - afterGapOff);
   }
 
-  /* Create a gap at the beginning of the track and
-   * move all the sectors to the end. */
-  size_t missingSize = sizeof(uint32_t) + sizeof(uint16_t);
-  size_t shift =
-    GAP_SIZE + missingSize + (isFirstSyncOK ? 0 : sizeof(uint16_t));
-  rightSize = sizeof(DiskSector_t) * SECTOR_COUNT - missingSize;
-  memmove((void *)track + shift, track, rightSize);
+  /* Shift sectors before the gap. */
+  memmove((void *)track + leftOff, track, leftSize);
+  RealignSectors(sectors, firstSecnum, beforeGap, leftOff);
 
-  /* Update sector pointers to reflect current sectors position. */
-  RealignSectors(sectors, first, SECTOR_COUNT - afterGapNum, shift);
-  if (afterGapNum)
-    RealignSectors(sectors, gapNextSecnum, afterGapNum,
-                   shift -
-                     ((uintptr_t)sectors[gapNextSecnum] - (uintptr_t)gap));
+  /* Fill the gap. */
+  (void)memset(track, 0xAA, leftOff);
 
-  /* Gap is 832 bytes of 0x00 data. */
-  memset(track, 0xAA, GAP_SIZE + sizeof(uint32_t));
-
-  /* The first sector read is cut off so we have to complete it. */
-  DiskSector_t *sec = sectors[first];
-  sec->sync[0] = sec->sync[1] = DSK_SYNC;
+  /* Complete the first sector. */
+  DiskSector_t *firstSec = sectors[firstSecnum];
+  firstSec->sync[0] = firstSec->sync[1] = DSK_SYNC;
 }
 
 #define SECTOR(track, i) ((void *)(track) + (i)*SECTOR_SIZE)
@@ -206,7 +211,7 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
 static inline uint32_t EncodeEven(uint32_t lw, uint32_t prev) {
   uint32_t code = lw | ((lw >> 1) ^ (MASK >> 1));
   code &= ~(lw << 1);
-  if (!(code >> 30) && !(prev & 1))
+  if (!(code & 0x40000000) && !(prev & 1))
     code |= 0x80000000;
   return code;
 }
@@ -245,9 +250,10 @@ void EncodeSector(uint32_t *buf, DiskSector_t *sector) {
 }
 
 static inline void UpdateMSB(uint32_t *lw, uint32_t prev) {
-  if (!((*lw >> 30) & 1)) {
+  if (!(*lw & 0x40000000)) {
     *lw &= 0x7fffffff;
-    *lw |= ~prev << 31;
+    if (!(prev & 1))
+      *lw |= 0x80000000;
   }
 }
 
