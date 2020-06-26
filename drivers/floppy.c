@@ -190,7 +190,7 @@ static void FloppyReader(__unused void *ptr) {
       uint16_t adkconClr = ADKF_WORDSYNC | ADKF_MSBSYNC;
       if (io->cmd == CMD_READ)
         adkconSet |= ADKF_WORDSYNC;
-      if (io->track / 2 < 40)
+      if (io->track < TRACK_COUNT / 2)
         adkconClr |= ADKF_PRECOMP1 | ADKF_PRECOMP0;
       else
         adkconSet |= ADKF_PRECOMP0;

@@ -22,6 +22,10 @@ int ProcLoadImage(Proc_t *proc, File_t *exe) {
   if (hunk == NULL)
     return 0;
   proc->hunk = hunk;
+
+  /* We assume that _start procedure is placed
+   * at the beginning of first hunk of executable file. */
+  proc->usrctx.pc = (intptr_t)proc->hunk->data;
   return 1;
 }
 
@@ -66,8 +70,9 @@ void ProcFini(Proc_t *proc) {
     sp = __sp;                                                                 \
   }
 
-static void *CopyArgVec(void *sp, char *const *argv) {
-  /* Copy argv contents to user stack and create argc and argv. */
+/* Copy argv contents to user stack and create argc and argv. */
+void ProcSetArgv(Proc_t *proc, char *const *argv) {
+  void *sp = proc->ustk + proc->ustksz; /* Stack grows down. */
   char **uargv;
   char *uargs;
   int argc;
@@ -92,21 +97,16 @@ static void *CopyArgVec(void *sp, char *const *argv) {
   sp = uargv;
   PUSH(sp, uargv);
   PUSH(sp, argc);
-  return sp;
+
+  proc->usrctx.sp = (intptr_t)sp;
 }
 
-void ProcExecute(Proc_t *proc, char *const *argv) {
-  /* Execute assumes that _start procedure is placed
-   * at the beginning of first hunk of executable file. */
-  void *pc = proc->hunk->data;
-  /* Stack grows down. */
-  void *sp = CopyArgVec(proc->ustk + proc->ustksz, argv);
-
+void ProcEnter(Proc_t *proc) {
   if (!setjmp(proc->retctx))
-    EnterUserMode(pc, sp);
+    EnterUserMode(&proc->usrctx);
 }
 
-__noreturn void ExitUserMode(Proc_t *proc, int exitcode) {
+__noreturn void ProcExit(Proc_t *proc, int exitcode) {
   proc->exitcode = exitcode;
   longjmp(proc->retctx, 1);
 }

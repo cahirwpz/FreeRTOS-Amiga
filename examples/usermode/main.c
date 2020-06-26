@@ -26,7 +26,8 @@ static void vMainTask(__unused void *data) {
   ProcFileInstall(&p, 0, FileHold(ser));
   ProcFileInstall(&p, 1, FileHold(ser));
   if (ProcLoadImage(&p, shell)) {
-    ProcExecute(&p, (char *[]){"shell", NULL});
+    ProcSetArgv(&p, (char *[]){"shell", NULL});
+    ProcEnter(&p);
     printf("Program returned: %d\n", p.exitcode);
   }
   ProcFini(&p);

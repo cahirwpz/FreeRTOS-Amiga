@@ -1,11 +1,5 @@
 #include "sysapi.h"
-
-#define SYS_exit 1
-#define SYS_open 2
-#define SYS_close 3
-#define SYS_read 4
-#define SYS_write 5
-#define SYS_sleep 6
+#include "syscall.h"
 
 /* Operand classes are described in gcc/config/m68k/m68k.md */
 #define SYSCALL1(res, nr, arg1)                                                \
