@@ -61,7 +61,7 @@ static void WaitIO(QueueHandle_t replyQ, void *buf) {
   (void)xQueueReceive(replyQ, &io, portMAX_DELAY);
 
   DiskSector_t *sectors[SECTOR_COUNT];
-  (void)DecodeTrack(io->buffer, sectors);
+  DecodeTrack(io->buffer, sectors);
   for (int j = 0; j < SECTOR_COUNT; j++)
     DecodeSector(sectors[j], buf + j * SECTOR_SIZE);
 }
