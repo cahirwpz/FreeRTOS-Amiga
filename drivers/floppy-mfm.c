@@ -87,8 +87,8 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
       /* Move to the first sector after the gap. */
       sec = FindSectorHeader(sec);
 #if DEBUG
-    printf("[MFM] Gap of size %d\n",
-           (intptr_t)sec - (intptr_t)(sectors[hdr.sectorNum] + 1));
+      printf("[MFM] Gap of size %d\n",
+             (intptr_t)sec - (intptr_t)(sectors[hdr.sectorNum] + 1));
 #endif
     }
   } while (--secnum);
@@ -170,7 +170,7 @@ void DecodeSector(const DiskSector_t *sector, RawSector_t buf) {
  */
 void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   DiskSector_t *sector = (void *)track + GAP_SIZE;
-  
+
   /* Compact sectors at the end of track buffer. */
   for (short i = SECTOR_COUNT - 1; i >= 0; i--) {
     (void)memmove(&sector[i], sectors[i], sizeof(DiskSector_t));
@@ -190,7 +190,7 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
  * 0000 -> 10
  * 0100 -> 00
  * ... which gives following algorithm:
- * 0a0b -> zb where z = ~(a OR b) 
+ * 0a0b -> zb where z = ~(a OR b)
  *
  * `prev` stores the least significant bit of previous encoded longword.
  */
@@ -203,7 +203,7 @@ static inline uint32_t Encode(uint32_t lw, uint32_t prev) {
 }
 
 /* If the most significant encoded bit is set to zero, this procedure updates
- * preceding bit according to previous encoded longword. */ 
+ * preceding bit according to previous encoded longword. */
 static inline void UpdateMSB(uint32_t *lwp, uint32_t prev) {
   uint32_t lw = *lwp;
   /* If encoded bit is set to one, then there's nothing to do. */

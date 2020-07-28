@@ -184,8 +184,8 @@ static void FloppyReader(__unused void *ptr) {
 
 #if DEBUG
       printf("[Floppy] %s track %d into %p.\n",
-             (io->cmd == CMD_WRITE) ? "Write" : "Read",
-             (int)io->track, io->buffer);
+             (io->cmd == CMD_WRITE) ? "Write" : "Read", (int)io->track,
+             io->buffer);
 #endif
 
       uint16_t adkconSet = ADKF_SETCLR | ADKF_MFMPREC | ADKF_FAST;
