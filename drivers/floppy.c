@@ -176,11 +176,16 @@ static void FloppyReader(__unused void *ptr) {
       /* Wait for the head to stabilize over the track. */
       WaitTimerSleep(FloppyTimer, DISK_SETTLE);
 
+      if (io->cmd == CMD_WRITE)
+        FixTrackEncoding((DiskTrack_t *)io->buffer);
+
       /* Make sure the DMA for the disk is turned off. */
       custom.dsklen = 0;
 
 #if DEBUG
-      printf("[Floppy] Read track %d into %p.\n", (int)io->track, io->buffer);
+      printf("[Floppy] %s track %d into %p.\n",
+             (io->cmd == CMD_WRITE) ? "Write" : "Read",
+             (int)io->track, io->buffer);
 #endif
 
       uint16_t adkconSet = ADKF_SETCLR | ADKF_MFMPREC | ADKF_FAST;
