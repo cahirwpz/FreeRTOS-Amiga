@@ -113,6 +113,10 @@ static inline void WaitDiskReady(void) {
     continue;
 }
 
+static inline int WriteProtected(void) {
+  return !(ciaa.ciapra & CIAF_DSKPROT);
+}
+
 static inline int HeadsAtTrack0() {
   return !(ciaa.ciapra & CIAF_DSKTRACK0);
 }
@@ -159,6 +163,9 @@ static void FloppyReader(__unused void *ptr) {
     FloppyIO_t *io;
 
     if (xQueueReceive(FloppyIOQueue, &io, 1000 / portTICK_PERIOD_MS)) {
+      if (io->cmd == CMD_WRITE && WriteProtected())
+        goto nowrite;
+
       /* Turn the motor on. */
       FloppyMotorOn();
 
@@ -221,6 +228,7 @@ static void FloppyReader(__unused void *ptr) {
       DisableINT(INTF_DSKBLK);
       DisableDMA(DMAF_DISK);
 
+    nowrite:
       /* Wake up the task that requested transfer. */
       xQueueSend(io->replyQueue, &io, portMAX_DELAY);
     } else {

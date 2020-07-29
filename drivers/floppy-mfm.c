@@ -39,7 +39,6 @@ typedef struct DiskSector {
 
 #define MASK 0x55555555
 #define DECODE(odd, even) ((((odd)&MASK) << 1) | ((even)&MASK))
-#define PREVLW(ptr) (((uint32_t *)&ptr)[-1])
 
 static inline DiskSector_t *HeaderToSector(uint16_t *header) {
   return (DiskSector_t *)((uintptr_t)header - offsetof(DiskSector_t, info[0]));
@@ -129,8 +128,8 @@ void DecodeSector(const DiskSector_t *sector, RawSector_t buf) {
     *buf++ = DECODE(odd1, even1);
 
 #if DEBUG
-    chksum ^= odd0 ^ odd1;
-    chksum ^= even0 ^ even1;
+    chksum ^= odd0 ^ even0;
+    chksum ^= odd1 ^ even1;
 #endif
   } while (--n);
 
@@ -262,7 +261,7 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   /* Sync word of first sector and magic longword might have not been read
    * correctly. Fix them now. */
   sector->magic = 0xAAAAAAAA;
-  sector->sync[1] = DSK_SYNC;
+  sector->sync[0] = DSK_SYNC;
 
   /* Fix sector header encoding */
   short gapDist = SECTOR_COUNT;
@@ -289,7 +288,7 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
 
     /* The least significant bit of last longword in previous sector
      * influences most significant bit of magic value. */
-    UpdateMSB(&sector->magic, PREVLW(sector));
+    UpdateMSB(&sector->magic, ((uint32_t *)sector)[-1]);
 
     sector++;
   } while (--gapDist);
