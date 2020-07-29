@@ -15,6 +15,7 @@ SOURCES = \
 	stdlib/strtoul.c \
 	string/bzero.S \
 	string/ffs.S \
+	string/memcmp.S \
 	string/memcpy.S \
 	string/memset.S \
 	string/strcat.S \

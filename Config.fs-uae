@@ -32,3 +32,4 @@ keyboard_key_f11 = action_pause
 keyboard_key_f10 = action_enter_debugger
 keyboard_key_f9 = action_screenshot
 joystick_port_1_mode = nothing
+writable_floppy_images = 1

@@ -113,6 +113,10 @@ static inline void WaitDiskReady(void) {
     continue;
 }
 
+static inline int WriteProtected(void) {
+  return !(ciaa.ciapra & CIAF_DSKPROT);
+}
+
 static inline int HeadsAtTrack0() {
   return !(ciaa.ciapra & CIAF_DSKTRACK0);
 }
@@ -159,6 +163,9 @@ static void FloppyReader(__unused void *ptr) {
     FloppyIO_t *io;
 
     if (xQueueReceive(FloppyIOQueue, &io, 1000 / portTICK_PERIOD_MS)) {
+      if (io->cmd == CMD_WRITE)
+        configASSERT(!WriteProtected());
+
       /* Turn the motor on. */
       FloppyMotorOn();
 
@@ -180,7 +187,9 @@ static void FloppyReader(__unused void *ptr) {
       custom.dsklen = 0;
 
 #if DEBUG
-      printf("[Floppy] Read track %d into %p.\n", (int)io->track, io->buffer);
+      printf("[Floppy] %s track %d into %p.\n",
+             (io->cmd == CMD_WRITE) ? "Write" : "Read", (int)io->track,
+             io->buffer);
 #endif
 
       uint16_t adkconSet = ADKF_SETCLR | ADKF_MFMPREC | ADKF_FAST;

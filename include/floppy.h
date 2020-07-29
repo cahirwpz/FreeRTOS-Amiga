@@ -23,6 +23,7 @@
 
 typedef uint16_t DiskTrack_t[TRACK_SIZE/sizeof(uint16_t)];
 typedef struct DiskSector DiskSector_t;
+typedef uint32_t RawSector_t[SECTOR_SIZE/sizeof(uint32_t)];
 
 #define CMD_READ 1
 #define CMD_WRITE 2
@@ -41,6 +42,8 @@ void FloppyKill(void);
 
 void FloppySendIO(FloppyIO_t *io);
 void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
-void DecodeSector(const DiskSector_t *sector, uint32_t *buf);
+void DecodeSector(const DiskSector_t *disksec, RawSector_t sec);
+void EncodeSector(const RawSector_t sec, DiskSector_t *disksec);
+void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
 
 #endif /* !_FLOPPY_H_ */

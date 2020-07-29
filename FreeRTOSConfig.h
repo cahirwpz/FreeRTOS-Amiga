@@ -63,7 +63,7 @@
 #define configASSERT(x)                                                        \
   {                                                                            \
     if (!(x))                                                                  \
-      portHALT();                                                              \
+      portBREAK();                                                             \
   }
 #else
 #include <stdio.h>
