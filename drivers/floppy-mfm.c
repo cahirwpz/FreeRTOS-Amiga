@@ -102,9 +102,9 @@ static uint32_t ChecksumHeader(const DiskSector_t *sector) {
   const uint32_t *end = sector->checksumHeader;
   uint32_t checksum = 0;
   do {
-    checksum ^= *ptr++ & MASK;
+    checksum ^= *ptr++;
   } while (ptr < end);
-  return checksum;
+  return checksum & MASK;
 }
 
 void DecodeSector(const DiskSector_t *sector, RawSector_t buf) {
@@ -149,7 +149,7 @@ void DecodeSector(const DiskSector_t *sector, RawSector_t buf) {
  *
  * `prev` stores the least significant bit of previous encoded longword.
  */
-static inline uint32_t Encode(uint32_t lw, uint32_t prev) {
+static uint32_t Encode(uint32_t lw, uint32_t prev) {
   lw &= MASK;                      /* -a-b-c-d */
   uint32_t odd = lw >> 1;          /* --a-b-c- */
   if (prev & 1)                    /* get x bit from previous word */
@@ -160,7 +160,7 @@ static inline uint32_t Encode(uint32_t lw, uint32_t prev) {
 
 /* If the most significant encoded bit is set to zero, this procedure updates
  * preceding bit according to previous encoded longword. */
-static inline void UpdateMSB(uint32_t *lwp, uint32_t prev) {
+static void UpdateMSB(uint32_t *lwp, uint32_t prev) {
   uint32_t lw = *lwp;
   /* If encoded bit is set to one, then there's nothing to do. */
   if (lw & 0x40000000)
@@ -169,7 +169,7 @@ static inline void UpdateMSB(uint32_t *lwp, uint32_t prev) {
   *lwp = (prev & 1) ? (lw & 0x7fffffff) : (lw | 0x80000000);
 }
 
-static inline void EncodeLongWord(uint32_t *enc, uint32_t lw) {
+static void EncodeLongWord(uint32_t *enc, uint32_t lw) {
   enc[ODD] = Encode(lw >> 1, enc[-1]);
   enc[EVEN] = Encode(lw, lw >> 1);
   configASSERT(lw == DecodeLong(enc));
@@ -205,9 +205,33 @@ void EncodeSector(const RawSector_t buf, DiskSector_t *sector) {
   /* We know last bit of encoded checksum,
    * thus we can correctly encode first longword of sector payload. */
   sector->data[ODD][0] = Encode(first >> 1, chksum);
-  sector->data[EVEN][0] = Encode(first, prev);
+  sector->data[EVEN][0] = Encode(first, prev >> 1);
   configASSERT(first == DECODE(sector->data[ODD][0], sector->data[EVEN][0]));
 }
+
+#if DEBUG
+static void VerifyTrackEncoding(uint32_t *data) {
+  short n = TRACK_SIZE / sizeof(uint32_t);
+  uint32_t prev = data[n - 1];
+  do {
+    uint32_t lw = *data;
+    if (lw != 0x44894489) {
+      /* Forbidden: no two consecutive 1s, no three consecutive 0s. */
+      uint32_t ones = lw & (lw >> 1);
+      uint32_t zeros = (lw | (lw >> 1) | (lw >> 2)) & MASK;
+      if (prev & 1)
+        zeros |= 0x40000000;
+      if (ones != 0)
+        printf("%p: two consecutive 1s (%08x)!\n", data, ones);
+      if (zeros != MASK)
+        printf("%p: three consecutive 0s (%08x)!\n", data, zeros);
+      configASSERT(ones == 0 && zeros == MASK);
+    }
+    data++;
+    prev = lw;
+  } while (--n);
+}
+#endif
 
 /*
  * Floppy drive rotational speed can vary (at most +/- 5%) !!!
@@ -258,18 +282,20 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   /* Fill the gap with encoded zeros. */
   (void)memset(track, 0xAA, GAP_SIZE);
 
-  /* Sync word of first sector and magic longword might have not been read
-   * correctly. Fix them now. */
-  sector->magic = 0xAAAAAAAA;
-  sector->sync[0] = DSK_SYNC;
-
   /* Fix sector header encoding */
   short gapDist = SECTOR_COUNT;
 
   do {
+    /* Magic longword and sync word of first sector have not been read
+     * correctly. We don't know which sector was first, so fix all of them. */
+    sector->magic = 0xAAAAAAAA;
+    sector->sync[ODD] = DSK_SYNC;
+
     /* Update the gap distance and encode the header. */
     SectorHeader_t hdr = DecodeHeader(sector);
     hdr.gapDist = gapDist;
+
+    (void)memset(sector->sectorLabel, 0xAA, sizeof(sector->sectorLabel));
 
 #if DEBUG
     printf("[MFM] Write: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
@@ -279,12 +305,12 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
     /* Encode the sector header. */
     uint32_t info = ((SectorHeader_u)hdr).lw;
     EncodeLongWord(sector->info, info);
-    UpdateMSB(sector->info + 1, info);
+    UpdateMSB((uint32_t *)sector->sectorLabel, info);
 
     /* Compute and encode the header checksum. */
     uint32_t chksum = ChecksumHeader(sector);
     EncodeLongWord(sector->checksumHeader, chksum);
-    UpdateMSB(sector->checksumHeader + 1, chksum);
+    UpdateMSB((uint32_t *)sector->checksum, chksum);
 
     /* The least significant bit of last longword in previous sector
      * influences most significant bit of magic value. */
@@ -292,4 +318,10 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
 
     sector++;
   } while (--gapDist);
+
+  UpdateMSB((void *)track, ((uint32_t *)sector)[-1]);
+
+#if DEBUG
+  VerifyTrackEncoding((uint32_t *)track);
+#endif
 }

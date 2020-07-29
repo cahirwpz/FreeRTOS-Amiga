@@ -62,8 +62,10 @@
 #if 1 /* Replace with 0 to turn of verbose assertion messages. */
 #define configASSERT(x)                                                        \
   {                                                                            \
-    if (!(x))                                                                  \
+    if (!(x)) {                                                                \
+      portBREAK();                                                             \
       portHALT();                                                              \
+    }                                                                          \
   }
 #else
 #include <stdio.h>
