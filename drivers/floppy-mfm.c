@@ -40,7 +40,6 @@ typedef struct DiskSector {
 #define MASK 0x55555555
 #define DECODE(odd, even) ((((odd)&MASK) << 1) | ((even)&MASK))
 #define PREVLW(ptr) (((uint32_t *)&ptr)[-1])
-#define NEXTLW(ptr) (((uint32_t *)&ptr)[1])
 
 static inline DiskSector_t *HeaderToSector(uint16_t *header) {
   return (DiskSector_t *)((uintptr_t)header - offsetof(DiskSector_t, info[0]));
@@ -61,22 +60,22 @@ static inline SectorHeader_t DecodeHeader(const DiskSector_t *sec) {
 }
 
 void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
-  short secnum = SECTOR_COUNT;
-  uint16_t *data = (uint16_t *)track;
-
   /* We always start after the DSK_SYNC word but the first one may be corrupted.
    * In case we start with the sync marker move to the sector header. */
+  uint16_t *data = (uint16_t *)track;
+
   if (*data == DSK_SYNC)
     data++;
 
   DiskSector_t *sec = HeaderToSector(data);
+  short secnum = SECTOR_COUNT;
 
   do {
     SectorHeader_t hdr = DecodeHeader(sec);
 
 #if DEBUG
-    printf("[MFM] SectorInfo: sector=%x, #sector=%d, #track=%d\n",
-           (intptr_t)sec, (int)hdr.sectorNum, (int)hdr.trackNum);
+    printf("[MFM] Read: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sec,
+           (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
     configASSERT(hdr.sectorNum <= SECTOR_COUNT);
     configASSERT(hdr.trackNum <= TRACK_COUNT);
 #endif
@@ -169,23 +168,32 @@ void DecodeSector(const DiskSector_t *sector, RawSector_t buf) {
  *          most significant encoded bit.
  */
 void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
-  DiskSector_t *sector = (void *)track + GAP_SIZE;
+  DiskSector_t *sector = ((void *)track) + GAP_SIZE;
 
-  /* Compact sectors at the end of track buffer. */
-  for (short i = SECTOR_COUNT - 1; i >= 0; i--) {
-    (void)memmove(&sector[i], sectors[i], sizeof(DiskSector_t));
-    sectors[i] = &sector[i];
+  /* Find sector with the highest address. */
+  DiskSector_t *last = NULL;
+  short lastNum = -1;
+  for (short i = 0; i < SECTOR_COUNT; i++) {
+    if (sectors[i] > last) {
+      last = sectors[i];
+      lastNum = i;
+    }
+  }
+
+  /* Compact sectors towards the end of track buffer. */
+  for (short i = SECTOR_COUNT - 1, j = lastNum; i >= 0; i--, j--) {
+    if (j < 0)
+      j += SECTOR_COUNT;
+    (void)memmove(&sector[i], sectors[j], sizeof(DiskSector_t));
+    sectors[j] = &sector[i];
   }
 
   /* Fill the gap with encoded zeros. */
-  (void)memset(track, 0xAA, GAP_SIZE);
-
-  /* Sync word of first sector might have not been read correctly. */
-  sector->sync[0] = sector->sync[1] = DSK_SYNC;
+  (void)memset(track, 0xAA, GAP_SIZE + sizeof(sector->magic));
 }
 
-/* Encode bits of a longword as MFM data. Assumes odd bits are masked out.
- * One bit of encoded data will become two bits of encoded data as follows:
+/* Encode bits of a longword as MFM data. One bit of encoded data will become
+ * two bits of encoded data as follows:
  * 0?01 -> 01
  * 0000 -> 10
  * 0100 -> 00
@@ -195,11 +203,12 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
  * `prev` stores the least significant bit of previous encoded longword.
  */
 static inline uint32_t Encode(uint32_t lw, uint32_t prev) {
-  uint32_t odd = lw >> 1;
+  lw &= MASK;             /* -a-b-c-d */
+  uint32_t odd = lw >> 1; /* --a-b-c- */
   if (prev & 1)
-    odd |= 0x80000000;
-  odd |= lw << 1;
-  return lw | (odd ^ MASK);
+    odd |= 0x80000000;             /* x-a-b-c- */
+  odd |= lw << 1;                  /* x-a-b-c- | a-b-c-d- */
+  return lw | (odd ^ (MASK << 1)); /* -a-b-c-d | ~(x-a-b-c- | a-b-c-d-) */
 }
 
 /* If the most significant encoded bit is set to zero, this procedure updates
@@ -209,7 +218,13 @@ static inline void UpdateMSB(uint32_t *lwp, uint32_t prev) {
   /* If encoded bit is set to one, then there's nothing to do. */
   if (lw & 0x40000000)
     return;
-  *lwp = (prev & 1) ? (lw | 0x80000000) : (lw & 0x7fffffff);
+  /* 0000 -> 10, 0100 -> 00 */
+  *lwp = (prev & 1) ? (lw & 0x7fffffff) : (lw | 0x80000000);
+}
+
+static inline void EncodeLongWord(uint32_t *enc, uint32_t lw) {
+  enc[ODD] = Encode(lw >> 1, enc[-1]);
+  enc[EVEN] = Encode(lw, lw >> 1);
 }
 
 void EncodeSector(const RawSector_t buf, DiskSector_t *sector) {
@@ -227,9 +242,9 @@ void EncodeSector(const RawSector_t buf, DiskSector_t *sector) {
 
   do {
     uint32_t lw = *buf++;
-    uint32_t odd = Encode(lw & MASK, prev);
-    uint32_t even = Encode((lw >> 1) & MASK, prev >> 1);
-    chksum ^= even ^ odd;
+    uint32_t odd = Encode(lw, prev);
+    uint32_t even = Encode(lw >> 1, prev >> 1);
+    chksum ^= odd ^ even;
     *dataOdd++ = odd;
     *dataEven++ = even;
     prev = lw;
@@ -250,23 +265,29 @@ void FixTrackEncoding(DiskTrack_t *track) {
   DiskSector_t *sec = (void *)track + GAP_SIZE;
 
   do {
+    /* Sync word of first sector and magic longword might have not been read
+     * correctly. Fix them now. */
+    sec->magic = 0xAAAAAAAA;
+    sec->sync[1] = DSK_SYNC;
+
     /* Update the gap distance and encode the header. */
     SectorHeader_t hdr = DecodeHeader(sec);
     hdr.gapDist = secnum;
 
+#if DEBUG
+    printf("[MFM] Write: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sec,
+           (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
+#endif
+
     /* Encode the sector header. */
     uint32_t info = ((SectorHeader_u)hdr).lw;
-
-    sec->info[ODD] = Encode(info, DSK_SYNC);
-    sec->info[EVEN] = Encode(info >> 1, info);
-    UpdateMSB(&NEXTLW(sec->info[EVEN]), info);
+    EncodeLongWord(sec->info, info);
+    UpdateMSB(sec->info + 1, info);
 
     /* Compute and encode the header checksum. */
     uint32_t chksum = ChecksumHeader(sec);
-
-    sec->checksumHeader[ODD] = Encode(chksum, PREVLW(sec->checksumHeader[ODD]));
-    sec->checksumHeader[EVEN] = Encode(chksum >> 1, chksum);
-    UpdateMSB(&NEXTLW(sec->checksumHeader[EVEN]), chksum);
+    EncodeLongWord(sec->checksumHeader, chksum);
+    UpdateMSB(sec->checksumHeader + 1, chksum);
 
     /* The least significant bit of last longword in previous sector
      * influences most significant bit of magic value. */

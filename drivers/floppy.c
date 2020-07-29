@@ -176,9 +176,6 @@ static void FloppyReader(__unused void *ptr) {
       /* Wait for the head to stabilize over the track. */
       WaitTimerSleep(FloppyTimer, DISK_SETTLE);
 
-      if (io->cmd == CMD_WRITE)
-        FixTrackEncoding((DiskTrack_t *)io->buffer);
-
       /* Make sure the DMA for the disk is turned off. */
       custom.dsklen = 0;
 
