@@ -7,6 +7,14 @@
 
 #define DEBUG 0
 
+#if DEBUG
+#define DASSERT(x) configASSERT(x)
+#define DPRINTF(...) printf(__VA_ARGS__)
+#else
+#define DASSERT(x)
+#define DPRINTF(...)
+#endif
+
 /*
  * Amiga MFM track format:
  * http://lclevy.free.fr/adflib/adf_info.html#p22
@@ -76,22 +84,18 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   do {
     SectorHeader_t hdr = DecodeHeader(sector);
 
-#if DEBUG
-    printf("[MFM] Read: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
-           (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
-    configASSERT(hdr.sectorNum <= SECTOR_COUNT);
-    configASSERT(hdr.trackNum <= TRACK_COUNT);
-#endif
+    DPRINTF("[MFM] Read: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
+            (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
+    DASSERT(hdr.sectorNum <= SECTOR_COUNT);
+    DASSERT(hdr.trackNum <= TRACK_COUNT);
 
     sectors[hdr.sectorNum] = sector++;
     /* Handle the gap. */
     if (hdr.gapDist == 1 && secnum > 1) {
       /* Move to the first sector after the gap. */
       sector = FindSectorHeader(sector);
-#if DEBUG
-      printf("[MFM] Gap of size %d\n",
-             (intptr_t)sector - (intptr_t)(sectors[hdr.sectorNum] + 1));
-#endif
+      DPRINTF("[MFM] Gap of size %d\n",
+              (intptr_t)sector - (intptr_t)(sectors[hdr.sectorNum] + 1));
     }
   } while (--secnum);
 }
@@ -112,9 +116,10 @@ void DecodeSector(const DiskSector_t *sector, RawSector_t buf) {
   const uint32_t *dataEven = &sector->data[EVEN][0];
   short n = SECTOR_SIZE / sizeof(uint32_t) / 2;
 
-#if DEBUG
   /* Verify header checksum. */
-  configASSERT(DecodeLong(sector->checksumHeader) == ChecksumHeader(sector));
+  DASSERT(DecodeLong(sector->checksumHeader) == ChecksumHeader(sector));
+
+#if DEBUG
   /* Calculate sector payload checksum. */
   uint32_t chksum = 0;
 #endif
@@ -133,10 +138,8 @@ void DecodeSector(const DiskSector_t *sector, RawSector_t buf) {
 #endif
   } while (--n);
 
-#if DEBUG
   /* Verify sector payload checksum. */
-  configASSERT((chksum & MASK) == DecodeLong(sector->checksum));
-#endif
+  DASSERT((chksum & MASK) == DecodeLong(sector->checksum));
 }
 
 /* Encode bits of a longword as MFM data. One bit of encoded data will become
@@ -172,7 +175,7 @@ static void UpdateMSB(uint32_t *lwp, uint32_t prev) {
 static void EncodeLongWord(uint32_t *enc, uint32_t lw) {
   enc[ODD] = Encode(lw >> 1, enc[-1]);
   enc[EVEN] = Encode(lw, lw >> 1);
-  configASSERT(lw == DecodeLong(enc));
+  DASSERT(lw == DecodeLong(enc));
 }
 
 void EncodeSector(const RawSector_t buf, DiskSector_t *sector) {
@@ -196,7 +199,7 @@ void EncodeSector(const RawSector_t buf, DiskSector_t *sector) {
     *dataOdd++ = odd;
     *dataEven++ = even;
     prev = lw;
-    configASSERT(lw == DECODE(odd, even));
+    DASSERT(lw == DECODE(odd, even));
   } while (--n);
 
   /* Sector checksum is known, so let's encode it. */
@@ -206,7 +209,7 @@ void EncodeSector(const RawSector_t buf, DiskSector_t *sector) {
    * thus we can correctly encode first longword of sector payload. */
   sector->data[ODD][0] = Encode(first >> 1, chksum);
   sector->data[EVEN][0] = Encode(first, prev >> 1);
-  configASSERT(first == DECODE(sector->data[ODD][0], sector->data[EVEN][0]));
+  DASSERT(first == DECODE(sector->data[ODD][0], sector->data[EVEN][0]));
 }
 
 #if DEBUG
@@ -297,10 +300,8 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
 
     (void)memset(sector->sectorLabel, 0xAA, sizeof(sector->sectorLabel));
 
-#if DEBUG
-    printf("[MFM] Write: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
-           (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
-#endif
+    DPRINTF("[MFM] Write: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
+            (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
 
     /* Encode the sector header. */
     uint32_t info = ((SectorHeader_u)hdr).lw;
