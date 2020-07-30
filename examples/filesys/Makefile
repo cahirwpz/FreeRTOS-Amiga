@@ -1,9 +1,9 @@
 TOPDIR = $(realpath ../..)
 
-PROGRAM = floppy
-SOURCES = main.c reader.c writer.c
+PROGRAM = filesys
+SOURCES = main.c filesys.c
 OBJECTS = ../startup.o ../fault.o ../trap.o 
-LAUNCHOPTS = --window parallel
+LAUNCHOPTS = --window serial
 ADF-EXTRA =
 
 include $(TOPDIR)/build/build.prog.mk

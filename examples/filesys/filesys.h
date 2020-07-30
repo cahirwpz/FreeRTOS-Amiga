@@ -1,5 +1,5 @@
-#ifndef _DIRENT_H_
-#define _DIRENT_H_
+#ifndef _FILESYS_H_
+#define _FILESYS_H_
 
 #include <types.h>
 #include <floppy.h>
@@ -31,4 +31,4 @@ const DirEntry_t *FsListDir(void **base_p);
 
 File_t *FsOpen(const char *name);
 
-#endif /* !_DIRENT_H_ */
+#endif /* !_FILESYS_H_ */
