@@ -5,3 +5,4 @@ set confirm off
 set verbose off
 
 source gdb-dashboard
+dashboard -layout breakpoints assembly registers source stack variables
