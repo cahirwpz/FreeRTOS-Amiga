@@ -11,6 +11,8 @@ extern File_t *KernCons; /* Kernel console file (parallel port by default) */
 typedef void (*putchar_t)(char);
 void kvprintf(putchar_t, const char *fmt, va_list ap);
 
+int snprintf(char *str, size_t size, const char *format, ...);
+
 #define putchar(c) FilePutChar(KernCons, (c))
 #define printf(...) FilePrintf(KernCons, __VA_ARGS__)
 

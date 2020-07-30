@@ -15,6 +15,11 @@ typedef enum {
   FS_READ     /* read some bytes from the file */
 } FsCmd_t;
 
+typedef struct FsFile {
+  File_t f;
+  DirEntry_t *de;
+} FsFile_t;
+
 /* The type of message send to file system task. */
 typedef struct FsMsg {
   FsCmd_t cmd; /* request type */
@@ -38,52 +43,61 @@ typedef struct FsMsg {
   } response;
 } FsMsg_t;
 
-typedef struct FsFile {
-  File_t f;
-  DirEntry_t *de;
-} FsFile_t;
-
 static long FsRead(FsFile_t *f, void *buf, size_t nbyte);
 static long FsSeek(FsFile_t *f, long offset, int whence);
 static void FsClose(FsFile_t *f);
 
-__unused static FileOps_t FsOps = {.read = (FileRead_t)FsRead,
-                                   .seek = (FileSeek_t)FsSeek,
-                                   .close = (FileClose_t)FsClose};
+static FileOps_t FsOps = {.read = (FileRead_t)FsRead,
+                          .seek = (FileSeek_t)FsSeek,
+                          .close = (FileClose_t)FsClose};
 
 static void vFileSysTask(__unused void *data) {
   for (;;) {
   }
 }
 
+static long FsSendMsg(FsMsg_t *msg) {
+  /* TODO: fill in missing 'msg' fields, send it to filesystem task and wait for
+   * the response. */
+  (void)msg;
+  return 0;
+}
+
 bool FsMount(void) {
-  return false;
+  FsMsg_t msg = {.cmd = FS_MOUNT};
+  return FsSendMsg(&msg);
 }
 
 /* Remember to free memory used up by a directory! */
 int FsUnMount(void) {
-  return 0;
+  FsMsg_t msg = {.cmd = FS_UNMOUNT};
+  return FsSendMsg(&msg);
 }
 
 const DirEntry_t *FsListDir(void **base_p) {
-  (void)base_p;
-  return NULL;
+  FsMsg_t msg = {.cmd = FS_DIRENT};
+  FsSendMsg(&msg);
+  return *base_p;
 }
 
 File_t *FsOpen(const char *name) {
+  FsMsg_t msg = {.cmd = FS_OPEN};
   (void)name;
-  return NULL;
+  return (File_t *)FsSendMsg(&msg);
 }
 
 static void FsClose(FsFile_t *ff) {
+  FsMsg_t msg = {.cmd = FS_CLOSE};
   (void)ff;
+  FsSendMsg(&msg);
 }
 
 static long FsRead(FsFile_t *ff, void *buf, size_t nbyte) {
+  FsMsg_t msg = {.cmd = FS_READ};
   (void)ff;
   (void)buf;
   (void)nbyte;
-  return -1;
+  return FsSendMsg(&msg);
 }
 
 /* Does not involve direct interaction with the filesystem. */
@@ -94,13 +108,15 @@ static long FsSeek(FsFile_t *ff, long offset, int whence) {
   return -1;
 }
 
-static TaskHandle_t filesys_handle;
+static TaskHandle_t filesysHandle;
 
 #define FLOPPY_TASK_PRIO 3
 #define FILESYS_TASK_PRIO 2
 
 void FsInit(void) {
+  (void)FsOps;
+
   FloppyInit(FLOPPY_TASK_PRIO);
   xTaskCreate(vFileSysTask, "filesys", configMINIMAL_STACK_SIZE, NULL,
-              FILESYS_TASK_PRIO, &filesys_handle);
+              FILESYS_TASK_PRIO, &filesysHandle);
 }

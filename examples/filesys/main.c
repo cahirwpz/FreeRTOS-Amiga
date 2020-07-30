@@ -6,6 +6,9 @@
 
 #include "filesys.h"
 
+extern void StartShellTask(void);
+extern void StartReaderTasks(void);
+
 static void SystemClockTickHandler(__unused void *data) {
   /* Increment the system timer value and possibly preempt. */
   uint32_t ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
@@ -21,6 +24,8 @@ int main(void) {
   AddIntServer(VertBlankChain, SystemClockTick);
 
   FsInit();
+  StartReaderTasks();
+  StartShellTask();
 
   vTaskStartScheduler();
 

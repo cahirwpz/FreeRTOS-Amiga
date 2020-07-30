@@ -6,14 +6,7 @@
 #include <floppy.h>
 
 #define DEBUG 0
-
-#if DEBUG
-#define DASSERT(x) configASSERT(x)
-#define DPRINTF(...) printf(__VA_ARGS__)
-#else
-#define DASSERT(x)
-#define DPRINTF(...)
-#endif
+#include <debug.h>
 
 /*
  * Amiga MFM track format:

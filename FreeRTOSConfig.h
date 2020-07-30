@@ -57,6 +57,10 @@
 
 /* m68k port specific definitions and options. */
 #define portCRITICAL_NESTING_IN_TCB             1
+#define portBYTE_ALIGNMENT                      4
+
+/* FreeRTOS-CLI specific configuration. */
+#define configCOMMAND_INT_MAX_OUTPUT_SIZE       1
 
 /* What to do when assertion fails? */
 #if 1 /* Replace with 0 to turn of verbose assertion messages. */

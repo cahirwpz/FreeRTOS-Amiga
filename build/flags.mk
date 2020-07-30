@@ -4,6 +4,7 @@ CFLAGS    += -std=gnu11 $(OFLAGS) $(WFLAGS)
 OFLAGS    += -m68010 -Wall -Wextra -fomit-frame-pointer -Os -fno-common # -mpcrel
 WFLAGS    += -Wall -Werror -Wno-builtin-declaration-mismatch
 CPPFLAGS  += -I$(TOPDIR)/FreeRTOS/portable/m68k-amiga \
+             -I$(TOPDIR)/FreeRTOS-Plus/include \
 	     -I$(TOPDIR)/include \
 	     -I$(TOPDIR)
 LDFLAGS   += -nostdlib

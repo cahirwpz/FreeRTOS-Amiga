@@ -86,6 +86,7 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
            (read ? "read" : "write"), addr);
   }
 
+  portBREAK();
   portHALT();
 }
 

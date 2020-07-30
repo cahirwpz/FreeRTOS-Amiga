@@ -1,6 +1,6 @@
 TOPDIR = $(realpath .)
 
-SUBDIR = tools FreeRTOS drivers libc examples
+SUBDIR = tools FreeRTOS FreeRTOS-Plus drivers libc examples
 BUILD-FILES = bootloader.bin cscope.out tags etags
 
 all: build
