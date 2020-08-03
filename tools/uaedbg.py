@@ -20,7 +20,7 @@ async def UaeLaunch(loop, args):
         await asyncio.create_subprocess_exec(
             args.emulator, *args.params,
             stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE))
 
     gdbserver = None
@@ -40,6 +40,8 @@ async def UaeLaunch(loop, args):
 
     # Terminate FS-UAE when connection with terminal is broken
     loop.add_signal_handler(signal.SIGHUP, uaeproc.terminate)
+
+    logger_task = asyncio.ensure_future(uaeproc.logger())
 
     if args.gdbserver:
         await GdbListen()

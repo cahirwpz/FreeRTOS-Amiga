@@ -14,6 +14,7 @@ PROVIDE(ciaa = 0xbfe001);
 PROVIDE(ciab = 0xbfd000);
 PROVIDE(msm6242b = 0xdc0000);
 PROVIDE(custom = 0xdff000);
+PROVIDE(UaeCallTrap = 0xf0ff60);
 SECTIONS
 {
   .text 0: ALIGN(4) SUBALIGN(2)
