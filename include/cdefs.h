@@ -51,7 +51,11 @@
 #define __unused __attribute__((unused))
 #define __datachip __attribute__((section(".datachip")))
 #define __bsschip __attribute__((section(".bsschip")))
+#define __aligned(x) __attribute__((aligned(x)))
 
-#define __weak_alias(alias, sym) __asm(".weak " #alias "\n" #alias " = " #sym)
+#define __weak_alias(alias, sym) \
+  __asm(".weak " #alias "\n" #alias " = " #sym)
+#define __strong_alias(alias, sym) \
+  __asm(".global " #alias "\n" #alias " = " #sym)
 
 #endif /* !_CDEFS_H_ */
