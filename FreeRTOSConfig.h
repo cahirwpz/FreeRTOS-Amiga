@@ -63,20 +63,11 @@
 #define configCOMMAND_INT_MAX_OUTPUT_SIZE       1
 
 /* What to do when assertion fails? */
-#if 1 /* Replace with 0 to turn of verbose assertion messages. */
 #define configASSERT(x)                                                        \
   {                                                                            \
     if (!(x))                                                                  \
       portPANIC();                                                             \
   }
-#else
-#include <stdio.h>
-#define configASSERT(x)                                                        \
-  {                                                                            \
-    if (!(x))                                                                  \
-    { printf("Error at %s:%d!", __FILE__, __LINE__); portPANIC (); }           \
-  }
-#endif
 
 /*---------------------------------------------------------------------------*
  * Amiga port specific definitions.                                          *
