@@ -9,7 +9,7 @@
 #error This file must not be used if configSUPPORT_DYNAMIC_ALLOCATION is 0
 #endif
 
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG
 #include <stdio.h>
@@ -181,35 +181,43 @@ static word_t *find_fit(arena_t *ar, size_t reqsz) {
 #endif
 
 static void ar_init(arena_t *ar, void *end) {
+  size_t sz = end - (void *)ar->start;
   n_setprev(head, head);
   n_setnext(head, head);
   ar->end = end;
   ar->last = ar->start;
-  ar->totalFree = end - (void *)ar->start;
-  ar->minFree = end - (void *)ar->start;
+  ar->totalFree = sz;
+  ar->minFree = sz;
+  word_t *bt = ar->start;
+  bt_make(bt, sz, FREE);
+  n_insert(bt);
 }
 
 static void *ar_malloc(arena_t *ar, size_t size) {
   size_t reqsz = blksz(size);
-  word_t *bt = find_fit(ar, reqsz);
-  if (bt == NULL)
-    return NULL;
 
-  /* Mark found block as used. */
-  size_t sz = bt_size(bt);
-  n_remove(bt);
-  bt_make(bt, reqsz, USED);
-  /* Split free block if needed. */
-  if (sz > reqsz) {
-    bt_make(bt_next(bt), sz - reqsz, FREE);
-    n_insert(bt_next(bt));
-  } else {
-    /* Nothing to split? Then previous block is not free anymore! */
-    bt_clr_prevfree(bt_next(bt));
+  vTaskSuspendAll();
+
+  word_t *bt = find_fit(ar, reqsz);
+  if (bt != NULL) {
+    /* Mark found block as used. */
+    size_t sz = bt_size(bt);
+    n_remove(bt);
+    bt_make(bt, reqsz, USED);
+    /* Split free block if needed. */
+    if (sz > reqsz) {
+      bt_make(bt_next(bt), sz - reqsz, FREE);
+      n_insert(bt_next(bt));
+    } else {
+      /* Nothing to split? Then previous block is not free anymore! */
+      bt_clr_prevfree(bt_next(bt));
+    }
   }
 
+  xTaskResumeAll();
+
   /* Did we run out of memory? */
-  void *ptr = bt_payload(bt);
+  void *ptr = bt ? bt_payload(bt) : NULL;
   debug("%s(%p, %lu) = %p", __func__, ar, size, ptr);
   return ptr;
 }
@@ -218,6 +226,8 @@ static void ar_free(arena_t *ar, void *ptr) {
   debug("%s(%p, %p)", __func__, ptr);
 
   word_t *bt = bt_fromptr(ptr);
+
+  vTaskSuspendAll();
 
   /* Mark block as free. */
   bt_make(bt, bt_size(bt), bt_get_prevfree(bt));
@@ -243,10 +253,14 @@ static void ar_free(arena_t *ar, void *ptr) {
     bt = prev;
   }
 
-  n_insert(bt);
+  /* Increase the amount of available memory. */
+  // ar->totalFree += freed;
+
+  xTaskResumeAll();
 }
 
 static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
+  void *new_ptr = NULL;
   word_t *bt = bt_fromptr(old_ptr);
   size_t reqsz = blksz(size);
   size_t sz = bt_size(bt);
@@ -256,47 +270,48 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
     return old_ptr;
   }
 
+  vTaskSuspendAll();
+
   if (reqsz < sz) {
     /* Shrink block: split block and free second one. */
     bt_make(bt, reqsz, USED | bt_get_prevfree(bt));
     word_t *next = bt_next(bt);
     bt_make(next, sz - reqsz, USED);
     ar_free(ar, bt_payload(next));
-    debug("%s(%p, %ld) = %p", __func__, old_ptr, size, old_ptr);
-    return old_ptr;
-  }
-
-  /* Expand block */
-  word_t *next = bt_next(bt);
-  if (next && bt_free(next)) {
-    /* Use next free block if it has enough space. */
-    size_t nextsz = bt_size(next);
-    if (sz + nextsz >= reqsz) {
-      n_remove(next);
-      bt_make(bt, reqsz, USED | bt_get_prevfree(bt));
-      word_t *next = bt_next(bt);
-      if (sz + nextsz > reqsz) {
-        bt_make(next, sz + nextsz - reqsz, FREE);
-        n_insert(next);
-      } else {
-        bt_clr_prevfree(next);
+    new_ptr = old_ptr;
+  } else {
+    /* Expand block */
+    word_t *next = bt_next(bt);
+    if (next && bt_free(next)) {
+      /* Use next free block if it has enough space. */
+      size_t nextsz = bt_size(next);
+      if (sz + nextsz >= reqsz) {
+        n_remove(next);
+        bt_make(bt, reqsz, USED | bt_get_prevfree(bt));
+        word_t *next = bt_next(bt);
+        if (sz + nextsz > reqsz) {
+          bt_make(next, sz + nextsz - reqsz, FREE);
+          n_insert(next);
+        } else {
+          bt_clr_prevfree(next);
+        }
+        new_ptr = old_ptr;
       }
-      debug("realloc(%p, %ld) = %p", old_ptr, size, old_ptr);
-      return old_ptr;
     }
   }
 
-  /* Run out of options: let real realloc move the block. */
-  return NULL;
+  xTaskResumeAll();
+
+  debug("%s(%p, %ld) = %p", __func__, old_ptr, size, new_ptr);
+  return new_ptr;
 }
 
 static void ar_check(arena_t *ar) {
   word_t *bt = ar->start;
 
-  if (bt == NULL)
-    return;
+  vTaskSuspendAll();
 
-  word_t *prev;
+  word_t *prev = NULL;
   int prevfree = 0;
 
   msg("--=[ all block list ]=---\n");
@@ -327,6 +342,8 @@ static void ar_check(arena_t *ar) {
   }
 
   msg("--=[ free block list end ]=---\n");
+
+  xTaskResumeAll();
 }
 
 /* --=[ wrappers ]=---------------------------------------------------------- */
@@ -355,7 +372,6 @@ static arena_t *arena_of(void *p) {
 
 void *_pvPortMallocBelow(size_t xSize, uintptr_t xUpperAddr) {
   void *ptr;
-
   for (const MemRegion_t *mr = MemRegions; mr->mr_upper; mr++) {
     if ((uintptr_t)arena(mr) >= xUpperAddr)
       continue;
@@ -383,7 +399,7 @@ void *pvPortMallocChip(size_t xSize) {
 }
 
 void vPortFree(void *p) {
-  if (p)
+  if (p != NULL)
     ar_free(arena_of(p), p);
 }
 
