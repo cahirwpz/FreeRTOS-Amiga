@@ -67,14 +67,14 @@
 #define configASSERT(x)                                                        \
   {                                                                            \
     if (!(x))                                                                  \
-      portBREAK();                                                             \
+      portPANIC();                                                             \
   }
 #else
 #include <stdio.h>
 #define configASSERT(x)                                                        \
   {                                                                            \
     if (!(x))                                                                  \
-    { printf("Error at %s:%d!", __FILE__, __LINE__); portHALT(); }                                                              \
+    { printf("Error at %s:%d!", __FILE__, __LINE__); portPANIC (); }           \
   }
 #endif
 
