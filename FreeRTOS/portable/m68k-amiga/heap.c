@@ -4,6 +4,7 @@
 #include <cdefs.h>
 #include <limits.h>
 #include <string.h>
+#include <stdio.h>
 #include <boot.h>
 
 #if (configSUPPORT_DYNAMIC_ALLOCATION == 0)
@@ -13,12 +14,9 @@
 #define DEBUG 0
 
 #if DEBUG
-#include <stdio.h>
 #define debug(fmt, ...) printf("%s: " fmt "\n", __func__, __VA_ARGS__)
-#define msg(...) printf(__VA_ARGS__)
 #else
 #define debug(fmt, ...)
-#define msg(...)
 #endif
 
 #define assert(...) configASSERT(__VA_ARGS__)
@@ -33,17 +31,20 @@ typedef uintptr_t word_t;
 /* Used block consists of header BT and user memory. */
 #define USEDBLK_SZ (sizeof(word_t))
 
+/* Boundary tag flags. */
 typedef enum {
-  FREE = 0,
-  USED = 1,
-  PREVFREE = 2,
+  FREE = 0,     /* this block is free */
+  USED = 1,     /* this block is used */
+  PREVFREE = 2, /* previous block is free */
 } bt_flags;
 
+/* Stored in payload of free blocks. */
 typedef struct node {
   struct node *prev;
   struct node *next;
 } node_t;
 
+/* Structure kept in the header of each managed memory region. */
 typedef struct arena {
   node_t freelst;     /* guard of free block list */
   word_t *end;        /* first address after the arena */
@@ -117,7 +118,7 @@ static inline word_t *ar_bt_prev(arena_t *ar, word_t *bt) {
   return (ft > ar->start) ? (void *)bt - bt_size(ft) : NULL;
 }
 
-/* Useful if pointer compression is implemented */
+/* These are only useful if node_t pointers are compressed. */
 static inline node_t *n_prev(node_t *node) {
   return node->prev;
 }
@@ -159,6 +160,7 @@ static inline size_t blksz(size_t size) {
 }
 
 #if 1
+/* First fit */
 static word_t *find_fit(arena_t *ar, size_t reqsz) {
   for (node_t *n = n_next(head); n != head; n = n_next(n)) {
     word_t *bt = bt_fromptr(n);
@@ -168,6 +170,7 @@ static word_t *find_fit(arena_t *ar, size_t reqsz) {
   return NULL;
 }
 #else
+/* Best fit */
 static word_t *find_fit(arena_t *ar, size_t reqsz) {
   word_t *best = NULL;
   size_t bestsz = INT_MAX;
@@ -337,7 +340,9 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
   return new_ptr;
 }
 
-static void ar_check(arena_t *ar) {
+#define msg(...) if (verbose) printf(__VA_ARGS__)
+
+static void ar_check(arena_t *ar, int verbose) {
   word_t *bt = ar->start;
 
   vTaskSuspendAll();
@@ -467,9 +472,9 @@ void *pvPortRealloc(void *old_ptr, size_t size) {
   return NULL;
 }
 
-void vPortMemCheck(void) {
+void vPortMemCheck(int verbose) {
   for (const MemRegion_t *mr = MemRegions; mr->mr_upper; mr++)
-    ar_check(arena(mr));
+    ar_check(arena(mr), verbose);
 }
 
 size_t xPortGetFreeHeapSize(void) {

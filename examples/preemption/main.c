@@ -69,7 +69,7 @@ static void vTestHeapTask(__unused void *data) {
       RandFree();
     else
       RandRealloc();
-    mcheck();
+    mcheck(0);
     vTaskDelay(1);
   }
 }

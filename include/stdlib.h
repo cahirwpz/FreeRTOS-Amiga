@@ -13,7 +13,7 @@ void *malloc(size_t size);
 void free(void *ptr);
 void *calloc(size_t nmemb, size_t size);
 void *realloc(void *ptr, size_t size);
-void mcheck(void);
+void mcheck(int verbose);
 
 #define alloca(size) __builtin_alloca(size)
 
