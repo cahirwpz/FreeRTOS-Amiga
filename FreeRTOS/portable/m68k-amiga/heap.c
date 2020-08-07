@@ -2,6 +2,7 @@
 #include <FreeRTOS/task.h>
 
 #include <cdefs.h>
+#include <limits.h>
 #include <string.h>
 #include <boot.h>
 
@@ -22,9 +23,15 @@
 
 #define assert(...) configASSERT(__VA_ARGS__)
 
+typedef uintptr_t word_t;
+
 #define ALIGNMENT 16
 
-typedef uintptr_t word_t;
+/* Free block consists of header BT, pointer to previous and next free block,
+ * payload and footer BT. */
+#define FREEBLK_SZ (4 * sizeof(word_t))
+/* Used block consists of header BT and user memory. */
+#define USEDBLK_SZ (sizeof(word_t))
 
 typedef enum {
   FREE = 0,
@@ -180,16 +187,32 @@ static word_t *find_fit(arena_t *ar, size_t reqsz) {
 }
 #endif
 
+#define inc_free(sz) ar_inc_free(ar, (sz))
+static void ar_inc_free(arena_t *ar, size_t sz) {
+  ar->totalFree += sz;
+}
+
+#define dec_free(sz) ar_dec_free(ar, (sz))
+static void ar_dec_free(arena_t *ar, size_t sz) {
+  /* Decrease the amount of available memory. */
+  ar->totalFree -= sz;
+  /* Record the lowest amount of available memory. */
+  if (ar->totalFree < ar->minFree)
+    ar->minFree = ar->totalFree;
+}
+
 static void ar_init(arena_t *ar, void *end) {
   size_t sz = end - (void *)ar->start;
+
   n_setprev(head, head);
   n_setnext(head, head);
   ar->end = end;
   ar->last = ar->start;
-  ar->totalFree = sz;
-  ar->minFree = sz;
+  ar->totalFree = 0;
+  ar->minFree = INT_MAX;
   word_t *bt = ar->start;
   bt_make(bt, sz, FREE);
+  inc_free(sz - USEDBLK_SZ);
   n_insert(bt);
 }
 
@@ -204,9 +227,11 @@ static void *ar_malloc(arena_t *ar, size_t size) {
     size_t sz = bt_size(bt);
     n_remove(bt);
     bt_make(bt, reqsz, USED);
+    dec_free(reqsz - USEDBLK_SZ);
     /* Split free block if needed. */
     if (sz > reqsz) {
       bt_make(bt_next(bt), sz - reqsz, FREE);
+      dec_free(USEDBLK_SZ);
       n_insert(bt_next(bt));
     } else {
       /* Nothing to split? Then previous block is not free anymore! */
@@ -223,14 +248,17 @@ static void *ar_malloc(arena_t *ar, size_t size) {
 }
 
 static void ar_free(arena_t *ar, void *ptr) {
-  debug("%s(%p, %p)", __func__, ptr);
+  debug("%s(%p, %p)", __func__, ar, ptr);
 
   word_t *bt = bt_fromptr(ptr);
 
   vTaskSuspendAll();
 
+  assert(bt_used(bt) && "Double free detected!");
+
   /* Mark block as free. */
   bt_make(bt, bt_size(bt), bt_get_prevfree(bt));
+  inc_free(bt_size(bt) - USEDBLK_SZ);
   debug("bt = %p (size: %u)", bt, bt_size(bt));
 
   word_t *next = bt_next(bt);
@@ -239,6 +267,7 @@ static void ar_free(arena_t *ar, void *ptr) {
       /* Coalesce with next block. */
       n_remove(next);
       bt_make(bt, bt_size(bt) + bt_size(next), bt_get_prevfree(bt));
+      inc_free(USEDBLK_SZ);
     } else {
       /* Mark next used block with prevfree flag. */
       bt_set_prevfree(next);
@@ -250,11 +279,11 @@ static void ar_free(arena_t *ar, void *ptr) {
     word_t *prev = bt_prev(bt);
     n_remove(prev);
     bt_make(prev, bt_size(prev) + bt_size(bt), FREE);
+    inc_free(USEDBLK_SZ);
     bt = prev;
   }
 
-  /* Increase the amount of available memory. */
-  // ar->totalFree += freed;
+  n_insert(bt);
 
   xTaskResumeAll();
 }
@@ -287,10 +316,12 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
       size_t nextsz = bt_size(next);
       if (sz + nextsz >= reqsz) {
         n_remove(next);
+        dec_free(nextsz - USEDBLK_SZ);
         bt_make(bt, reqsz, USED | bt_get_prevfree(bt));
         word_t *next = bt_next(bt);
         if (sz + nextsz > reqsz) {
           bt_make(next, sz + nextsz - reqsz, FREE);
+          inc_free(sz + nextsz - reqsz - USEDBLK_SZ);
           n_insert(next);
         } else {
           bt_clr_prevfree(next);
@@ -313,6 +344,7 @@ static void ar_check(arena_t *ar) {
 
   word_t *prev = NULL;
   int prevfree = 0;
+  unsigned freeMem = 0, dangling = 0;
 
   msg("--=[ all block list ]=---\n");
 
@@ -325,12 +357,15 @@ static void ar_check(arena_t *ar) {
       assert(*bt == *ft && "Header and footer do not match!");
       assert(!prevfree && "Free block not coalesced?");
       prevfree = 1;
+      freeMem += bt_size(bt) - USEDBLK_SZ;
+      dangling++;
     } else {
       assert(flag == prevfree && "PREVFREE flag mismatch!");
       prevfree = 0;
     }
   }
 
+  assert(freeMem == ar->totalFree && "Total free memory miscalculated!");
   assert(prev == ar->last && "Last block set incorrectly!");
 
   msg("--=[ free block list start ]=---\n");
@@ -339,9 +374,12 @@ static void ar_check(arena_t *ar) {
     word_t *bt = bt_fromptr(n);
     msg("%p: [%p, %p]\n", n, n_prev(n), n_next(n));
     assert(bt_free(bt));
+    dangling--;
   }
 
   msg("--=[ free block list end ]=---\n");
+
+  assert(dangling == 0 && "Dangling free blocks!");
 
   xTaskResumeAll();
 }
