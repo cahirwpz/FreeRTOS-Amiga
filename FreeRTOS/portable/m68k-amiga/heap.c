@@ -37,6 +37,7 @@ typedef enum {
   FREE = 0,     /* this block is free */
   USED = 1,     /* this block is used */
   PREVFREE = 2, /* previous block is free */
+  ISLAST = 4,   /* last block in an arena */
 } bt_flags;
 
 /* Stored in payload of free blocks. */
@@ -49,19 +50,19 @@ typedef struct node {
 typedef struct arena {
   node_t freelst;     /* guard of free block list */
   word_t *end;        /* first address after the arena */
-  word_t *last;       /* last block in the arena */
   uint32_t totalFree; /* total number of free bytes */
   uint32_t minFree;   /* minimum recorded number of free bytes */
-  word_t start[] __aligned(ALIGNMENT);     /* first block in the arena */
+  uint32_t pad[2];    /* make user address aligned to ALIGNMENT */
+  word_t start[];     /* first block in the arena */
 } arena_t;
 
 #define head (&ar->freelst)
 
 static inline word_t bt_size(word_t *bt) {
-  return *bt & ~(USED | PREVFREE);
+  return *bt & ~(USED | PREVFREE | ISLAST);
 }
 
-__unused static inline int bt_used(word_t *bt) {
+static inline int bt_used(word_t *bt) {
   return *bt & USED;
 }
 
@@ -77,24 +78,32 @@ static inline word_t *bt_fromptr(void *ptr) {
   return (word_t *)ptr - 1;
 }
 
-#define bt_make(bt, size, flags) ar_bt_make(ar, (bt), (size), (flags))
-static inline __always_inline void ar_bt_make(arena_t *ar, word_t *bt,
-                                              size_t size, bt_flags flags) {
+static inline __always_inline void bt_make(word_t *bt, size_t size,
+                                           bt_flags flags) {
   word_t val = size | flags;
   *bt = val;
   word_t *ft = (void *)bt + size - sizeof(word_t);
   *ft = (flags & USED) ? CANARY : val;
-  if ((void *)ar->end == (void *)bt + size)
-    ar->last = bt;
 }
 
 static inline int bt_has_canary(word_t *bt) {
-  word_t *ft = (void *)bt + bt_size(bt) - sizeof(word_t);
-  return *ft == CANARY;
+  return *bt_footer(bt) == CANARY;
+}
+
+static inline bt_flags bt_get_flags(word_t *bt) {
+  return *bt & (PREVFREE | ISLAST);
 }
 
 static inline bt_flags bt_get_prevfree(word_t *bt) {
   return *bt & PREVFREE;
+}
+
+static inline bt_flags bt_get_islast(word_t *bt) {
+  return *bt & ISLAST;
+}
+
+static inline void bt_clr_islast(word_t *bt) {
+  *bt &= ~ISLAST;
 }
 
 static inline void bt_clr_prevfree(word_t *bt) {
@@ -109,10 +118,8 @@ static inline void *bt_payload(word_t *bt) {
   return bt + 1;
 }
 
-#define bt_next(bt) ar_bt_next(ar, (bt))
-static inline word_t *ar_bt_next(arena_t *ar, word_t *bt) {
-  word_t *next = (void *)bt + bt_size(bt);
-  return (next < ar->end) ? next : NULL;
+static inline word_t *bt_next(word_t *bt) {
+  return (void *)bt + bt_size(bt);
 }
 
 /* Must never be called on first block in an arena. */
@@ -193,12 +200,6 @@ static word_t *find_fit(arena_t *ar, size_t reqsz) {
 }
 #endif
 
-#define inc_free(sz) ar_inc_free(ar, (sz))
-static inline void ar_inc_free(arena_t *ar, size_t sz) {
-  ar->totalFree += sz;
-}
-
-#define dec_free(sz) ar_dec_free(ar, (sz))
 static inline void ar_dec_free(arena_t *ar, size_t sz) {
   /* Decrease the amount of available memory. */
   ar->totalFree -= sz;
@@ -213,12 +214,10 @@ static void ar_init(arena_t *ar, void *end) {
   n_setprev(head, head);
   n_setnext(head, head);
   ar->end = end;
-  ar->last = ar->start;
-  ar->totalFree = 0;
+  ar->totalFree = sz - USEDBLK_SZ;
   ar->minFree = INT_MAX;
   word_t *bt = ar->start;
-  bt_make(bt, sz, FREE);
-  inc_free(sz - USEDBLK_SZ);
+  bt_make(bt, sz, FREE | ISLAST);
   n_insert(bt);
 }
 
@@ -229,22 +228,24 @@ static void *ar_malloc(arena_t *ar, size_t size) {
 
   word_t *bt = find_fit(ar, reqsz);
   if (bt != NULL) {
+    bt_flags is_last = bt_get_islast(bt);
     size_t memsz = reqsz - USEDBLK_SZ;
     /* Mark found block as used. */
     size_t sz = bt_size(bt);
     n_remove(bt);
-    bt_make(bt, reqsz, USED);
+    bt_make(bt, reqsz, USED | is_last);
     /* Split free block if needed. */
     word_t *next = bt_next(bt);
     if (sz > reqsz) {
-      bt_make(next, sz - reqsz, FREE);
+      bt_make(next, sz - reqsz, FREE | is_last);
+      bt_clr_islast(bt);
       memsz += USEDBLK_SZ;
       n_insert(next);
-    } else if (next != NULL) {
+    } else if (!is_last) {
       /* Nothing to split? Then previous block is not free anymore! */
       bt_clr_prevfree(next);
     }
-    dec_free(memsz);
+    ar_dec_free(ar, memsz);
   }
 
   xTaskResumeAll();
@@ -267,7 +268,7 @@ static void ar_free(arena_t *ar, void *ptr) {
   /* Mark block as free. */
   size_t memsz = bt_size(bt) - USEDBLK_SZ;
   size_t sz = bt_size(bt);
-  bt_make(bt, sz, bt_get_prevfree(bt));
+  bt_make(bt, sz, FREE | bt_get_flags(bt));
   debug("bt = %p (size: %u)", bt, sz);
 
   word_t *next = bt_next(bt);
@@ -276,7 +277,7 @@ static void ar_free(arena_t *ar, void *ptr) {
       /* Coalesce with next block. */
       n_remove(next);
       sz += bt_size(next);
-      bt_make(bt, sz, bt_get_prevfree(bt));
+      bt_make(bt, sz, FREE | bt_get_prevfree(bt) | bt_get_islast(next));
       memsz += USEDBLK_SZ;
     } else {
       /* Mark next used block with prevfree flag. */
@@ -289,12 +290,12 @@ static void ar_free(arena_t *ar, void *ptr) {
     word_t *prev = bt_prev(bt);
     n_remove(prev);
     sz += bt_size(prev);
-    bt_make(prev, sz, FREE);
+    bt_make(prev, sz, FREE | bt_get_islast(bt));
     memsz += USEDBLK_SZ;
     bt = prev;
   }
 
-  inc_free(memsz);
+  ar->totalFree += memsz;
   n_insert(bt);
 
   xTaskResumeAll();
@@ -314,10 +315,11 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
   vTaskSuspendAll();
 
   if (reqsz < sz) {
+    bt_flags is_last = bt_get_islast(bt);
     /* Shrink block: split block and free second one. */
     bt_make(bt, reqsz, USED | bt_get_prevfree(bt));
     word_t *next = bt_next(bt);
-    bt_make(next, sz - reqsz, USED);
+    bt_make(next, sz - reqsz, USED | is_last);
     ar_free(ar, bt_payload(next));
     new_ptr = old_ptr;
   } else {
@@ -325,6 +327,7 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
     word_t *next = bt_next(bt);
     if (next && bt_free(next)) {
       /* Use next free block if it has enough space. */
+      bt_flags is_last = bt_get_islast(next);
       size_t nextsz = bt_size(next);
       if (sz + nextsz >= reqsz) {
         size_t memsz;
@@ -332,14 +335,14 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
         bt_make(bt, reqsz, USED | bt_get_prevfree(bt));
         word_t *next = bt_next(bt);
         if (sz + nextsz > reqsz) {
-          bt_make(next, sz + nextsz - reqsz, FREE);
+          bt_make(next, sz + nextsz - reqsz, FREE | is_last);
           memsz = reqsz - sz;
           n_insert(next);
         } else {
           memsz = nextsz - USEDBLK_SZ;
           bt_clr_prevfree(next);
         }
-        dec_free(memsz);
+        ar_dec_free(ar, memsz);
         new_ptr = old_ptr;
       }
     }
@@ -364,10 +367,11 @@ static void ar_check(arena_t *ar, int verbose) {
 
   msg("--=[ all block list ]=---\n");
 
-  for (; bt != NULL; prev = bt, bt = bt_next(bt)) {
+  for (; bt < ar->end; prev = bt, bt = bt_next(bt)) {
     int flag = !!bt_get_prevfree(bt);
+    int is_last = !!bt_get_islast(bt);
     msg("%p: [%c%c:%d] %c\n", bt, "FU"[bt_used(bt)], " P"[flag], bt_size(bt),
-        " *"[bt == ar->last]);
+        " *"[is_last]);
     if (bt_free(bt)) {
       word_t *ft = bt_footer(bt);
       assert(*bt == *ft); /* Header and footer do not match? */
@@ -382,8 +386,8 @@ static void ar_check(arena_t *ar, int verbose) {
     }
   }
 
+  assert(bt_get_islast(prev)); /* Last block set incorrectly? */
   assert(freeMem == ar->totalFree); /* Total free memory miscalculated? */
-  assert(prev == ar->last); /* Last block set incorrectly? */
 
   msg("--=[ free block list start ]=---\n");
 
@@ -509,7 +513,7 @@ void vPortDefineMemoryRegions(MemRegion_t *aMemRegions) {
   for (MemRegion_t *mr = aMemRegions; mr->mr_upper; mr++) {
     /* align upper and lower addresses */
     mr->mr_lower = roundup(mr->mr_lower, ALIGNMENT);
-    mr->mr_upper = rounddown(mr->mr_upper, ALIGNMENT);
+    mr->mr_upper = rounddown(mr->mr_upper, ALIGNMENT) - sizeof(word_t);
     ar_init(arena(mr), (void *)mr->mr_upper);
   }
 }

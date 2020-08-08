@@ -60,6 +60,7 @@ static void RandRealloc(void) {
 static void vTestHeapTask(__unused void *data) {
   for (short i = 0; i < NSLOTS * 3 / 4; i++)
     RandMalloc();
+  mcheck(0);
 
   for (;;) {
     int c = rand() % 4;
