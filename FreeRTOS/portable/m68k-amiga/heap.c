@@ -94,8 +94,7 @@ static inline bt_flags bt_get_prevfree(word_t *bt) {
 }
 
 static inline void bt_clr_prevfree(word_t *bt) {
-  if (bt)
-    *bt &= ~PREVFREE;
+  *bt &= ~PREVFREE;
 }
 
 static inline void bt_set_prevfree(word_t *bt) {
@@ -156,7 +155,7 @@ static inline void n_remove(word_t *bt) {
 }
 
 static inline size_t blksz(size_t size) {
-  return (size + sizeof(word_t) + ALIGNMENT - 1) & -ALIGNMENT;
+  return roundup(size + USEDBLK_SZ, ALIGNMENT);
 }
 
 #if 1
@@ -191,12 +190,12 @@ static word_t *find_fit(arena_t *ar, size_t reqsz) {
 #endif
 
 #define inc_free(sz) ar_inc_free(ar, (sz))
-static void ar_inc_free(arena_t *ar, size_t sz) {
+static inline void ar_inc_free(arena_t *ar, size_t sz) {
   ar->totalFree += sz;
 }
 
 #define dec_free(sz) ar_dec_free(ar, (sz))
-static void ar_dec_free(arena_t *ar, size_t sz) {
+static inline void ar_dec_free(arena_t *ar, size_t sz) {
   /* Decrease the amount of available memory. */
   ar->totalFree -= sz;
   /* Record the lowest amount of available memory. */
@@ -226,20 +225,22 @@ static void *ar_malloc(arena_t *ar, size_t size) {
 
   word_t *bt = find_fit(ar, reqsz);
   if (bt != NULL) {
+    size_t memsz = reqsz - USEDBLK_SZ;
     /* Mark found block as used. */
     size_t sz = bt_size(bt);
     n_remove(bt);
     bt_make(bt, reqsz, USED);
-    dec_free(reqsz - USEDBLK_SZ);
     /* Split free block if needed. */
+    word_t *next = bt_next(bt);
     if (sz > reqsz) {
-      bt_make(bt_next(bt), sz - reqsz, FREE);
-      dec_free(USEDBLK_SZ);
-      n_insert(bt_next(bt));
-    } else {
+      bt_make(next, sz - reqsz, FREE);
+      memsz += USEDBLK_SZ;
+      n_insert(next);
+    } else if (next != NULL) {
       /* Nothing to split? Then previous block is not free anymore! */
-      bt_clr_prevfree(bt_next(bt));
+      bt_clr_prevfree(next);
     }
+    dec_free(memsz);
   }
 
   xTaskResumeAll();
@@ -260,17 +261,19 @@ static void ar_free(arena_t *ar, void *ptr) {
   assert(bt_used(bt) && "Double free detected!");
 
   /* Mark block as free. */
-  bt_make(bt, bt_size(bt), bt_get_prevfree(bt));
-  inc_free(bt_size(bt) - USEDBLK_SZ);
-  debug("bt = %p (size: %u)", bt, bt_size(bt));
+  size_t memsz = bt_size(bt) - USEDBLK_SZ;
+  size_t sz = bt_size(bt);
+  bt_make(bt, sz, bt_get_prevfree(bt));
+  debug("bt = %p (size: %u)", bt, sz);
 
   word_t *next = bt_next(bt);
   if (next) {
     if (bt_free(next)) {
       /* Coalesce with next block. */
       n_remove(next);
-      bt_make(bt, bt_size(bt) + bt_size(next), bt_get_prevfree(bt));
-      inc_free(USEDBLK_SZ);
+      sz += bt_size(next);
+      bt_make(bt, sz, bt_get_prevfree(bt));
+      memsz += USEDBLK_SZ;
     } else {
       /* Mark next used block with prevfree flag. */
       bt_set_prevfree(next);
@@ -281,11 +284,13 @@ static void ar_free(arena_t *ar, void *ptr) {
   if (bt_get_prevfree(bt)) {
     word_t *prev = bt_prev(bt);
     n_remove(prev);
-    bt_make(prev, bt_size(prev) + bt_size(bt), FREE);
-    inc_free(USEDBLK_SZ);
+    sz += bt_size(prev);
+    bt_make(prev, sz, FREE);
+    memsz += USEDBLK_SZ;
     bt = prev;
   }
 
+  inc_free(memsz);
   n_insert(bt);
 
   xTaskResumeAll();
@@ -318,17 +323,19 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
       /* Use next free block if it has enough space. */
       size_t nextsz = bt_size(next);
       if (sz + nextsz >= reqsz) {
+        size_t memsz;
         n_remove(next);
-        dec_free(nextsz - USEDBLK_SZ);
         bt_make(bt, reqsz, USED | bt_get_prevfree(bt));
         word_t *next = bt_next(bt);
         if (sz + nextsz > reqsz) {
           bt_make(next, sz + nextsz - reqsz, FREE);
-          inc_free(sz + nextsz - reqsz - USEDBLK_SZ);
+          memsz = reqsz - sz;
           n_insert(next);
         } else {
+          memsz = nextsz - USEDBLK_SZ;
           bt_clr_prevfree(next);
         }
+        dec_free(memsz);
         new_ptr = old_ptr;
       }
     }
@@ -496,8 +503,8 @@ void vPortDefineMemoryRegions(MemRegion_t *aMemRegions) {
 
   for (MemRegion_t *mr = aMemRegions; mr->mr_upper; mr++) {
     /* align upper and lower addresses */
-    mr->mr_lower = (mr->mr_lower + (ALIGNMENT - 1)) & -ALIGNMENT;
-    mr->mr_upper = mr->mr_upper & -ALIGNMENT;
+    mr->mr_lower = roundup(mr->mr_lower, ALIGNMENT);
+    mr->mr_upper = rounddown(mr->mr_upper, ALIGNMENT);
     ar_init(arena(mr), (void *)mr->mr_upper);
   }
 }

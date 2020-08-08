@@ -43,6 +43,9 @@
 #define BSET(x, b) ((x) |= BIT(b))
 #define BCLR(x, b) ((x) &= ~BIT(b))
 
+#define roundup(x, y) ((((x) + ((y) - 1)) / (y)) * (y))
+#define rounddown(x, y) (((x) / (y)) * (y))
+
 #define __always_inline __attribute__((always_inline))
 #define __noinline __attribute__((noinline))
 #define __noreturn __attribute__((noreturn))
@@ -53,9 +56,9 @@
 #define __bsschip __attribute__((section(".bsschip")))
 #define __aligned(x) __attribute__((aligned(x)))
 
-#define __weak_alias(alias, sym) \
+#define __weak_alias(alias, sym)                                               \
   __asm(".weak " #alias "\n" #alias " = " #sym)
-#define __strong_alias(alias, sym) \
+#define __strong_alias(alias, sym)                                             \
   __asm(".global " #alias "\n" #alias " = " #sym)
 
 #endif /* !_CDEFS_H_ */
