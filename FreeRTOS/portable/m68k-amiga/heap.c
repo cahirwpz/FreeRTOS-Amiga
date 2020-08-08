@@ -24,12 +24,13 @@
 typedef uintptr_t word_t;
 
 #define ALIGNMENT 16
+#define CANARY 0xDEADC0DE
 
 /* Free block consists of header BT, pointer to previous and next free block,
  * payload and footer BT. */
 #define FREEBLK_SZ (4 * sizeof(word_t))
-/* Used block consists of header BT and user memory. */
-#define USEDBLK_SZ (sizeof(word_t))
+/* Used block consists of header BT, user memory and canary. */
+#define USEDBLK_SZ (2 * sizeof(word_t))
 
 /* Boundary tag flags. */
 typedef enum {
@@ -81,12 +82,15 @@ static inline __always_inline void ar_bt_make(arena_t *ar, word_t *bt,
                                               size_t size, bt_flags flags) {
   word_t val = size | flags;
   *bt = val;
-  if ((flags & USED) == 0) {
-    word_t *ft = (void *)bt + size - sizeof(word_t);
-    *ft = val;
-  }
+  word_t *ft = (void *)bt + size - sizeof(word_t);
+  *ft = (flags & USED) ? CANARY : val;
   if ((void *)ar->end == (void *)bt + size)
     ar->last = bt;
+}
+
+static inline int bt_has_canary(word_t *bt) {
+  word_t *ft = (void *)bt + bt_size(bt) - sizeof(word_t);
+  return *ft == CANARY;
 }
 
 static inline bt_flags bt_get_prevfree(word_t *bt) {
@@ -258,7 +262,7 @@ static void ar_free(arena_t *ar, void *ptr) {
 
   vTaskSuspendAll();
 
-  assert(bt_used(bt) && "Double free detected!");
+  assert(bt_used(bt) && bt_has_canary(bt)); /* Is block free and has canary? */
 
   /* Mark block as free. */
   size_t memsz = bt_size(bt) - USEDBLK_SZ;
@@ -366,19 +370,20 @@ static void ar_check(arena_t *ar, int verbose) {
         " *"[bt == ar->last]);
     if (bt_free(bt)) {
       word_t *ft = bt_footer(bt);
-      assert(*bt == *ft && "Header and footer do not match!");
-      assert(!prevfree && "Free block not coalesced?");
+      assert(*bt == *ft); /* Header and footer do not match? */
+      assert(!prevfree); /* Free block not coalesced? */
       prevfree = 1;
       freeMem += bt_size(bt) - USEDBLK_SZ;
       dangling++;
     } else {
-      assert(flag == prevfree && "PREVFREE flag mismatch!");
+      assert(flag == prevfree); /* PREVFREE flag mismatch? */
+      assert(bt_has_canary(bt)); /* Canary damaged? */
       prevfree = 0;
     }
   }
 
-  assert(freeMem == ar->totalFree && "Total free memory miscalculated!");
-  assert(prev == ar->last && "Last block set incorrectly!");
+  assert(freeMem == ar->totalFree); /* Total free memory miscalculated? */
+  assert(prev == ar->last); /* Last block set incorrectly? */
 
   msg("--=[ free block list start ]=---\n");
 
