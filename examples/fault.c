@@ -3,10 +3,10 @@
 
 void vApplicationMallocFailedHook(void) {
   printf("Memory exhausted!\n");
-  portHALT();
+  portPANIC();
 }
 
 void vApplicationStackOverflowHook(void) {
   printf("Stack overflow!\n");
-  portHALT();
+  portPANIC();
 }

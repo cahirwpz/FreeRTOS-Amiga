@@ -11,6 +11,7 @@ SOURCES = \
 	gen/setjmp.S \
 	stdio/kvprintf.c \
 	stdio/snprintf.c \
+	stdlib/malloc.c \
 	stdlib/rand_r.c \
 	stdlib/strtol.c \
 	stdlib/strtoul.c \

@@ -76,6 +76,10 @@ uint32_t ulPortSetIPL(uint32_t);
 /* Issue trap 0..15 instruction that can be interpreted by a trap handler. */
 #define portTRAP(n) { asm volatile("\ttrap\t#" #n "\n"); }
 
+/* Use whenever a program should generate a fatal error. This will break into
+ * debugger for program inspection and stop instruction execution. */
+#define portPANIC() { portBREAK(); portHALT(); }
+
 /* Instruction that effectively is a no-op, but its opcode is different from
  * real nop instruction. Useful for introducing transparent breakpoints that
  * are only understood by simulator. */

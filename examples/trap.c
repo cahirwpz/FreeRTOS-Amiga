@@ -86,8 +86,7 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
            (read ? "read" : "write"), addr);
   }
 
-  portBREAK();
-  portHALT();
+  portPANIC();
 }
 
 __weak_alias(vPortTrapHandler, vPortDefaultTrapHandler);
