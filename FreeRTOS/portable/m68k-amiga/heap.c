@@ -115,10 +115,10 @@ static inline word_t *ar_bt_next(arena_t *ar, word_t *bt) {
   return (next < ar->end) ? next : NULL;
 }
 
-#define bt_prev(bt) ar_bt_prev(ar, (bt))
-static inline word_t *ar_bt_prev(arena_t *ar, word_t *bt) {
+/* Must never be called on first block in an arena. */
+static inline word_t *bt_prev(word_t *bt) {
   word_t *ft = bt - 1;
-  return (ft > ar->start) ? (void *)bt - bt_size(ft) : NULL;
+  return (void *)bt - bt_size(ft);
 }
 
 /* These are only useful if node_t pointers are compressed. */
