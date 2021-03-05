@@ -1,0 +1,1 @@
+#define ffconfigBYTE_ORDER pdFREERTOS_BIG_ENDIAN
