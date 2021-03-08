@@ -29,7 +29,7 @@ static File_t *OpenNthFile(short n) {
 static void vReaderTask(__unused void *data) {
   FsMount();
 
-  uint32_t seed = (intptr_t)xTaskGetCurrentTaskHandle();
+  unsigned seed = (intptr_t)xTaskGetCurrentTaskHandle();
   uint8_t *buf = pvPortMalloc(BUFSIZE);
   int n = DirectorySize();
 

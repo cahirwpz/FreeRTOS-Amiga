@@ -3,7 +3,7 @@
 
 #ifndef __ASSEMBLER__
 
-#include <cdefs.h>
+#include <sys/cdefs.h>
 
 struct CIA {
   uint8_t ciapra;

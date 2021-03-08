@@ -1,10 +1,10 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
 
-#include <cdefs.h>
+#include <sys/cdefs.h>
 #include <limits.h>
 #include <string.h>
-#include <stdio.h>
+#include <libkern.h>
 #include <boot.h>
 
 #if (configSUPPORT_DYNAMIC_ALLOCATION == 0)
@@ -14,7 +14,7 @@
 #define DEBUG 0
 
 #if DEBUG
-#define debug(fmt, ...) printf("%s: " fmt "\n", __func__, __VA_ARGS__)
+#define debug(fmt, ...) kprintf("%s: " fmt "\n", __func__, __VA_ARGS__)
 #else
 #define debug(fmt, ...)
 #endif
@@ -354,7 +354,7 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
   return new_ptr;
 }
 
-#define msg(...) if (verbose) printf(__VA_ARGS__)
+#define msg(...) if (verbose) kprintf(__VA_ARGS__)
 
 static void ar_check(arena_t *ar, int verbose) {
   word_t *bt = ar->start;
@@ -460,6 +460,14 @@ void *pvPortMallocChip(size_t xSize) {
 void vPortFree(void *p) {
   if (p != NULL)
     ar_free(arena_of(p), p);
+}
+
+void *pvPortCalloc(size_t nmemb, size_t size) {
+  size_t bytes = nmemb * size;
+  void *new_ptr = pvPortMalloc(bytes);
+  if (new_ptr)
+    memset(new_ptr, 0, bytes);
+  return new_ptr;
 }
 
 void *pvPortRealloc(void *old_ptr, size_t size) {

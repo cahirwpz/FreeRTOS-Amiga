@@ -2,7 +2,7 @@
 #include <FreeRTOS/atomic.h>
 
 #include <stdarg.h>
-#include <stdio.h>
+#include <libkern.h>
 #include <file.h>
 
 File_t *FileHold(File_t *f) {

@@ -1,7 +1,7 @@
 #ifndef _SETJMP_H_
 #define _SETJMP_H_
 
-#include <cdefs.h>
+#include <sys/cdefs.h>
 
 #define _JB_D2 0
 #define _JB_D3 1
