@@ -23,6 +23,7 @@ SOURCES = \
 	  serial.c \
 	  serial-file.c \
 	  sprite.c
+FORMAT-EXCLUDE = ff.c ffsystem.c ffunicode.c
 
 LIBNAME = drivers.lib
 
