@@ -1,7 +1,7 @@
 #ifndef _SYSAPI_H_
 #define _SYSAPI_H_
 
-#include <cdefs.h>
+#include <sys/cdefs.h>
 #include <stddef.h>
 
 #define STDIN_FILENO 0

@@ -1,7 +1,7 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
 #include <amigahunk.h>
-#include <stdlib.h>
+#include <libkern.h>
 #include <string.h>
 #include <strings.h>
 
@@ -33,7 +33,7 @@ void ProcFreeImage(Proc_t *proc) {
   Hunk_t *next;
   for (Hunk_t *hunk = proc->hunk; hunk != NULL; hunk = next) {
     next = hunk->next;
-    free(hunk);
+    kfree(hunk);
   }
 }
 
@@ -45,7 +45,7 @@ void ProcInit(Proc_t *proc, size_t ustksz) {
   /* Align to long word size. */
   ustksz = (ustksz + 3) & -4;
   proc->ustksz = ustksz;
-  proc->ustk = malloc(ustksz);
+  proc->ustk = kmalloc(ustksz);
   bzero(proc->ustk, ustksz);
 
   proc->pid = pid++;
@@ -60,7 +60,7 @@ void ProcFini(Proc_t *proc) {
       FileClose(f);
   }
 
-  free(proc->ustk);
+  kfree(proc->ustk);
 }
 
 #define PUSH(sp, v)                                                            \

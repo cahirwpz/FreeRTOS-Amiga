@@ -4,7 +4,7 @@
 #include <custom.h>
 #include <serial.h>
 #include <file.h>
-#include <stdio.h>
+#include <libkern.h>
 #include "proc.h"
 
 extern char _binary_ushell_exe_end[];
@@ -28,7 +28,7 @@ static void vMainTask(__unused void *data) {
   if (ProcLoadImage(&p, shell)) {
     ProcSetArgv(&p, (char *[]){"shell", NULL});
     ProcEnter(&p);
-    printf("Program returned: %d\n", p.exitcode);
+    kprintf("Program returned: %d\n", p.exitcode);
   }
   ProcFini(&p);
 

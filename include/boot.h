@@ -1,7 +1,7 @@
 #ifndef _BOOT_H_
 #define _BOOT_H_
 
-#include <cdefs.h>
+#include <sys/cdefs.h>
 
 typedef struct MemRegion {
   uintptr_t mr_lower;

@@ -1,12 +1,12 @@
 #include <FreeRTOS/FreeRTOS.h>
-#include <stdio.h>
+#include <libkern.h>
 
 void vApplicationMallocFailedHook(void) {
-  printf("Memory exhausted!\n");
+  kprintf("Memory exhausted!\n");
   portPANIC();
 }
 
 void vApplicationStackOverflowHook(void) {
-  printf("Stack overflow!\n");
+  kprintf("Stack overflow!\n");
   portPANIC();
 }

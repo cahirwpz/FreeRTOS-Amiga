@@ -3,7 +3,7 @@
 
 #include <custom.h>
 #include <interrupt.h>
-#include <stdio.h>
+#include <libkern.h>
 
 #include <serial.h>
 
@@ -34,7 +34,7 @@ static void RecvIntHandler(__unused void *ptr) {
 }
 
 void SerialInit(unsigned baud) {
-  printf("[Serial] Initializing driver!\n");
+  kprintf("[Serial] Initializing driver!\n");
 
   custom.serper = CLOCK / baud - 1;
 
@@ -56,7 +56,7 @@ void SerialKill(void) {
   vQueueDelete(RecvQ);
   vQueueDelete(SendQ);
 
-  printf("[Serial] Driver deactivated!\n");
+  kprintf("[Serial] Driver deactivated!\n");
 }
 
 static void TriggerSend(uint8_t cSend) {

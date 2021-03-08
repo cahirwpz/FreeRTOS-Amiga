@@ -1,7 +1,7 @@
 #ifndef _KEYBOARD_H_
 #define _KEYBOARD_H_
 
-#include <cdefs.h>
+#include <sys/cdefs.h>
 
 typedef enum {
   KEY_BACKQUOTE = 0x00,

@@ -1,7 +1,7 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
 
-#include <stdio.h>
+#include <libkern.h>
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
@@ -37,8 +37,8 @@ static void CompareSectors(int trknum, uint32_t *saveTrk, uint32_t *readTrk) {
     uint32_t *new = SECTOR(readTrk, i);
     for (short j = 0; j < (int)(SECTOR_SIZE / sizeof(uint32_t)); j++) {
       if (old[j] != new[j]) {
-        printf("trk(%3d), sec(%2d), off(%3d): %08x (old) vs. %08x (new)\n",
-               trknum, i, j * sizeof(uint32_t), old[j], new[j]);
+        kprintf("trk(%3d), sec(%2d), off(%3d): %08x (old) vs. %08x (new)\n",
+                trknum, i, j * sizeof(uint32_t), old[j], new[j]);
         portBREAK();
         return;
       }

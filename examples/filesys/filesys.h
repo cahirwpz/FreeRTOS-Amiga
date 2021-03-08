@@ -1,7 +1,7 @@
 #ifndef _FILESYS_H_
 #define _FILESYS_H_
 
-#include <types.h>
+#include <sys/types.h>
 #include <floppy.h>
 #include <file.h>
 

@@ -1,7 +1,7 @@
 #include <interrupt.h>
 #include <cia.h>
 #include <keyboard.h>
-#include <stdio.h>
+#include <libkern.h>
 
 #define LO(K, V) [K] = V
 #define HI(K, V) [K | 0x80] = V
@@ -190,7 +190,7 @@ static void KeyboardIntHandler(CIA_t cia) {
 INTSERVER_DEFINE(KeyboardInt, -10, (ISR_t)KeyboardIntHandler, (void *)CIAA);
 
 void KeyboardInit(KeyEventNotify_t notify) {
-  printf("[Init] Keyboard driver!\n");
+  kprintf("[Init] Keyboard driver!\n");
 
   KeyboardTimer = AcquireTimer(TIMER_ANY);
   configASSERT(KeyboardTimer != NULL);
