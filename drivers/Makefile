@@ -10,6 +10,9 @@ SOURCES = \
 	  cia-icr.c \
 	  cia-line.c \
 	  cia-timer.c \
+	  ff.c \
+	  ffsystem.c \
+	  ffunicode.c \
 	  file.c \
 	  floppy.c \
 	  floppy-mfm.c \
