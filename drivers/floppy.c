@@ -6,7 +6,7 @@
 #include <cia.h>
 
 #include <stdint.h>
-#include <stdio.h>
+#include <libkern.h>
 
 #include <floppy.h>
 
@@ -26,7 +26,7 @@ static void TrackTransferDone(__unused void *ptr) {
 static void FloppyReader(void *);
 
 void FloppyInit(unsigned aFloppyIOTaskPrio) {
-  printf("[Init] Floppy drive driver!\n");
+  kprintf("[Init] Floppy drive driver!\n");
 
   FloppyTimer = AcquireTimer(TIMER_ANY);
   configASSERT(FloppyTimer != NULL);

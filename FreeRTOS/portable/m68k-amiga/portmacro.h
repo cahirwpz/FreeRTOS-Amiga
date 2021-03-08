@@ -1,7 +1,7 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-#include <cdefs.h>
+#include <sys/cdefs.h>
 
 #ifdef __cplusplus
 extern "C" {

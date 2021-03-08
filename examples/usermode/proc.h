@@ -1,7 +1,7 @@
 #ifndef _PROC_H_
 #define _PROC_H_
 
-#include <cdefs.h>
+#include <sys/cdefs.h>
 #include <stddef.h>
 #include <setjmp.h>
 

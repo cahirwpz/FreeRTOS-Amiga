@@ -38,6 +38,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <limits.h>
 
 typedef long INTMAX_T;
 typedef unsigned long UINTMAX_T;

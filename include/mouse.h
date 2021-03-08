@@ -1,7 +1,7 @@
 #ifndef _MOUSE_H_
 #define _MOUSE_H_
 
-#include <cdefs.h>
+#include <sys/cdefs.h>
 
 #define LMB_PRESSED  BIT(0)
 #define RMB_PRESSED  BIT(1)
