@@ -1,6 +1,9 @@
 TOPDIR = $(realpath ..)
 
-SOURCES = heap.c \
+SOURCES = amigahunk.c \
+	  file.c \
+	  heap.c \
+	  hexdump.c \
 	  port.c \
 	  intsrv.c \
 	  intr.S \
@@ -8,8 +11,6 @@ SOURCES = heap.c \
 	  portasm.S
 
 LIBNAME = kernel.lib
-
-CPPFLAGS = -I$(TOPDIR)/kernel/include
 
 include $(TOPDIR)/build/build.lib.mk
 

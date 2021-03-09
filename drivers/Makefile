@@ -1,7 +1,6 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = \
-	  amigahunk.c \
 	  blt-copy.c \
 	  blt-line.c \
 	  bootcons.c \
@@ -13,16 +12,15 @@ SOURCES = \
 	  ff.c \
 	  ffsystem.c \
 	  ffunicode.c \
-	  file.c \
 	  floppy.c \
 	  floppy-mfm.c \
-	  hexdump.c \
 	  keyboard.c \
 	  memory-file.c \
 	  mouse.c \
 	  serial.c \
 	  serial-file.c \
 	  sprite.c
+
 FORMAT-EXCLUDE = ff.c ffsystem.c ffunicode.c
 
 LIBNAME = drivers.lib

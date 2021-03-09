@@ -18,7 +18,7 @@ before-drivers: build-tools
 before-libc: build-tools
 
 # Lists of all files that we consider our sources.
-SRCDIRS = include drivers kernel libc FreeRTOS FreeRTOS-Plus
+SRCDIRS = drivers kernel libc FreeRTOS FreeRTOS-Plus
 SRCFILES_C = $(shell find $(SRCDIRS) -type f -iname '*.[ch]')
 SRCFILES_ASM = $(shell find $(SRCDIRS) -type f -iname '*.S')
 SRCFILES = $(SRCFILES_C) $(SRCFILES_ASM)

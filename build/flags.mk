@@ -6,7 +6,7 @@ OFLAGS    += -m68010 -Wall -Wextra -fomit-frame-pointer -Os -fno-common # -mpcre
 WFLAGS    += -Wall -Werror -Wno-builtin-declaration-mismatch
 CPPFLAGS  += -I$(TOPDIR)/FreeRTOS-Plus/include \
 	     -I$(TOPDIR)/kernel/include \
+	     -I$(TOPDIR)/drivers/include \
 	     -I$(TOPDIR)/libc/include \
-	     -I$(TOPDIR)/include \
 	     -I$(TOPDIR)
 LDFLAGS   += -nostdlib
