@@ -2,14 +2,17 @@ TOPDIR = $(realpath ..)
 
 SOURCES = amigahunk.c \
 	  file.c \
-	  heap.c \
 	  hexdump.c \
 	  intr.S \
 	  intsrv.c \
+	  malloc.c \
 	  port.c \
 	  portasm.S \
-	  trap.S \
-	  traphandler.c
+	  proc.c \
+	  sysent.c \
+	  trapasm.S \
+	  trap.c \
+	  userent.S
 
 LIBNAME = kernel.lib
 
