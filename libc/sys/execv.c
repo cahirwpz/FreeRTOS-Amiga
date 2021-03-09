@@ -2,8 +2,7 @@
 #include <unistd.h>
 
 int execv(const char *path, char *const argv[]) {
-  /* TODO: Implement system call wrapper. */
-  (void)path;
-  (void)argv;
-  return -1;
+  int err;
+  SYSCALL2(err, SYS_execv, path, argv);
+  return err;
 }

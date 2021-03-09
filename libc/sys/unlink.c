@@ -2,7 +2,7 @@
 #include <unistd.h>
 
 int unlink(const char *path) {
-  /* TODO: Implement system call wrapper. */
-  (void)path;
-  return -1;
+  int err;
+  SYSCALL1(err, SYS_unlink, path);
+  return err;
 }

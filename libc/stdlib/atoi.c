@@ -1,10 +1,5 @@
 #include <stdlib.h>
 
-int atoi(const char *s) {
-  int n;
-
-  n = 0;
-  while ('0' <= *s && *s <= '9')
-    n = n * 10 + *s++ - '0';
-  return n;
+int atoi(const char *str) {
+  return strtol(str, NULL, 10);
 }

@@ -6,7 +6,7 @@ SOURCES = $(addsuffix .c,$(PROGRAMS))
 BUILD-FILES += crt0.o $(PROGRAMS)
 CLEAN-FILES += $(addsuffix .elf,$(PROGRAMS))
 
-CPPFLAGS = -I$(TOPDIR)/libc/include
+CPPFLAGS = -I$(TOPDIR)/libc/include -D_USERSPACE
 
 all: build
 

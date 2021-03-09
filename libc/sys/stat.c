@@ -2,8 +2,7 @@
 #include <sys/stat.h>
 
 int stat(const char *path, struct stat *sb) {
-  /* TODO: Implement system call wrapper. */
-  (void)path;
-  (void)sb;
-  return -1;
+  int err;
+  SYSCALL2(err, SYS_stat, path, sb);
+  return err;
 }

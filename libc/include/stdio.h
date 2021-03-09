@@ -18,4 +18,8 @@ typedef void (*putchar_t)(char);
 void kvprintf(putchar_t, const char *fmt, va_list ap);
 int snprintf(char *str, size_t size, const char *format, ...);
 
+#ifdef _USERSPACE
+
 int dprintf(int fd, const char *fmt, ...);
+
+#endif /* !_USERSPACE */

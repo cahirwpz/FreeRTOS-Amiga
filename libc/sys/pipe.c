@@ -2,7 +2,7 @@
 #include <unistd.h>
 
 int pipe(int fd[2]) {
-  /* TODO: Implement system call wrapper. */
-  (void)fd;
-  return -1;
+  int err;
+  SYSCALL1(err, SYS_pipe, fd);
+  return err;
 }

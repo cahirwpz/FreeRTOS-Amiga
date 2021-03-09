@@ -53,6 +53,8 @@ SOURCES = \
 
 SOURCES_H = $(shell find include -type f -iname '*.h')
 
+CPPFLAGS = -D_USERSPACE
+
 FORMAT-EXCLUDE = include/asm.h include/sys/cdefs.h
 
 LIBNAME = c.lib

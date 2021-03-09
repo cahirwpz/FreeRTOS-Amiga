@@ -2,7 +2,7 @@
 #include <signal.h>
 
 int kill(pid_t pid) {
-  /* TODO: Implement system call wrapper. */
-  (void)pid;
-  return -1;
+  int err;
+  SYSCALL1(err, SYS_kill, pid);
+  return err;
 }

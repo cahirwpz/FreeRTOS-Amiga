@@ -2,7 +2,7 @@
 #include <unistd.h>
 
 int dup(int fd) {
-  /* TODO: Implement system call wrapper. */
-  (void)fd;
-  return -1;
+  int fd2;
+  SYSCALL1(fd2, SYS_dup, fd);
+  return fd2;
 }
