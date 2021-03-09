@@ -9,6 +9,8 @@ endif
 	$(AR) rcs $@ $^
 	$(RANLIB) $@
 
+SOURCES_H = $(shell find include -type f -iname '*.h')
+
 include $(TOPDIR)/build/compile.mk
 include $(TOPDIR)/build/flags.mk
 include $(TOPDIR)/build/common.mk
