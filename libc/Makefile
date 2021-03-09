@@ -51,8 +51,11 @@ SOURCES = \
 	sys/wait.c \
 	sys/write.c
 
+SOURCES_H = $(shell find include -type f -iname '*.h')
+
+FORMAT-EXCLUDE = include/asm.h include/sys/cdefs.h
+
 LIBNAME = c.lib
-CLEAN-FILES = $(wildcard include/*~ include/sys/*~)
 
 include $(TOPDIR)/build/build.lib.mk
 
