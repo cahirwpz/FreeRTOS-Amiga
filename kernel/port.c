@@ -1,5 +1,5 @@
-#include <FreeRTOS.h>
-#include <task.h>
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/task.h>
 
 #include <custom.h>
 #include <cia.h>

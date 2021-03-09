@@ -453,6 +453,8 @@ void *pvPortMalloc(size_t xSize) {
   return _pvPortMallocBelow(xSize, MEM_ANY);
 }
 
+__strong_alias(kmalloc, pvPortMalloc);
+
 void *pvPortMallocChip(size_t xSize) {
   return _pvPortMallocBelow(xSize, MEM_CHIP);
 }
@@ -462,6 +464,8 @@ void vPortFree(void *p) {
     ar_free(arena_of(p), p);
 }
 
+__strong_alias(kfree, vPortFree);
+
 void *pvPortCalloc(size_t nmemb, size_t size) {
   size_t bytes = nmemb * size;
   void *new_ptr = pvPortMalloc(bytes);
@@ -469,6 +473,8 @@ void *pvPortCalloc(size_t nmemb, size_t size) {
     memset(new_ptr, 0, bytes);
   return new_ptr;
 }
+
+__strong_alias(kcalloc, pvPortCalloc);
 
 void *pvPortRealloc(void *old_ptr, size_t size) {
   void *new_ptr;
@@ -496,10 +502,14 @@ void *pvPortRealloc(void *old_ptr, size_t size) {
   return NULL;
 }
 
+__strong_alias(krealloc, pvPortRealloc);
+
 void vPortMemCheck(int verbose) {
   for (const MemRegion_t *mr = MemRegions; mr->mr_upper; mr++)
     ar_check(arena(mr), verbose);
 }
+
+__strong_alias(kmcheck, vPortMemCheck);
 
 size_t xPortGetFreeHeapSize(void) {
   size_t sum = 0;

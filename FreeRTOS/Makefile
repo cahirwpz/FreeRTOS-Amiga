@@ -1,19 +1,13 @@
 TOPDIR = $(realpath ..)
 
-SOURCES = \
-	  croutine.c \
+SOURCES = croutine.c \
 	  event_groups.c \
 	  list.c \
 	  queue.c \
 	  stream_buffer.c \
 	  tasks.c \
-	  timers.c \
-	  $(PORT_DIR)/heap.c \
-	  $(PORT_DIR)/port.c \
-	  $(PORT_DIR)/intsrv.c \
-	  $(PORT_DIR)/intr.S \
-	  $(PORT_DIR)/trap.S \
-	  $(PORT_DIR)/portasm.S
+	  timers.c
+
 FORMAT-EXCLUDE = $(SOURCES)
 
 LIBNAME = freertos.lib

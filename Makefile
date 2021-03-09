@@ -1,6 +1,6 @@
 TOPDIR = $(realpath .)
 
-SUBDIR = tools FreeRTOS FreeRTOS-Plus drivers libc examples
+SUBDIR = tools kernel FreeRTOS FreeRTOS-Plus drivers libc examples
 BUILD-FILES = bootloader.bin cscope.out tags etags
 
 all: build
@@ -12,13 +12,13 @@ include $(TOPDIR)/build/common.mk
 	@echo "[AS] $(DIR)$< -> $(DIR)$@"
 	$(VASM) -Fbin $(CPPFLAGS) $(VASMFLAGS) -o $@ $(realpath $<)
 
-before-examples: bootloader.bin build-FreeRTOS build-drivers build-libc
+before-examples: bootloader.bin build-kernel build-FreeRTOS build-drivers build-libc
 before-FreeRTOS: build-tools
 before-drivers: build-tools
 before-libc: build-tools
 
 # Lists of all files that we consider our sources.
-SRCDIRS = include drivers libc FreeRTOS 
+SRCDIRS = include drivers kernel libc FreeRTOS FreeRTOS-Plus
 SRCFILES_C = $(shell find $(SRCDIRS) -type f -iname '*.[ch]')
 SRCFILES_ASM = $(shell find $(SRCDIRS) -type f -iname '*.S')
 SRCFILES = $(SRCFILES_C) $(SRCFILES_ASM)
