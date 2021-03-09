@@ -1,5 +1,4 @@
-#ifndef _CUSTOM_REGDEF_H_
-#define _CUSTOM_REGDEF_H_
+#pragma once
 
 #ifndef __ASSEMBLER__
 
@@ -284,5 +283,3 @@ struct Custom {
 #define DATLY BIT(10) /* Data for port 1, pin 9 (right mouse button) */
 #define OUTLX BIT(9)  /* Output enable for bit 8 */
 #define DATLX BIT(8)  /* Data for port 1, pin 5 (middle mouse button) */
-
-#endif /* !_CUSTOM_REGDEF_H_ */

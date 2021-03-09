@@ -1,5 +1,4 @@
-#ifndef _COPPER_H_
-#define _COPPER_H_
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -185,5 +184,3 @@ static inline void CopSetupBitplaneFetch(coplist_t *list, uint16_t mode,
   CopMove16(list, bplcon1, ((xs & 15) << 4) | (xs & 15));
   CopMove16(list, fmode, 0);
 }
-
-#endif /* !_COPPER_H_ */

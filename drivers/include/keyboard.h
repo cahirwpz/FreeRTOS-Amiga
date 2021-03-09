@@ -1,5 +1,4 @@
-#ifndef _KEYBOARD_H_
-#define _KEYBOARD_H_
+#pragma once
 
 #include <sys/cdefs.h>
 
@@ -129,5 +128,3 @@ typedef void (*KeyEventNotify_t)(const KeyEvent_t *);
 /* Notify procedure will always be called from ISR! */
 void KeyboardInit(KeyEventNotify_t notify);
 void KeyboardKill(void);
-
-#endif /* !_KEYBOARD_H_ */

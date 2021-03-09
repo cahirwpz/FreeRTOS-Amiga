@@ -1,5 +1,4 @@
-#ifndef _RTC_H_
-#define _RTC_H_
+#pragma once
 
 /* Complete register description can be found in m6242b_oki_datasheet.pdf */
 
@@ -23,5 +22,3 @@ struct msm6242b {
 };
 
 extern struct msm6242b volatile msm6242b;
-
-#endif /* !_RTC_H_ */

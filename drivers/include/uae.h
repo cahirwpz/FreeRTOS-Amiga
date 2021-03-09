@@ -1,5 +1,4 @@
-#ifndef _UAE_H_
-#define _UAE_H_
+#pragma once
 
 /*
  * Corresponding interface is implemented in fs-uae:
@@ -19,5 +18,3 @@ enum {
 #define UaeReset() UaeCalTrap(uaelib_Reset)
 #define UaeExit() UaeCallTrap(uaelib_ExitEmu)
 #define UaeLog(...) UaeCallTrap(uaelib_Log, __VA_ARGS__)
-
-#endif

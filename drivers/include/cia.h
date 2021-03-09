@@ -1,5 +1,4 @@
-#ifndef _CIA_H_
-#define _CIA_H_
+#pragma once
 
 #include <cia_regdef.h>
 
@@ -64,5 +63,3 @@ uint8_t WriteICR(CIA_t cia, uint8_t mask);
 
 /* ICR: sample and clear pending interrupts. */
 uint8_t SampleICR(CIA_t cia, uint8_t mask);
-
-#endif

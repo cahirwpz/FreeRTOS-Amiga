@@ -1,5 +1,4 @@
-#ifndef _FLOPPY_H_
-#define _FLOPPY_H_
+#pragma once
 
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/queue.h>
@@ -45,5 +44,3 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
 void DecodeSector(const DiskSector_t *disksec, RawSector_t sec);
 void EncodeSector(const RawSector_t sec, DiskSector_t *disksec);
 void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
-
-#endif /* !_FLOPPY_H_ */

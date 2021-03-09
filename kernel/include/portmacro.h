@@ -1,5 +1,4 @@
-#ifndef PORTMACRO_H
-#define PORTMACRO_H
+#pragma once
 
 #include <sys/cdefs.h>
 
@@ -120,5 +119,3 @@ extern BaseType_t xNeedRescheduleTask;
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* PORTMACRO_H */

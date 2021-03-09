@@ -1,5 +1,4 @@
-#ifndef _BOOT_H_
-#define _BOOT_H_
+#pragma once
 
 #include <sys/cdefs.h>
 
@@ -15,5 +14,3 @@ typedef struct BootData {
   uint16_t bd_nregions;
   MemRegion_t bd_region[];
 } BootData_t;
-
-#endif /* !_BOOT_H_ */

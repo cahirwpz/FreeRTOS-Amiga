@@ -1,5 +1,4 @@
-#ifndef _INTERRUPT_H_
-#define _INTERRUPT_H_
+#pragma once
 
 #define INTB_SETCLR 15  /* Set/Clear control bit. Determines if bits */
                         /* written with a one get set or cleared. Bits */
@@ -136,5 +135,3 @@ extern IntChain_t *VertBlankChain;
 extern IntChain_t *ExterChain;
 
 #endif /* __ASSEMBLER__ */
-
-#endif /* !_INTERRUPT_H_ */

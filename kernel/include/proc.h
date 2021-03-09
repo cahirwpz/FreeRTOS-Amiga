@@ -1,5 +1,4 @@
-#ifndef _PROC_H_
-#define _PROC_H_
+#pragma once
 
 #include <sys/cdefs.h>
 #include <stddef.h>
@@ -52,5 +51,3 @@ __noreturn void ProcExit(Proc_t *proc, int exitcode);
 
 /* Descriptor table management procedures. */
 int ProcFileInstall(Proc_t *proc, int fd, File_t *file);
-
-#endif /* !_PROC_H_ */

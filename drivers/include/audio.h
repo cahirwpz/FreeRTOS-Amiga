@@ -1,5 +1,4 @@
-#ifndef _AUDIO_H_
-#define _AUDIO_H_
+#pragma once
 
 #include <custom.h>
 
@@ -41,5 +40,3 @@ static inline void AudioPlay(Channel_t num) {
 static inline void AudioStop(Channel_t num) {
   DisableDMA(1 << (DMAB_AUD0 + num));
 }
-
-#endif /* !_AUDIO_H_ */

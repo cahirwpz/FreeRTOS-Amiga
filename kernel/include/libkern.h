@@ -1,5 +1,4 @@
-#ifndef _LIBKERN_H_
-#define _LIBKERN_H_
+#pragma once
 
 #include <file.h>
 
@@ -16,5 +15,3 @@ void kfree(void *ptr);
 void *kcalloc(size_t nmemb, size_t size);
 void *krealloc(void *ptr, size_t size);
 void kmcheck(int verbose);
-
-#endif /* !_LIBKERN_H_ */

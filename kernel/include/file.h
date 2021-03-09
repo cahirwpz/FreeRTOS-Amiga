@@ -1,5 +1,4 @@
-#ifndef _FILE_H_
-#define _FILE_H_
+#pragma once
 
 #include <sys/types.h>
 
@@ -37,5 +36,3 @@ void FilePrintf(File_t *f, const char *fmt, ...);
 void FileHexDump(File_t *f, void *ptr, size_t length);
 
 File_t *MemoryOpen(const void *buf, size_t nbyte);
-
-#endif /* !_FILE_H_ */

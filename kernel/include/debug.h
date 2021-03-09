@@ -1,5 +1,4 @@
-#ifndef _DEBUG_H_
-#define _DEBUG_H_
+#pragma once
 
 #if DEBUG
 #include <FreeRTOSConfig.h>
@@ -11,5 +10,3 @@
 #define DASSERT(x)
 #define DPRINTF(...)
 #endif
-
-#endif /* !__DEBUG_H__ */

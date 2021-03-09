@@ -1,5 +1,4 @@
-#ifndef _MOUSE_H_
-#define _MOUSE_H_
+#pragma once
 
 #include <sys/cdefs.h>
 
@@ -23,5 +22,3 @@ typedef void (*MouseEventNotify_t)(const MouseEvent_t *);
 void MouseInit(MouseEventNotify_t notify,
                int16_t minX, int16_t minY, int16_t maxX, int16_t maxY);
 void MouseKill(void);
-
-#endif /* !_MOUSE_H_ */

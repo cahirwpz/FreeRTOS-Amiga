@@ -1,5 +1,4 @@
-#ifndef _TRAP_H_
-#define _TRAP_H_
+#pragma once
 
 #define T_UNKNOWN   0
 #define T_BUSERR    1
@@ -97,5 +96,3 @@ void TraceTrap(void);
 void FmtErrTrap(void);
 void TrapInstTrap(void);
 #endif /* !__ASSEMBLER__ */
-
-#endif /* !_TRAP_H_ */

@@ -1,5 +1,4 @@
-#ifndef _CIA_REGDEF_H_
-#define _CIA_REGDEF_H_
+#pragma once
 
 #ifndef __ASSEMBLER__
 
@@ -182,5 +181,3 @@ struct CIA {
 #define CIAF_DSKSIDE BIT(2)
 #define CIAF_DSKDIREC BIT(1)
 #define CIAF_DSKSTEP BIT(0)
-
-#endif /* !_CIA_REGDEF_H_ */

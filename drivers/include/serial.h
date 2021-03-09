@@ -1,5 +1,4 @@
-#ifndef _SERIAL_H_
-#define _SERIAL_H_
+#pragma once
 
 #include <file.h>
 
@@ -9,5 +8,3 @@ void SerialInit(unsigned baud);
 void SerialKill(void);
 void SerialPutChar(char data);
 int SerialGetChar(void);
-
-#endif /* !_SERIAL_H_ */

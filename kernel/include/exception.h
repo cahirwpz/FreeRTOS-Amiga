@@ -1,5 +1,4 @@
-#ifndef _EXCEPTION_H_
-#define _EXCEPTION_H_
+#pragma once
 
 /* Exception Service Routine */
 typedef void (*ESR_t)(void);
@@ -24,5 +23,3 @@ typedef void (*ESR_t)(void);
 typedef ESR_t ExcVec_t[EXC_LAST + 1];
 extern ExcVec_t *ExcVecBase;
 #define ExcVec (*ExcVecBase)
-
-#endif /* !_EXCEPTION_H_ */

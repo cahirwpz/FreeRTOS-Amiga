@@ -1,5 +1,4 @@
-#ifndef _BITMAP_H_
-#define _BITMAP_H_
+#pragma once
 
 #include <copper.h>
 
@@ -41,5 +40,3 @@ static inline void CopSetupBitplanes(coplist_t *list, const bitmap_t *bm,
   CopMove16(list, bpl1mod, modulo);
   CopMove16(list, bpl2mod, modulo);
 }
-
-#endif /* !_BITMAP_H_ */

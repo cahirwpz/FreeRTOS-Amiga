@@ -1,5 +1,4 @@
-#ifndef _PALETTE_H_
-#define _PALETTE_H_
+#pragma once
 
 #include <copper.h>
 
@@ -21,5 +20,3 @@ copins_t *CopLoadPal(coplist_t *list, palette_t *pal, uint16_t start) {
 }
 
 #define CopLoadColor(CP, NUM, RGB) CopMove16((CP), color[(NUM)], (RGB))
-
-#endif /* !_PALETTE_H_ */

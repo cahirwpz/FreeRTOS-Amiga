@@ -1,5 +1,4 @@
-#ifndef _BLITTER_H_
-#define _BLITTER_H_
+#pragma once
 
 #include <custom.h>
 #include <bitmap.h>
@@ -142,5 +141,3 @@ typedef struct {
 
 void BltLineSetup(bltline_t *bl);
 void BltLine(bltline_t *bl, void *dstbpl);
-
-#endif

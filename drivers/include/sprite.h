@@ -1,5 +1,4 @@
-#ifndef _SPRITE_H_
-#define _SPRITE_H_
+#pragma once
 
 #include <stdint.h>
 #include <copper.h>
@@ -58,5 +57,3 @@ static inline void SpriteUpdatePos(sprite_t *spr, short x, short y) {
 static inline copins_t *CopLoadSprite(coplist_t *list, int num, sprite_t *spr) {
   return CopMove32(list, sprpt[num], spr ? spr->data : _empty_spr);
 }
-
-#endif /* !_SPRITE_H_ */
