@@ -1,5 +1,5 @@
 #include <asm.h>
-#include "syscall.h"
+#include <sys/syscall.h>
 
 /* WARNING! Since executable loader is very primitive _start procedure
  * MUST BE first one in .text section of the program! */

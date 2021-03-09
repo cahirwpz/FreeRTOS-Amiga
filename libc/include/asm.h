@@ -1,5 +1,4 @@
-#ifndef _ASM_H_
-#define _ASM_H_
+#pragma once
 
 #define __IMMEDIATE #
 
@@ -16,5 +15,3 @@
 #define STRONG_ALIAS(alias, sym)        \
   .globl alias;                         \
   alias = sym
-
-#endif /* _ASM_H_ */

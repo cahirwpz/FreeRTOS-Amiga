@@ -1,8 +1,7 @@
 /* This code is covered by BSD license.
  * It was taken from OpenBSD sys/sys/queue.h and slightly modified. */
 
-#ifndef _QUEUE_H_
-#define _QUEUE_H_
+#pragma once
 
 #include <stddef.h>
 
@@ -406,5 +405,3 @@
       TAILQ_INIT((head2));                                                     \
     }                                                                          \
   } while (0)
-
-#endif /* !_QUEUE_H_ */

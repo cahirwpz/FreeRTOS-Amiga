@@ -1,5 +1,4 @@
-#ifndef _STDIO_H_
-#define _STDIO_H_
+#pragma once
 
 #include <sys/cdefs.h>
 #include <stdarg.h>
@@ -19,4 +18,8 @@ typedef void (*putchar_t)(char);
 void kvprintf(putchar_t, const char *fmt, va_list ap);
 int snprintf(char *str, size_t size, const char *format, ...);
 
-#endif /* !_STDIO_H_ */
+#ifdef _USERSPACE
+
+int dprintf(int fd, const char *fmt, ...);
+
+#endif /* !_USERSPACE */

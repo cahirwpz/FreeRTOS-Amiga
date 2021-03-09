@@ -1,5 +1,4 @@
-#ifndef _SETJMP_H_
-#define _SETJMP_H_
+#pragma once
 
 #include <sys/cdefs.h>
 
@@ -23,5 +22,3 @@ typedef int32_t jmp_buf[_JBLEN];
 
 __returns_twice int setjmp(jmp_buf);
 __noreturn void longjmp(jmp_buf, int);
-
-#endif /* !_SETJMP_H_ */

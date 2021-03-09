@@ -1,5 +1,4 @@
-#ifndef _CDEFS_H_
-#define _CDEFS_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -60,5 +59,3 @@
   __asm(".weak " #alias "\n" #alias " = " #sym)
 #define __strong_alias(alias, sym)                                             \
   __asm(".global " #alias "\n" #alias " = " #sym)
-
-#endif /* !_CDEFS_H_ */

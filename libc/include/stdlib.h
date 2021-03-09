@@ -1,14 +1,22 @@
-#ifndef _STDLIB_H_
-#define _STDLIB_H_
+#pragma once
 
 #include <sys/types.h>
 #include <stddef.h>
 
-int rand_r(unsigned int *seed);
+#define alloca(size) __builtin_alloca(size)
 
+int atoi(const char *);
+int rand_r(unsigned int *seed);
 long strtol(const char *restrict str, char **restrict endptr, int base);
 u_long strtoul(const char *restrict str, char **restrict endptr, int base);
 
-#define alloca(size) __builtin_alloca(size)
+#ifdef _USERSPACE
 
-#endif /* !_STDLIB_H_ */
+#define EXIT_FAILURE 1
+#define EXIT_SUCCESS 0
+
+__noreturn void exit(int);
+void free(void *);
+void *malloc(size_t);
+
+#endif /* !_USERSPACE */
