@@ -1,9 +1,9 @@
 #include <cpu.h>
 #include <trap.h>
 #include <string.h>
+#include <proc.h>
 
 #include <sys/syscall.h>
-#include <sys/proc.h>
 
 extern void vPortDefaultTrapHandler(TrapFrame_t *);
 

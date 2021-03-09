@@ -4,7 +4,7 @@
 #include <libkern.h>
 #include <string.h>
 #include <strings.h>
-#include <sys/proc.h>
+#include <proc.h>
 
 Proc_t *TaskGetProc(void) {
   return pvTaskGetThreadLocalStoragePointer(NULL, TLS_PROC);
