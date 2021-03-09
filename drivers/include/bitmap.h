@@ -24,8 +24,7 @@ static inline void CopSetupScreen(coplist_t *list, const bitmap_t *bm,
 }
 
 static inline void CopSetupBitplanes(coplist_t *list, const bitmap_t *bm,
-                                     copins_t **bplptr)
-{
+                                     copins_t **bplptr) {
   for (int i = 0; i < bm->depth; i++) {
     copins_t *ins = CopMove32(list, bplpt[i], bm->planes[i]);
     if (bplptr)

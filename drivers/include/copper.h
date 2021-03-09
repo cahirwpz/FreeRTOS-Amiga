@@ -31,7 +31,7 @@
 /* Last Horizontal Position in line one can reliably wait on. */
 #define HP_LAST 0xde
 
-/* 
+/*
  * Copper is described here:
  * http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node0047.html
  */
@@ -56,7 +56,9 @@ typedef struct {
 
 #define COPLIST(NAME, SIZE)                                                    \
   __bsschip copins_t NAME##_ins[SIZE];                                         \
-  coplist_t *NAME = &(coplist_t){NAME##_ins, NAME##_ins}
+  coplist_t *NAME = &(coplist_t) {                                             \
+    NAME##_ins, NAME##_ins                                                     \
+  }
 
 /* Low-level functions */
 static inline copins_t *CopMoveWord(coplist_t *list, uint16_t reg,
@@ -73,7 +75,7 @@ static inline copins_t *CopMoveLong(coplist_t *list, uint16_t reg, void *ptr) {
   return ins;
 }
 
-#define CSREG(reg) (uint16_t)offsetof(struct Custom, reg)
+#define CSREG(reg) (uint16_t) offsetof(struct Custom, reg)
 #define CopMove16(list, reg, data) CopMoveWord(list, CSREG(reg), data)
 #define CopMove32(list, reg, data) CopMoveLong(list, CSREG(reg), data)
 
@@ -114,21 +116,22 @@ static inline void CopListActivate(coplist_t *list) {
   custom.cop1lc = (intptr_t)list->list;
 }
 
-#define MODE_LORES  0
-#define MODE_HIRES  BPLCON0_HIRES
+#define MODE_LORES 0
+#define MODE_HIRES BPLCON0_HIRES
 #define MODE_DUALPF BPLCON0_DBLPF
-#define MODE_LACE   BPLCON0_LACE
-#define MODE_HAM    BPLCON0_HOMOD
+#define MODE_LACE BPLCON0_LACE
+#define MODE_HAM BPLCON0_HOMOD
 
-static inline void CopSetupMode(coplist_t *list, uint16_t mode, uint16_t depth) {
+static inline void CopSetupMode(coplist_t *list, uint16_t mode,
+                                uint16_t depth) {
   CopMove16(list, bplcon0, BPLCON0_BPU(depth) | BPLCON0_COLOR | mode);
   CopMove16(list, bplcon2, BPLCON2_PF2P2 | BPLCON2_PF1P2 | BPLCON2_PF2PRI);
   CopMove16(list, bplcon3, 0);
 }
 
 static inline void CopSetupDisplayWindow(coplist_t *list, uint16_t mode,
-                                         uint16_t xs, uint16_t ys,
-                                         uint16_t w, uint16_t h) {
+                                         uint16_t xs, uint16_t ys, uint16_t w,
+                                         uint16_t h) {
   /* vstart  $00 ..  $ff */
   /* hstart  $00 ..  $ff */
   /* vstop   $80 .. $17f */

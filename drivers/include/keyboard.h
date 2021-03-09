@@ -117,7 +117,7 @@ typedef enum {
 #define EV_KEY 2
 
 typedef struct KeyEvent {
-  uint8_t type;     /* always set to EV_KEY */
+  uint8_t type; /* always set to EV_KEY */
   uint8_t modifier;
   uint8_t code;
   char ascii;

@@ -85,8 +85,8 @@ struct CIA {
 #define CIAICRF_FLG BIT(CIAICRB_FLG)
 #define CIAICRF_IR BIT(CIAICRB_IR)
 #define CIAICRF_SETCLR BIT(CIAICRB_SETCLR)
-#define CIAICRF_ALL (CIAICRF_TA | CIAICRF_TB | CIAICRF_ALRM | CIAICRF_SP |     \
-                     CIAICRF_FLG)
+#define CIAICRF_ALL                                                            \
+  (CIAICRF_TA | CIAICRF_TB | CIAICRF_ALRM | CIAICRF_SP | CIAICRF_FLG)
 
 /* control register A register masks */
 #define CIACRAF_START BIT(CIACRAB_START)

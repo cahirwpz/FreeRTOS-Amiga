@@ -18,12 +18,12 @@
 #define SRCB BIT(10)
 #define SRCA BIT(11)
 
-#define ASHIFT(x) (((x) & 15) << 12)
+#define ASHIFT(x) (((x)&15) << 12)
 
 /* definitions for blitter control register 1 */
 #define LINEMODE BIT(0)
 
-#define BSHIFT(x) (((x) & 15) << 12)
+#define BSHIFT(x) (((x)&15) << 12)
 
 /* bltcon1 in normal mode */
 #define OVFLAG BIT(5)
@@ -67,7 +67,8 @@ static inline bool BlitterBusy(void) {
 }
 
 static inline void WaitBlitter(void) {
-  while (BlitterBusy());
+  while (BlitterBusy())
+    continue;
 }
 
 /* Blitter copying state & routines. */
@@ -79,8 +80,8 @@ typedef struct {
   } dst;
   struct {
     const bitmap_t *bm; /* source bitmap */
-    short x, y;   /* x must be 16 pixels aligned */
-    short w, h;   /* w must be 16 pixels aligned */
+    short x, y;         /* x must be 16 pixels aligned */
+    short w, h;         /* w must be 16 pixels aligned */
   } src;
 
   /* private fields */
@@ -93,9 +94,8 @@ typedef struct {
 void BltCopySetup(bltcopy_t *bc);
 void BltCopy(bltcopy_t *bc, void *dstbpl, void *srcbpl, void *mskbpl);
 
-static inline void BltCopySetSrc(bltcopy_t *bc, const bitmap_t *bm,
-                                 short x, short y, short w, short h)
-{
+static inline void BltCopySetSrc(bltcopy_t *bc, const bitmap_t *bm, short x,
+                                 short y, short w, short h) {
   bc->src.bm = bm;
   bc->src.x = x;
   bc->src.y = y;
@@ -103,8 +103,8 @@ static inline void BltCopySetSrc(bltcopy_t *bc, const bitmap_t *bm,
   bc->src.h = h < 0 ? bm->height : h;
 }
 
-static inline void BltCopySetDst(bltcopy_t *bc, const bitmap_t *bm, short x, short y)
-{
+static inline void BltCopySetDst(bltcopy_t *bc, const bitmap_t *bm, short x,
+                                 short y) {
   bc->dst.bm = bm;
   bc->dst.x = x;
   bc->dst.y = y;
@@ -129,7 +129,7 @@ typedef struct {
   /* public fields */
   short xs, ys;
   short xe, ye;
-  short stride;     /* Distance between two lines of bitplane (in bytes). */
+  short stride; /* Distance between two lines of bitplane (in bytes). */
   linemode_t mode;
   uint16_t pattern; /* Line texture pattern. */
 

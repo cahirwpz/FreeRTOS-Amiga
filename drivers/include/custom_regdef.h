@@ -154,7 +154,7 @@ struct Custom {
 #define VSYNCTRUE BIT(1)   /* vertical sync true */
 #define HSYNCTRUE BIT(0)   /* horizontal sync true */
 
-#define BPLCON0_BPU(d) (((d) & 7) << 12)
+#define BPLCON0_BPU(d) (((d)&7) << 12)
 #define BPLCON0_COLOR BIT(9)
 #define BPLCON0_LACE BIT(2)
 #define BPLCON0_DBLPF BIT(10)

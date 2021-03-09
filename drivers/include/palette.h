@@ -10,7 +10,7 @@ typedef struct palette {
 copins_t *CopLoadPal(coplist_t *list, palette_t *pal, uint16_t start) {
   copins_t *ins = list->curr;
   short n = pal->count;
-  
+
   if (n + start > 32)
     n = 32 - start;
 

@@ -46,10 +46,18 @@
 #include <custom.h>
 
 /* All macros below take or'ed INTF_* flags. */
-static inline void EnableINT(uint16_t x) { custom.intena_ = INTF_SETCLR | x; }
-static inline void DisableINT(uint16_t x) { custom.intena_ = x; }
-static inline void CauseIRQ(uint16_t x) { custom.intreq_ = INTF_SETCLR | x; }
-static inline void ClearIRQ(uint16_t x) { custom.intreq_ = x; }
+static inline void EnableINT(uint16_t x) {
+  custom.intena_ = INTF_SETCLR | x;
+}
+static inline void DisableINT(uint16_t x) {
+  custom.intena_ = x;
+}
+static inline void CauseIRQ(uint16_t x) {
+  custom.intreq_ = INTF_SETCLR | x;
+}
+static inline void ClearIRQ(uint16_t x) {
+  custom.intreq_ = x;
+}
 
 /* Interrupt Service Routine */
 typedef void (*ISR_t)(void *);
@@ -69,7 +77,9 @@ extern void DummyInterruptHandler(void *);
 
 /* Macros for setting up ISR for given interrupt number. */
 #define SetIntVec(INTR, CODE, DATA)                                            \
-  IntVec[INTB_##INTR] = (IntVecEntry_t){.code = (CODE), .data = (DATA)}
+  IntVec[INTB_##INTR] = (IntVecEntry_t) {                                      \
+    .code = (CODE), .data = (DATA)                                             \
+  }
 #define ResetIntVec(INTR) SetIntVec(INTR, DummyInterruptHandler, NULL)
 
 /* Amiga Interrupt Autovector handlers */
@@ -104,13 +114,15 @@ typedef struct IntChain {
  * IntServer definition recalculates priority number accordingly.
  */
 #define INTSERVER(PRI, CODE, DATA)                                             \
-  {.node = {.pvOwner = DATA, .xItemValue = (127 - (PRI))}, .code = CODE} 
+  { .node = {.pvOwner = DATA, .xItemValue = (127 - (PRI))}, .code = CODE }
 #define INTSERVER_DEFINE(NAME, PRI, CODE, DATA)                                \
   static IntServer_t *NAME = &(IntServer_t)INTSERVER(PRI, CODE, DATA)
 
 /* Defines Interrupt Chain of given name. */
 #define INTCHAIN(NAME)                                                         \
-  IntChain_t *NAME = &(IntChain_t) { 0 }
+  IntChain_t *NAME = &(IntChain_t) {                                           \
+    0                                                                          \
+  }
 
 /* Register Interrupt Server for given Interrupt Chain. */
 void AddIntServer(IntChain_t *, IntServer_t *);

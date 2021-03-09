@@ -35,16 +35,18 @@ typedef struct sprite {
  *  Bit 0           The HSTART low bit
  */
 #define SPRCTL(X, Y, A, H)                                                     \
-  (((((Y) + (H) + 1) & 255) << 8) |                                            \
-   (((A) & 1) << 7) |                                                          \
-   (((Y) & 256) >> 6) |                                                        \
-   ((((Y) + (H) + 1) & 256) >> 7) |                                            \
-   ((X) & 1))
+  (((((Y) + (H) + 1) & 255) << 8) | (((A)&1) << 7) | (((Y)&256) >> 6) |        \
+   ((((Y) + (H) + 1) & 256) >> 7) | ((X)&1))
 
 #define SPRHDR(x, y, a, h)                                                     \
-  (sprdat_t){ SPRPOS((x),(y)), SPRCTL((x), (y), (a), (h)) }
+  (sprdat_t) {                                                                 \
+    SPRPOS((x), (y)), SPRCTL((x), (y), (a), (h))                               \
+  }
 
-#define SPREND() (sprdat_t){ 0, 0 }
+#define SPREND()                                                               \
+  (sprdat_t) {                                                                 \
+    0, 0                                                                       \
+  }
 
 extern sprdat_t _empty_spr[];
 

@@ -23,8 +23,8 @@ typedef struct CIATimer CIATimer_t;
 #define E_CLOCK 709379
 
 /* Maximum delay is around 92.38ms */
-#define TIMER_MS(ms) ((ms) * E_CLOCK / 1000)
-#define TIMER_US(us) ((us) * E_CLOCK / (1000 * 1000))
+#define TIMER_MS(ms) ((ms) * (E_CLOCK / 1000))
+#define TIMER_US(us) ((us) * (E_CLOCK / (1000 * 1000)))
 
 /* Procedures for handling one-shot delays with high resolution timers. */
 struct CIATimer *AcquireTimer(unsigned num);

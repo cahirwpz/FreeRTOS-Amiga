@@ -1,17 +1,17 @@
 #pragma once
 
-#define T_UNKNOWN   0
-#define T_BUSERR    1
-#define T_ADDRERR   2
-#define T_ILLINST   3
-#define T_ZERODIV   4
-#define T_CHKINST   5
+#define T_UNKNOWN 0
+#define T_BUSERR 1
+#define T_ADDRERR 2
+#define T_ILLINST 3
+#define T_ZERODIV 4
+#define T_CHKINST 5
 #define T_TRAPVINST 6
-#define T_PRIVINST  7
-#define T_TRACE     8
-#define T_FMTERR    9
-#define T_TRAPINST  10
-#define T_NTRAPS    11
+#define T_PRIVINST 7
+#define T_TRACE 8
+#define T_FMTERR 9
+#define T_TRAPINST 10
+#define T_NTRAPS 11
 
 #ifndef __ASSEMBLER__
 #include <stdint.h>

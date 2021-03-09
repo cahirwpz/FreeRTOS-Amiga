@@ -20,9 +20,9 @@
 #define GAP_SIZE 832
 #define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
 
-typedef uint16_t DiskTrack_t[TRACK_SIZE/sizeof(uint16_t)];
+typedef uint16_t DiskTrack_t[TRACK_SIZE / sizeof(uint16_t)];
 typedef struct DiskSector DiskSector_t;
-typedef uint32_t RawSector_t[SECTOR_SIZE/sizeof(uint32_t)];
+typedef uint32_t RawSector_t[SECTOR_SIZE / sizeof(uint32_t)];
 
 #define CMD_READ 1
 #define CMD_WRITE 2

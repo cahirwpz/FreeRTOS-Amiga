@@ -8,7 +8,7 @@ SOURCES = croutine.c \
 	  tasks.c \
 	  timers.c
 
-FORMAT-EXCLUDE = $(SOURCES)
+FORMAT-EXCLUDE = $(SOURCES) $(SOURCES_H)
 
 LIBNAME = freertos.lib
 

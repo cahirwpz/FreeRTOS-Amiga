@@ -1,7 +1,7 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = FreeRTOS_CLI.c
-FORMAT-EXCLUDE = $(SOURCES)
+FORMAT-EXCLUDE = $(SOURCES) $(SOURCES_H)
 
 LIBNAME = freertos-plus.lib
 
