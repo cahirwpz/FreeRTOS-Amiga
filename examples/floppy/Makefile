@@ -2,7 +2,7 @@ TOPDIR = $(realpath ../..)
 
 PROGRAM = floppy
 SOURCES = main.c reader.c writer.c
-OBJECTS = ../startup.o ../fault.o ../trap.o 
+OBJECTS = ../startup.o
 LAUNCHOPTS = --window parallel
 ADF-EXTRA =
 

@@ -4,11 +4,12 @@ SOURCES = amigahunk.c \
 	  file.c \
 	  heap.c \
 	  hexdump.c \
-	  port.c \
-	  intsrv.c \
 	  intr.S \
+	  intsrv.c \
+	  port.c \
+	  portasm.S \
 	  trap.S \
-	  portasm.S
+	  traphandler.c
 
 LIBNAME = kernel.lib
 

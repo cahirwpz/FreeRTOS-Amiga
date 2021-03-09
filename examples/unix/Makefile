@@ -2,7 +2,7 @@ TOPDIR = $(realpath ../..)
 
 PROGRAM = unix
 SOURCES = main.c sysent.c proc.c trampoline.S
-OBJECTS = ../startup.o ../fault.o ../trap.o
+OBJECTS = ../startup.o
 
 SUBDIR = bin
 

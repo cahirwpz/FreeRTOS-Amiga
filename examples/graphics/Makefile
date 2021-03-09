@@ -4,7 +4,7 @@ PROGRAM = graphics
 SOURCES = main.c
 SOURCES_GEN = data/simpsons-bg.c data/bart.c data/homer.c data/marge.c \
 	      data/screen.c
-OBJECTS = ../startup.o ../fault.o ../trap.o
+OBJECTS = ../startup.o
 
 PNG2C.simpsons-bg := --bitmap simpsons_bm,320x176x4 --palette simpsons_pal,16
 PNG2C.bart := --bitmap bart_bm,256x31x4,+mask

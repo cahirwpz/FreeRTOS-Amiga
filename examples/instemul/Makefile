@@ -2,7 +2,7 @@ TOPDIR = $(realpath ../..)
 
 PROGRAM = instemul
 SOURCES = main.c rand.c
-OBJECTS = ../startup.o ../fault.o ../trap.o
+OBJECTS = ../startup.o
 
 CFLAGS.rand := -m68060
 
