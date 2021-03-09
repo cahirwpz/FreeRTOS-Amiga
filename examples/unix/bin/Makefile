@@ -1,4 +1,4 @@
-TOPDIR = $(realpath ../..)
+TOPDIR = $(realpath ../../..)
 
 PROGRAMS = cat echo grep init kill ls mkdir rm sh wc
 SOURCES = $(addsuffix .c,$(PROGRAMS))
@@ -19,5 +19,5 @@ include $(TOPDIR)/build/common.mk
 	$(ELF2HUNK) $< $@
 
 %.elf: crt0.o %.o $(TOPDIR)/libc/c.lib
-	@echo "[LD] $(addprefix $(DIR), $^) -> $(DIR)$@"
+	@echo "[LD] $(addprefix $(DIR), $*.o) -> $(DIR)$@"
 	$(LD) $(LDFLAGS) -o $@ $^

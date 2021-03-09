@@ -7,26 +7,22 @@
 #include <libkern.h>
 #include "proc.h"
 
-extern char _binary_ushell_exe_end[];
-extern char _binary_ushell_exe_size[];
-extern char _binary_ushell_exe_start[];
-
-extern char _binary_ucat_exe_end[];
-extern char _binary_ucat_exe_size[];
-extern char _binary_ucat_exe_start[];
+static File_t *FloppyOpen(const char *path) {
+  (void)path;
+  return NULL;
+}
 
 static void vMainTask(__unused void *data) {
   File_t *ser = SerialOpen(9600);
-  File_t *shell =
-    MemoryOpen(_binary_ushell_exe_start, (size_t)_binary_ushell_exe_size);
+  File_t *init = FloppyOpen("init");
 
   Proc_t p;
   ProcInit(&p, UPROC_STKSZ);
   TaskSetProc(&p);
   ProcFileInstall(&p, 0, FileHold(ser));
   ProcFileInstall(&p, 1, FileHold(ser));
-  if (ProcLoadImage(&p, shell)) {
-    ProcSetArgv(&p, (char *[]){"shell", NULL});
+  if (ProcLoadImage(&p, init)) {
+    ProcSetArgv(&p, (char *[]){"init", NULL});
     ProcEnter(&p);
     kprintf("Program returned: %d\n", p.exitcode);
   }

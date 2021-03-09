@@ -2,7 +2,7 @@
 #include <trap.h>
 #include <string.h>
 
-#include "syscall.h"
+#include <sys/syscall.h>
 #include "proc.h"
 
 extern void vPortDefaultTrapHandler(TrapFrame_t *);
