@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include <sys/syscall.h>
-#include "proc.h"
+#include <sys/proc.h>
 
 extern void vPortDefaultTrapHandler(TrapFrame_t *);
 

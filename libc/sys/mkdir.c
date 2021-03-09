@@ -1,8 +1,8 @@
 #include <sys/syscall.h>
 #include <sys/stat.h>
 
-int mkdir(const char *path, mode_t mode) {
+int mkdir(const char *path) {
   int err;
-  SYSCALL2(err, SYS_mkdir, path, mode);
+  SYSCALL1(err, SYS_mkdir, path);
   return err;
 }

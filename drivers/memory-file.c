@@ -1,6 +1,7 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <string.h>
 #include <file.h>
+#include <stdio.h>
 
 typedef struct MemFile {
   File_t f;

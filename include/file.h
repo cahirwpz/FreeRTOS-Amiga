@@ -1,9 +1,7 @@
 #ifndef _FILE_H_
 #define _FILE_H_
 
-#include <sys/cdefs.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <sys/types.h>
 
 typedef struct File File_t;
 
@@ -22,7 +20,7 @@ typedef struct {
 typedef struct File {
   FileOps_t *ops;
   uint32_t usecount;
-  long offset;
+  off_t offset;
 } File_t;
 
 /* Increase reference counter. */

@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <libkern.h>
 #include <file.h>
+#include <stdio.h>
 
 File_t *FileHold(File_t *f) {
   uint32_t old = Atomic_Increment_u32(&f->usecount);

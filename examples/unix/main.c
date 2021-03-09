@@ -5,7 +5,7 @@
 #include <serial.h>
 #include <file.h>
 #include <libkern.h>
-#include "proc.h"
+#include <sys/proc.h>
 
 static File_t *FloppyOpen(const char *path) {
   (void)path;
