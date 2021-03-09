@@ -354,7 +354,10 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
   return new_ptr;
 }
 
-#define msg(...) if (verbose) kprintf(__VA_ARGS__)
+#define msg(...)                                                               \
+  if (verbose) {                                                               \
+    kprintf(__VA_ARGS__);                                                      \
+  }
 
 static void ar_check(arena_t *ar, int verbose) {
   word_t *bt = ar->start;
@@ -375,18 +378,18 @@ static void ar_check(arena_t *ar, int verbose) {
     if (bt_free(bt)) {
       word_t *ft = bt_footer(bt);
       assert(*bt == *ft); /* Header and footer do not match? */
-      assert(!prevfree); /* Free block not coalesced? */
+      assert(!prevfree);  /* Free block not coalesced? */
       prevfree = 1;
       freeMem += bt_size(bt) - USEDBLK_SZ;
       dangling++;
     } else {
-      assert(flag == prevfree); /* PREVFREE flag mismatch? */
+      assert(flag == prevfree);  /* PREVFREE flag mismatch? */
       assert(bt_has_canary(bt)); /* Canary damaged? */
       prevfree = 0;
     }
   }
 
-  assert(bt_get_islast(prev)); /* Last block set incorrectly? */
+  assert(bt_get_islast(prev));      /* Last block set incorrectly? */
   assert(freeMem == ar->totalFree); /* Total free memory miscalculated? */
 
   msg("--=[ free block list start ]=---\n");

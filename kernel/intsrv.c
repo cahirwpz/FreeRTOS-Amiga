@@ -31,9 +31,7 @@ void RemIntServer(IntServer_t *is) {
 void RunIntChain(IntChain_t *ic) {
   /* Call each server in turn. */
   for (ListItem_t *node = listGET_HEAD_ENTRY(&ic->list);
-       node != listGET_END_MARKER(&ic->list);
-       node = listGET_NEXT(node))
-  {
+       node != listGET_END_MARKER(&ic->list); node = listGET_NEXT(node)) {
     IntServer_t *is = (IntServer_t *)node;
     is->code(listGET_LIST_ITEM_OWNER(node));
   }
