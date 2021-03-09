@@ -1,5 +1,4 @@
-#ifndef _CTYPE_H_
-#define _CTYPE_H_
+#pragma once
 
 int isspace(int ch);
 int isascii(int ch);
@@ -15,5 +14,3 @@ int isprint(int ch);
 int ispunct(int ch);
 int toupper(int ch);
 int tolower(int ch);
-
-#endif /* !_CTYPE_H_ */

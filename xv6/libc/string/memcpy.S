@@ -1,1 +1,0 @@
-../../../libc/string/memcpy.S

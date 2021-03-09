@@ -1,5 +1,4 @@
-#ifndef _LIMITS_H_
-#define _LIMITS_H_
+#pragma once
 
 #define CHAR_BIT __CHAR_BIT__
 
@@ -115,5 +114,3 @@
 /* limit of size_t */
 #define SIZE_MAX __SIZE_MAX__
 #define SSIZE_MAX ((ssize_t)(__SIZE_MAX__ / 2))
-
-#endif /* !_MACHINE_LIMITS_H_ */

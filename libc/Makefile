@@ -9,8 +9,11 @@ SOURCES = \
 	gen/umodsi3.S \
 	gen/longjmp.S \
 	gen/setjmp.S \
+	stdio/dprintf.c \
 	stdio/kvprintf.c \
 	stdio/snprintf.c \
+	stdlib/atoi.c \
+	stdlib/malloc.c \
 	stdlib/rand_r.c \
 	stdlib/strtol.c \
 	stdlib/strtoul.c \
@@ -29,9 +32,27 @@ SOURCES = \
 	string/strncpy.S \
 	string/strrchr.S \
 	string/strspn.c \
-	string/strtok_r.c
+	string/strtok_r.c \
+	sys/chdir.c \
+	sys/close.c \
+	sys/dup.c \
+	sys/execv.c \
+	sys/exit.c \
+	sys/fstat.c \
+	sys/kill.c \
+	sys/mkdir.c \
+	sys/open.c \
+	sys/pipe.c \
+	sys/read.c \
+	sys/sbrk.c \
+	sys/stat.c \
+	sys/unlink.c \
+	sys/vfork.c \
+	sys/wait.c \
+	sys/write.c
 
 LIBNAME = c.lib
+CLEAN-FILES = $(wildcard include/*~ include/sys/*~)
 
 include $(TOPDIR)/build/build.lib.mk
 

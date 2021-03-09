@@ -1,1 +1,0 @@
-../../../libc/string/strcmp.S

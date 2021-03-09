@@ -1,5 +1,4 @@
-#ifndef _STDINT_H_
-#define _STDINT_H_
+#pragma once
 
 /*
  * 7.18.1 Integer types
@@ -42,5 +41,3 @@ typedef __UINTPTR_TYPE__ uintptr_t;
 /* 7.18.1.5 Greatest-width integer types */
 typedef __INTMAX_TYPE__ intmax_t;
 typedef __UINTMAX_TYPE__ uintmax_t;
-
-#endif /* !_STDINT_H_ */
