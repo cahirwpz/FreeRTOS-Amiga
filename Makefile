@@ -19,8 +19,8 @@ before-libc: build-tools
 
 # Lists of all files that we consider our sources.
 SRCDIRS = include drivers libc FreeRTOS 
-SRCFILES_C = $(shell find $(SRCDIRS) -iname '*.[ch]')
-SRCFILES_ASM = $(shell find $(SRCDIRS) -iname '*.S')
+SRCFILES_C = $(shell find $(SRCDIRS) -type f -iname '*.[ch]')
+SRCFILES_ASM = $(shell find $(SRCDIRS) -type f -iname '*.S')
 SRCFILES = $(SRCFILES_C) $(SRCFILES_ASM)
 
 cscope.out: $(SRCFILES)
