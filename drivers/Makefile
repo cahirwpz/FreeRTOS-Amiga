@@ -9,9 +9,6 @@ SOURCES = \
 	  cia-icr.c \
 	  cia-line.c \
 	  cia-timer.c \
-	  ff.c \
-	  ffsystem.c \
-	  ffunicode.c \
 	  floppy.c \
 	  floppy-mfm.c \
 	  keyboard.c \
@@ -20,9 +17,6 @@ SOURCES = \
 	  serial.c \
 	  serial-file.c \
 	  sprite.c
-
-FORMAT-EXCLUDE = ff.c ffsystem.c ffunicode.c \
-                 include/diskio.h include/ff.h include/ffconf.h
 
 LIBNAME = drivers.lib
 
