@@ -4,7 +4,7 @@ PROGRAM = console
 SOURCES = main.c console.c tty.c event.c
 SOURCES_GEN = data/drdos8x8.c data/koi8r.8x8.c data/lat2-08.c data/pointer.c \
 	      data/screen.c
-OBJECTS = ../startup.o ../fault.o ../trap.o
+OBJECTS = ../startup.o
 
 PSF2C.drdos8x8 := --name console
 PSF2C.koi8r.8x8 := --name console

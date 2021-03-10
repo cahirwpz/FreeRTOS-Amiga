@@ -5,6 +5,7 @@ endif
 LIBS    ?= $(TOPDIR)/drivers/drivers.lib \
 	   $(TOPDIR)/FreeRTOS/freertos.lib \
 	   $(TOPDIR)/FreeRTOS-Plus/freertos-plus.lib \
+	   $(TOPDIR)/kernel/kernel.lib \
 	   $(TOPDIR)/libc/c.lib
 LDFLAGS  = --emit-relocs -T $(TOPDIR)/amiga.ld
 
