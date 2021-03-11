@@ -1,7 +1,5 @@
 #pragma once
 
-#define __IMMEDIATE #
-
 #define ENTRY(name)                     \
   .text;                                \
   .even;                                \

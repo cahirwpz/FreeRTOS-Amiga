@@ -2,72 +2,77 @@
 #include <custom_regdef.h>
 #include <interrupt.h>
 
-#define ISR(name,num)                           \
-ENTRY(name);                                    \
-        movem.l d0-d1/a0-a1,-(sp);              \
-        lea     IntVec+8*num,a0;                \
-        moveq   __IMMEDIATE num,d1
+.macro  FIRST   intb
+        movem.l d0-d1/a0-a1,-(sp)
+        moveq   #\intb,d1
+        move.w  custom+intreqr,d0
+        and.w   custom+intenar,d0
+        btst    d1,d0
+        jne     EnterIntr
+.endm
 
-#define HANDLE                                  \
-        btst    d1,d0;                          \
-        jne     _handle;                        \
-        addq.l  #8,a0;                          \
+.macro  NEXT    irq
         addq.w  #1,d1
+        btst    d1,d0
+        jne     EnterIntr
+.endm
 
-#define FINISH                                  \
-        jra     _handle
+.macro  FINISH
+        jra     LeaveIntr
+.endm
 
 # Level 1 Interrupt Autovector
 
-ISR(AmigaLvl1Handler,INTB_TBE)
-        move.w  custom+intreqr,d0
-
-        HANDLE  /* TBE */
-        HANDLE  /* DSKBLK */
-        FINISH  /* SOFTINT */
+ENTRY(AmigaLvl1Handler)
+        FIRST   INTB_TBE
+        NEXT    INTB_DSKBLK
+        NEXT    INTB_SOFTINT
+        FINISH
 END(AmigaLvl1Handler)
 
 # Level 2 Interrupt Autovector
 
-ISR(AmigaLvl2Handler,INTB_PORTS)
-        FINISH  /* PORTS */
+ENTRY(AmigaLvl2Handler)
+        FIRST   INTB_PORTS
+        FINISH
 END(AmigaLvl2Handler)
 
 # Level 3 Interrupt Autovector
 
-ISR(AmigaLvl3Handler,INTB_COPER)
-        move.w  custom+intreqr,d0
-
-        HANDLE  /* COPER */
-        HANDLE  /* VERTB */
-        FINISH  /* BLIT */
+ENTRY(AmigaLvl3Handler)
+        FIRST   INTB_COPER
+        NEXT    INTB_VERTB
+        NEXT    INTB_BLIT
+        FINISH
 END(AmigaLvl3Handler)
 
-# Level 4 Interrupt Autovector
+# Level 6 Interrupt Autovector
 
-ISR(AmigaLvl4Handler,INTB_AUD0)
-        move.w  custom+intreqr,d0
-
-        HANDLE  /* AUD0 */
-        HANDLE  /* AUD1 */
-        HANDLE  /* AUD2 */
-        /* FINISH AUD3 */
-END(AmigaLvl4Handler)
+ENTRY(AmigaLvl6Handler)
+        FIRST   INTB_EXTER
+        FINISH
+END(AmigaLvl6Handler)
 
 # Main part of interrupt handler
 
-_handle:
+ENTRY(EnterIntr)
         /* Make INTF_* mask, and clear pending interrupt. */
         clr.w   d0
         bset    d1,d0
         move.w  d0,custom+intreq
+
+        lea     IntVec,a0
+        lsl.w   #3,d1
+        add.w   d1,a0
 
         /* Enter interrupt service routine. */
         move.l  (a0)+,a1                /* IntVecEntry_t.code */
         move.l  (a0)+,-(sp)             /* IntVecEntry_t.data */
         jsr     (a1)
         addq.l  #4,sp
+END(EnterIntr)
 
+ENTRY(LeaveIntr)
         /*
          * Check if we need to reschedule a task - usually as a result waking
          * up a higher priorty task while running interrupt service routine.
@@ -91,21 +96,25 @@ _handle:
 .Lnoswitch:
         movem.l (sp)+,d0-d1/a0-a1
         rte
+END(LeaveIntr)
+
+# Level 4 Interrupt Autovector
+
+ENTRY(AmigaLvl4Handler)
+        FIRST   INTB_AUD0
+        NEXT    INTB_AUD1
+        NEXT    INTB_AUD2
+        NEXT    INTB_AUD3
+        FINISH
+END(AmigaLvl4Handler)
 
 # Level 5 Interrupt Autovector
 
-ISR(AmigaLvl5Handler,INTB_RBF)
-        move.w  custom+intreqr,d0
-
-        HANDLE  /* RBF *
-        FINISH  /* DSKSYNC */
+ENTRY(AmigaLvl5Handler)
+        FIRST   INTB_RBF
+        NEXT    INTB_DSKSYNC
+        FINISH
 END(AmigaLvl5Handler)
-
-# Level 6 Interrupt Autovector
-
-ISR(AmigaLvl6Handler,INTB_EXTER)
-        FINISH  /* EXTER */
-END(AmigaLvl6Handler)
 
 # Dummy handler
 
