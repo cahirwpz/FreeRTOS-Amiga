@@ -16,6 +16,7 @@
 #define SYS_stat 14
 #define SYS_unlink 15
 #define SYS_wait 16
+#define SYS_MAXSYSCALL 17
 
 /* Operand classes are described in gcc/config/m68k/m68k.md */
 #define SYSCALL0(res, nr)                                                      \

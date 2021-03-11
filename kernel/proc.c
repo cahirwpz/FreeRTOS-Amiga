@@ -1,6 +1,8 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
 #include <amigahunk.h>
+#include <cpu.h>
+#include <trap.h>
 #include <libkern.h>
 #include <string.h>
 #include <strings.h>
@@ -12,6 +14,12 @@ Proc_t *TaskGetProc(void) {
 
 void TaskSetProc(Proc_t *proc) {
   vTaskSetThreadLocalStoragePointer(NULL, TLS_PROC, (void *)proc);
+}
+
+void CloneUserCtx(UserCtx_t *ctx, TrapFrame_t *frame) {
+  ctx->pc = (CpuModel > CF_68000) ? frame->m68010.pc : frame->m68000.pc;
+  ctx->sp = frame->usp;
+  memcpy(&ctx->d0, &frame->d0, 15 * sizeof(uint32_t));
 }
 
 int ProcLoadImage(Proc_t *proc, File_t *exe) {
@@ -108,15 +116,4 @@ void ProcEnter(Proc_t *proc) {
 __noreturn void ProcExit(Proc_t *proc, int exitcode) {
   proc->exitcode = exitcode;
   longjmp(proc->retctx, 1);
-}
-
-int ProcFileInstall(Proc_t *proc, int fd, File_t *file) {
-  if (fd < 0 || fd >= MAXFILES)
-    return 0;
-
-  File_t **fp = &proc->fdtab[fd];
-  if (*fp)
-    FileClose(*fp);
-  *fp = file;
-  return 1;
 }

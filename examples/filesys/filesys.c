@@ -3,6 +3,7 @@
 #include <FreeRTOS/queue.h>
 
 #include <floppy.h>
+#include <sys/errno.h>
 
 #include "filesys.h"
 
@@ -43,9 +44,9 @@ typedef struct FsMsg {
   } response;
 } FsMsg_t;
 
-static long FsRead(FsFile_t *f, void *buf, size_t nbyte);
-static long FsSeek(FsFile_t *f, long offset, int whence);
-static void FsClose(FsFile_t *f);
+static int FsRead(FsFile_t *f, void *buf, size_t nbyte, long *donep);
+static int FsSeek(FsFile_t *f, long offset, int whence, long *newoffp);
+static int FsClose(FsFile_t *f);
 
 static FileOps_t FsOps = {.read = (FileRead_t)FsRead,
                           .seek = (FileSeek_t)FsSeek,
@@ -86,26 +87,22 @@ File_t *FsOpen(const char *name) {
   return (File_t *)FsSendMsg(&msg);
 }
 
-static void FsClose(FsFile_t *ff) {
+static int FsClose(FsFile_t *ff) {
   FsMsg_t msg = {.cmd = FS_CLOSE};
   (void)ff;
-  FsSendMsg(&msg);
+  return FsSendMsg(&msg);
 }
 
-static long FsRead(FsFile_t *ff, void *buf, size_t nbyte) {
+static int FsRead(FsFile_t *ff, void *buf, size_t nbyte, long *donep) {
   FsMsg_t msg = {.cmd = FS_READ};
-  (void)ff;
-  (void)buf;
-  (void)nbyte;
+  (void)ff, (void)buf, (void)nbyte, (void)donep;
   return FsSendMsg(&msg);
 }
 
 /* Does not involve direct interaction with the filesystem. */
-static long FsSeek(FsFile_t *ff, long offset, int whence) {
-  (void)ff;
-  (void)offset;
-  (void)whence;
-  return -1;
+static int FsSeek(FsFile_t *ff, long offset, int whence, long *newoffp) {
+  (void)ff, (void)offset, (void)whence, (void)newoffp;
+  return ENOSYS;
 }
 
 static TaskHandle_t filesysHandle;

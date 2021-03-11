@@ -2,8 +2,7 @@
 #include <FreeRTOS/task.h>
 
 #include <interrupt.h>
-#include <stdio.h>
-
+#include <libkern.h>
 #include <file.h>
 
 #include "console.h"
@@ -19,12 +18,12 @@ static void vInputTask(void *data) {
     if (!PopEvent(&ev))
       continue;
     if (ev.type == EV_MOUSE) {
-      FilePrintf(tty, "MOUSE: x = %d, y = %d, button = %x\n", ev.mouse.x,
-                 ev.mouse.y, ev.mouse.button);
+      kfprintf(tty, "MOUSE: x = %d, y = %d, button = %x\n", ev.mouse.x,
+               ev.mouse.y, ev.mouse.button);
       ConsoleMovePointer(ev.mouse.x, ev.mouse.y);
     } else if (ev.type == EV_KEY) {
-      FilePrintf(tty, "KEY: ascii = '%c', code = %02x, modifier = %02x\n",
-                 ev.key.ascii, ev.key.code, ev.key.modifier);
+      kfprintf(tty, "KEY: ascii = '%c', code = %02x, modifier = %02x\n",
+               ev.key.ascii, ev.key.code, ev.key.modifier);
     }
   }
 }

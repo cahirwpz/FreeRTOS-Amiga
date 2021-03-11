@@ -2,10 +2,12 @@ TOPDIR = $(realpath ..)
 
 SOURCES = amigahunk.c \
 	  file.c \
+	  filedesc.c \
 	  hexdump.c \
 	  intr.S \
 	  intsrv.c \
 	  malloc.c \
+	  pipe.c \
 	  port.c \
 	  portasm.S \
 	  proc.c \

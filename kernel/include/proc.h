@@ -48,6 +48,3 @@ void ProcFreeImage(Proc_t *proc);
 void ProcSetArgv(Proc_t *proc, char *const *argv);
 void ProcEnter(Proc_t *proc);
 __noreturn void ProcExit(Proc_t *proc, int exitcode);
-
-/* Descriptor table management procedures. */
-int ProcFileInstall(Proc_t *proc, int fd, File_t *file);

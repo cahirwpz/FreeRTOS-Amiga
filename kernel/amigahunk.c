@@ -1,9 +1,8 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <amigahunk.h>
 #include <strings.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
+#include <libkern.h>
 
 #define DEBUG 0
 
@@ -21,12 +20,12 @@
 
 static long ReadLong(File_t *fh) {
   long v = 0;
-  FileRead(fh, &v, sizeof(v));
+  kfread(fh, &v, sizeof(v));
   return v;
 }
 
 static void SkipLongs(File_t *fh, int n) {
-  FileSeek(fh, n * sizeof(int), SEEK_CUR);
+  kfseek(fh, n * sizeof(int), SEEK_CUR);
 }
 
 static bool AllocHunks(File_t *fh, Hunk_t **hunkArray, short hunkCount) {
@@ -69,7 +68,7 @@ static bool LoadHunks(File_t *fh, Hunk_t **hunkArray) {
       hunkRoot = true;
       n = ReadLong(fh);
       if (hunkId != HUNK_BSS)
-        FileRead(fh, hunk->data, n * sizeof(int));
+        kfread(fh, hunk->data, n * sizeof(int));
 #if DEBUG
       {
         const char *hunkType;

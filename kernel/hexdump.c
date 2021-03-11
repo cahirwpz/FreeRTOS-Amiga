@@ -1,4 +1,4 @@
-#include <file.h>
+#include <libkern.h>
 #include <custom.h>
 
 static const char hex2char[16] = "0123456789abcdef";
@@ -29,13 +29,13 @@ void FileHexDump(File_t *f, void *ptr, size_t length) {
       *s++ = ' ';
     if ((i & 15) == 15) {
       *s++ = '\n';
-      FileWrite(f, buf, s - buf);
+      kfwrite(f, buf, s - buf);
       s = buf;
     }
   }
   if (s > buf) {
     *s++ = '\n';
-    FileWrite(f, buf, s - buf);
+    kfwrite(f, buf, s - buf);
   }
 }
 

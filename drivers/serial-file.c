@@ -3,17 +3,18 @@
 
 #include <serial.h>
 #include <file.h>
+#include <sys/errno.h>
 
-static long SerialRead(File_t *f, char *buf, size_t nbyte);
-static long SerialWrite(File_t *f, const char *buf, size_t nbyte);
-static void SerialClose(File_t *f);
+static int SerialRead(File_t *f, char *buf, size_t nbyte, long *donep);
+static int SerialWrite(File_t *f, const char *buf, size_t nbyte, long *donep);
+static int SerialClose(File_t *f);
 
 static FileOps_t SerOps = {.read = (FileRead_t)SerialRead,
                            .write = (FileWrite_t)SerialWrite,
                            .close = (FileClose_t)SerialClose};
 
 File_t *SerialOpen(unsigned baud) {
-  static File_t f = {.ops = &SerOps};
+  static File_t f = {.ops = &SerOps, .readable = 1, .writeable = 1};
 
   uint32_t old = Atomic_Increment_u32(&f.usecount);
   configASSERT(old == 0);
@@ -21,23 +22,29 @@ File_t *SerialOpen(unsigned baud) {
   return &f;
 }
 
-static void SerialClose(File_t *f) {
-  configASSERT(f->usecount == 0);
+static int SerialClose(File_t *f) {
+  if (f->usecount)
+    return EBUSY;
   SerialKill();
+  return 0;
 }
 
-static long SerialWrite(__unused File_t *f, const char *buf, size_t nbyte) {
+static int SerialWrite(__unused File_t *f, const char *buf, size_t nbyte,
+                       long *donep) {
   for (size_t i = 0; i < nbyte; i++)
     SerialPutChar(*buf++);
-  return nbyte;
+  *donep = nbyte;
+  return 0;
 }
 
-static long SerialRead(__unused File_t *f, char *buf, size_t nbyte) {
+static int SerialRead(__unused File_t *f, char *buf, size_t nbyte,
+                      long *donep) {
   size_t i = 0;
   while (i < nbyte) {
     buf[i] = SerialGetChar();
     if (buf[i++] == '\n')
       break;
   }
-  return i;
+  *donep = i;
+  return 0;
 }

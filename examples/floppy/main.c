@@ -3,6 +3,7 @@
 
 #include <floppy.h>
 #include <serial.h>
+#include <libkern.h>
 #include <interrupt.h>
 
 extern void vReaderTask(void);
@@ -10,12 +11,12 @@ extern void vWriterTask(void);
 
 static void vPlusTask(File_t *ser) {
   for (;;)
-    FilePutChar(ser, '-');
+    kfputchar(ser, '-');
 }
 
 static void vMinusTask(File_t *ser) {
   for (;;)
-    FilePutChar(ser, '+');
+    kfputchar(ser, '+');
 }
 
 static void SystemClockTickHandler(__unused void *data) {

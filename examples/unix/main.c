@@ -4,6 +4,7 @@
 #include <custom.h>
 #include <serial.h>
 #include <file.h>
+#include <filedesc.h>
 #include <proc.h>
 #include <libkern.h>
 
@@ -19,8 +20,8 @@ static void vMainTask(__unused void *data) {
   Proc_t p;
   ProcInit(&p, UPROC_STKSZ);
   TaskSetProc(&p);
-  ProcFileInstall(&p, 0, FileHold(ser));
-  ProcFileInstall(&p, 1, FileHold(ser));
+  FdInstallAt(&p, FileHold(ser), 0);
+  FdInstallAt(&p, FileHold(ser), 1);
   if (ProcLoadImage(&p, init)) {
     ProcSetArgv(&p, (char *[]){"init", NULL});
     ProcEnter(&p);

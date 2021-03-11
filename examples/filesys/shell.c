@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <libkern.h>
 #include <string.h>
 #include <serial.h>
 
@@ -124,8 +125,8 @@ static BaseType_t cmdReadFile(char *out, size_t len, const char *cmdline) {
   if (left > 0 && bufLeft == 0) {
     static uint8_t data[BUFSIZE];
     buf = data;
-    pos = FileSeek(f, 0, SEEK_CUR);
-    bufLeft = FileRead(f, buf, min(BUFSIZE, left));
+    pos = kfseek(f, 0, SEEK_CUR);
+    bufLeft = kfread(f, buf, min(BUFSIZE, left));
     if (bufLeft == 0)
       left = 0;
   }
@@ -205,10 +206,10 @@ static void vShellTask(__unused void *data) {
     BaseType_t xMoreData;
 
     if (Active < 0)
-      FilePrintf(ser, "? > ");
+      kfprintf(ser, "? > ");
     else
-      FilePrintf(ser, "%d > ", Active);
-    nbytes = FileRead(ser, pcInputString, MAX_INPUT_LENGTH);
+      kfprintf(ser, "%d > ", Active);
+    nbytes = kfread(ser, pcInputString, MAX_INPUT_LENGTH);
     if (pcInputString[nbytes - 1] == '\n')
       nbytes--;
     pcInputString[nbytes] = '\0';
@@ -217,7 +218,7 @@ static void vShellTask(__unused void *data) {
     do {
       xMoreData = FreeRTOS_CLIProcessCommand(pcInputString, pcOutputString,
                                              MAX_OUTPUT_LENGTH);
-      FileWrite(ser, pcOutputString, strlen(pcOutputString));
+      kfwrite(ser, pcOutputString, strlen(pcOutputString));
     } while (xMoreData);
   }
 }

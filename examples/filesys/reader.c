@@ -2,7 +2,7 @@
 #include <FreeRTOS/task.h>
 
 #include <stdlib.h>
-#include <stdio.h>
+#include <libkern.h>
 
 #include "filesys.h"
 
@@ -37,7 +37,7 @@ static void vReaderTask(__unused void *data) {
     File_t *f = OpenNthFile(rand_r(&seed) % n);
     size_t nbyte;
     do {
-      nbyte = FileRead(f, buf, 1 + rand_r(&seed) % BUFSIZE);
+      nbyte = kfread(f, buf, 1 + rand_r(&seed) % BUFSIZE);
       vTaskDelay((750 + rand_r(&seed) % 250) / portTICK_PERIOD_MS);
     } while (nbyte != 0);
     FileClose(f);
