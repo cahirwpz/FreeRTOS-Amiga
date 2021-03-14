@@ -12,10 +12,9 @@ SOURCES = \
 	  floppy.c \
 	  floppy-mfm.c \
 	  keyboard.c \
-	  memory-file.c \
+	  memdev.c \
 	  mouse.c \
 	  serial.c \
-	  serial-file.c \
 	  sprite.c
 
 LIBNAME = drivers.lib

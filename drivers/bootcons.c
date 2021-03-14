@@ -12,6 +12,6 @@ static int BootConsWrite(__unused File_t *f, const char *buf, size_t nbyte,
 
 static FileOps_t BootConsOps = {.write = (FileWrite_t)BootConsWrite};
 
-static File_t BootCons = {.ops = &BootConsOps, .usecount = 1, .writeable = 1};
+static File_t BootCons = {.ops = &BootConsOps, .usecount = 1, .writable = 1};
 
 File_t *KernCons = &BootCons;

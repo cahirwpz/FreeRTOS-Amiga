@@ -44,9 +44,10 @@ int main(void) {
 
   AddIntServer(VertBlankChain, SystemClockTick);
 
-  File_t *ser = SerialOpen(9600);
-
+  SerialInit(9600);
   FloppyInit(FLOPPY_TASK_PRIO);
+
+  File_t *ser = kopen("serial", O_RDWR);
 
   xTaskCreate((TaskFunction_t)vPlusTask, "plus", configMINIMAL_STACK_SIZE, ser,
               PLUS_TASK_PRIO, &plusHandle);

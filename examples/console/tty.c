@@ -10,7 +10,7 @@ static int TtyClose(File_t *f);
 static FileOps_t TtyOps = {.write = (FileWrite_t)TtyWrite, .close = TtyClose};
 
 File_t *TtyOpen(void) {
-  static File_t f = {.ops = &TtyOps, .writeable = 1};
+  static File_t f = {.ops = &TtyOps, .writable = 1};
   Atomic_Increment_u32(&f.usecount);
   return &f;
 }

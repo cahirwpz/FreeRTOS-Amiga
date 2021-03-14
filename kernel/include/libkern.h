@@ -5,6 +5,7 @@
 
 extern File_t *KernCons; /* Kernel console file (parallel port by default) */
 
+File_t *kopen(const char *name, int oflag);
 long kfread(File_t *f, void *buf, size_t len);
 long kfwrite(File_t *f, const void *buf, size_t len);
 long kfseek(File_t *f, long offset, int whence);

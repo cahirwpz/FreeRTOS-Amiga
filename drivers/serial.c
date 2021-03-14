@@ -4,14 +4,22 @@
 #include <custom.h>
 #include <interrupt.h>
 #include <libkern.h>
-
 #include <serial.h>
+#include <device.h>
 
 #define CLOCK 3546895
 #define QUEUELEN 64
 
 static QueueHandle_t SendQ;
 static QueueHandle_t RecvQ;
+
+static int SerialRead(Device_t *, off_t, void *, size_t, ssize_t *);
+static int SerialWrite(Device_t *, off_t, const void *, size_t, ssize_t *);
+
+static DeviceOps_t SerialOps = {
+  .read = SerialRead,
+  .write = SerialWrite,
+};
 
 #define SendByte(byte)                                                         \
   { custom.serdat = (uint16_t)(byte) | (uint16_t)0x100; }
@@ -46,6 +54,8 @@ void SerialInit(unsigned baud) {
 
   ClearIRQ(INTF_TBE | INTF_RBF);
   EnableINT(INTF_TBE | INTF_RBF);
+
+  AddDevice("serial", &SerialOps, NULL);
 }
 
 void SerialKill(void) {
@@ -71,7 +81,7 @@ static void TriggerSend(uint8_t cSend) {
   taskEXIT_CRITICAL();
 }
 
-void SerialPutChar(char data) {
+static void SerialPutChar(char data) {
   TriggerSend(data);
   if (data == '\n') {
     data = '\r';
@@ -79,8 +89,30 @@ void SerialPutChar(char data) {
   }
 }
 
-int SerialGetChar(void) {
+static int SerialGetChar(void) {
   char cRecv;
   xQueueReceive(RecvQ, (void *)&cRecv, portMAX_DELAY);
   return cRecv;
+}
+
+static int SerialWrite(Device_t *dev __unused, off_t offset __unused,
+                       const void *buf, size_t nbyte, ssize_t *donep) {
+  const char *cbuf = buf;
+  for (size_t i = 0; i < nbyte; i++)
+    SerialPutChar(*cbuf++);
+  *donep = nbyte;
+  return 0;
+}
+
+static int SerialRead(Device_t *dev __unused, off_t offset __unused, void *buf,
+                      size_t nbyte, ssize_t *donep) {
+  char *cbuf = buf;
+  size_t i = 0;
+  while (i < nbyte) {
+    cbuf[i] = SerialGetChar();
+    if (cbuf[i++] == '\n')
+      break;
+  }
+  *donep = i;
+  return 0;
 }

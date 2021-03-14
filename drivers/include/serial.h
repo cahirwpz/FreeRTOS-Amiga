@@ -1,10 +1,6 @@
 #pragma once
 
-#include <file.h>
-
-File_t *SerialOpen(unsigned baud);
+#include <sys/cdefs.h>
 
 void SerialInit(unsigned baud);
 void SerialKill(void);
-void SerialPutChar(char data);
-int SerialGetChar(void);

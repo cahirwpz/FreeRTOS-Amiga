@@ -45,8 +45,10 @@
 #define roundup(x, y) ((((x) + ((y) - 1)) / (y)) * (y))
 #define rounddown(x, y) (((x) / (y)) * (y))
 
+/* Wrapper for various GCC attributes */
 #define __always_inline __attribute__((always_inline))
 #define __noinline __attribute__((noinline))
+#define __nonnull(x) __attribute__((nonnull(x)))
 #define __noreturn __attribute__((noreturn))
 #define __returns_twice __attribute__((returns_twice))
 #define __packed __attribute__((packed))

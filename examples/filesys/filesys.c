@@ -45,7 +45,7 @@ typedef struct FsMsg {
 } FsMsg_t;
 
 static int FsRead(FsFile_t *f, void *buf, size_t nbyte, long *donep);
-static int FsSeek(FsFile_t *f, long offset, int whence, long *newoffp);
+static int FsSeek(FsFile_t *f, long offset, int whence);
 static int FsClose(FsFile_t *f);
 
 static FileOps_t FsOps = {.read = (FileRead_t)FsRead,
@@ -100,8 +100,8 @@ static int FsRead(FsFile_t *ff, void *buf, size_t nbyte, long *donep) {
 }
 
 /* Does not involve direct interaction with the filesystem. */
-static int FsSeek(FsFile_t *ff, long offset, int whence, long *newoffp) {
-  (void)ff, (void)offset, (void)whence, (void)newoffp;
+static int FsSeek(FsFile_t *ff, long offset, int whence) {
+  (void)ff, (void)offset, (void)whence;
   return ENOSYS;
 }
 

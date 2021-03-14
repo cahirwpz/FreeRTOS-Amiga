@@ -197,7 +197,7 @@ static void vShellTask(__unused void *data) {
   static char pcOutputString[MAX_OUTPUT_LENGTH];
   static char pcInputString[MAX_INPUT_LENGTH];
 
-  File_t *ser = SerialOpen(9600);
+  File_t *ser = kopen("serial", O_RDWR);
 
   FsMount();
 
@@ -226,6 +226,8 @@ static void vShellTask(__unused void *data) {
 static TaskHandle_t shellHandle;
 
 void StartShellTask(void) {
+  SerialInit(9600);
+
   FreeRTOS_CLIRegisterCommand(&xOpenFileCmd);
   FreeRTOS_CLIRegisterCommand(&xCloseFileCmd);
   FreeRTOS_CLIRegisterCommand(&xSelectFileCmd);
