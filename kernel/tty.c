@@ -3,6 +3,7 @@
 
 #include <tty.h>
 #include <device.h>
+#include <ioreq.h>
 #include <libkern.h>
 #include <sys/errno.h>
 
@@ -15,12 +16,10 @@ typedef struct TtyState {
   Device_t *cons;
   SemaphoreHandle_t writeLock;
   SemaphoreHandle_t readLock;
-  char line[LINEBUF_SIZE];
-  size_t lineLength;
 } TtyState_t;
 
-static int TtyRead(Device_t *, off_t, void *, size_t, ssize_t *);
-static int TtyWrite(Device_t *, off_t, const void *, size_t, ssize_t *);
+static int TtyRead(Device_t *, IoReq_t *);
+static int TtyWrite(Device_t *, IoReq_t *);
 
 static DeviceOps_t TtyOps = {
   .read = TtyRead,
@@ -37,7 +36,6 @@ int AddTtyDevice(const char *name, Device_t *cons) {
   ts->cons = cons;
   ts->readLock = xSemaphoreCreateMutex();
   ts->writeLock = xSemaphoreCreateMutex();
-  ts->lineLength = 0;
 
   if ((error = AddDevice(name, &TtyOps, &dev)))
     return error;
@@ -45,60 +43,54 @@ int AddTtyDevice(const char *name, Device_t *cons) {
   return 0;
 }
 
-static inline int ConsWrite(Device_t *cons, const char *data, size_t len) {
-  return cons->ops->write(cons, 0, data, len, NULL);
+static inline int ConsPutChar(Device_t *cons, char data) {
+  return cons->ops->write(cons, &IOREQ_WRITE(0, &data, 1));
 }
 
-static int TtyWrite(Device_t *dev, off_t offset __unused, const void *data,
-                    size_t len, ssize_t *donep) {
+static int TtyWrite(Device_t *dev, IoReq_t *req) {
   TtyState_t *tty = dev->data;
   Device_t *cons = tty->cons;
-  const char *buf = data;
-  size_t done;
+  size_t n = req->left;
   int error;
 
   xSemaphoreTake(tty->writeLock, portMAX_DELAY);
-  for (done = 0; done < len; done++) {
-    char ch = buf[done];
+  while (req->left) {
+    char ch = *req->wbuf;
     if (ch == '\n') {
       /* Turn LF into CR + LF */
-      if ((error = ConsWrite(cons, "\r\n", 2)))
-        break;
-    } else {
-      /* Pass through all other characters. */
-      if ((error = ConsWrite(cons, buf + done, 1)))
+      if ((error = ConsPutChar(cons, '\r')))
         break;
     }
+    if ((error = ConsPutChar(cons, ch)))
+      break;
+    req->wbuf++;
+    req->left--;
   }
   xSemaphoreGive(tty->writeLock);
 
-  if (donep)
-    *donep = done;
-  return done ? 0 : error;
+  return req->left < n ? 0 : error;
 }
 
 static inline int ConsGetChar(Device_t *cons, char *data) {
-  return cons->ops->read(cons, 0, data, 1, NULL);
+  return cons->ops->read(cons, &IOREQ_READ(0, data, 1));
 }
 
-static int TtyRead(Device_t *dev, off_t offset __unused, void *data, size_t len,
-                   ssize_t *donep) {
+static int TtyRead(Device_t *dev, IoReq_t *req) {
   TtyState_t *tty = dev->data;
   Device_t *cons = tty->cons;
-  char *buf = data;
-  size_t done = 0;
+  size_t n = req->left;
   int error;
 
   xSemaphoreTake(tty->readLock, portMAX_DELAY);
-  while (done < len) {
-    if ((error = ConsGetChar(cons, buf + done)))
+  while (req->left) {
+    if ((error = ConsGetChar(cons, req->rbuf)))
       break;
-    if (buf[done++] == '\n')
+    char ch = *req->rbuf++;
+    req->left--;
+    if (ch == '\n')
       break;
   }
   xSemaphoreGive(tty->readLock);
 
-  if (donep)
-    *donep = done;
-  return done ? 0 : error;
+  return req->left < n ? 0 : error;
 }

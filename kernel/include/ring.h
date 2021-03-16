@@ -2,6 +2,8 @@
 
 #include <sys/types.h>
 
+typedef struct IoReq IoReq_t;
+
 typedef struct Ring {
   size_t head;   /*!< producing data moves head forward */
   size_t tail;   /*!< consuming data moves tail forward */
@@ -26,5 +28,6 @@ static inline bool RingFull(Ring_t *buf) {
 
 void RingPutByte(Ring_t *buf, uint8_t byte);
 int RingGetByte(Ring_t *buf);
-size_t RingRead(Ring_t *buf, void *data, size_t len);
-size_t RingWrite(Ring_t *buf, const void *data, size_t len);
+
+void RingRead(Ring_t *buf, IoReq_t *req);
+void RingWrite(Ring_t *buf, IoReq_t *req);

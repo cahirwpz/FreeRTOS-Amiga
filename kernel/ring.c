@@ -1,3 +1,4 @@
+#include <ioreq.h>
 #include <ring.h>
 #include <string.h>
 
@@ -30,34 +31,32 @@ int RingGetByte(Ring_t *buf) {
   return byte;
 }
 
-size_t RingRead(Ring_t *buf, void *data, size_t len) {
-  size_t done = 0;
+void RingRead(Ring_t *buf, IoReq_t *req) {
   /* repeat when used space is split into two parts */
-  while (done < len && !RingEmpty(buf)) {
+  while (req->left && !RingEmpty(buf)) {
     /* used space is either [tail, head) or [tail, size) */
     size_t size =
       (buf->tail < buf->head) ? buf->head - buf->tail : buf->size - buf->tail;
-    if (size > len)
-      size = len;
-    memcpy(data + done, buf->data + buf->tail, size);
+    if (size > req->left)
+      size = req->left;
+    memcpy(req->rbuf, buf->data + buf->tail, size);
+    req->rbuf += size;
+    req->left -= size;
     RingConsume(buf, size);
-    done += size;
   }
-  return done;
 }
 
-size_t RingWrite(Ring_t *buf, const void *data, size_t len) {
-  size_t done = 0;
+void RingWrite(Ring_t *buf, IoReq_t *req) {
   /* repeat when free space is split into two parts */
-  while (done < len && !RingFull(buf)) {
+  while (req->left && !RingFull(buf)) {
     /* free space is either [head, tail) or [head, size) */
     size_t size =
       (buf->head < buf->tail) ? buf->tail - buf->head : buf->size - buf->head;
-    if (size > len)
-      size = len;
-    memcpy(buf->data + buf->head, data + done, size);
+    if (size > req->left)
+      size = req->left;
+    memcpy(buf->data + buf->head, req->wbuf, size);
+    req->wbuf += size;
+    req->left -= size;
     RingProduce(buf, size);
-    done += size;
   }
-  return done;
 }

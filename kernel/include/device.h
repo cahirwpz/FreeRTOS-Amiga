@@ -4,13 +4,12 @@
 #include <sys/queue.h>
 
 typedef struct File File_t;
+typedef struct IoReq IoReq_t;
 typedef struct Device Device_t;
 typedef struct DeviceOps DeviceOps_t;
 
-typedef int (*DeviceRead_t)(Device_t *dev, off_t offset, void *buf, size_t len,
-                            ssize_t *donep);
-typedef int (*DeviceWrite_t)(Device_t *dev, off_t offset, const void *buf,
-                             size_t len, ssize_t *donep);
+typedef int (*DeviceRead_t)(Device_t *dev, IoReq_t *req);
+typedef int (*DeviceWrite_t)(Device_t *dev, IoReq_t *req);
 
 struct DeviceOps {
   DeviceRead_t read;

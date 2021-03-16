@@ -6,6 +6,7 @@
 #include <libkern.h>
 #include <string.h>
 #include <device.h>
+#include <ioreq.h>
 #include <sys/errno.h>
 
 static int DevRead(File_t *, void *, size_t, long *);
@@ -97,12 +98,24 @@ leave:
 
 static int DevRead(File_t *f, void *buf, size_t len, long *donep) {
   DeviceRead_t read = f->device->ops->read;
-  return read ? read(f->device, f->offset, buf, len, donep) : ENOSYS;
+  if (!read)
+    return ENOSYS;
+
+  IoReq_t req = IOREQ_READ(f->offset, buf, len);
+  int error = read(f->device, &req);
+  *donep = len - req.left;
+  return error;
 }
 
 static int DevWrite(File_t *f, const void *buf, size_t len, long *donep) {
   DeviceWrite_t write = f->device->ops->write;
-  return write ? write(f->device, f->offset, buf, len, donep) : ENOSYS;
+  if (!write)
+    return ENOSYS;
+
+  IoReq_t req = IOREQ_WRITE(f->offset, buf, len);
+  int error = write(f->device, &req);
+  *donep = len - req.left;
+  return error;
 }
 
 static int DevSeek(File_t *f, long offset, int whence) {

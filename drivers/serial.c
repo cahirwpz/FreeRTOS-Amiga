@@ -6,6 +6,7 @@
 #include <libkern.h>
 #include <serial.h>
 #include <ring.h>
+#include <ioreq.h>
 #include <device.h>
 
 #define CLOCK 3546895
@@ -18,8 +19,8 @@ static Ring_t *RxBuf = &RING(BUFLEN);
 static TaskHandle_t TxWaiter;
 static TaskHandle_t RxWaiter;
 
-static int SerialRead(Device_t *, off_t, void *, size_t, ssize_t *);
-static int SerialWrite(Device_t *, off_t, const void *, size_t, ssize_t *);
+static int SerialRead(Device_t *, IoReq_t *);
+static int SerialWrite(Device_t *, IoReq_t *);
 
 static DeviceOps_t SerialOps = {
   .read = SerialRead,
@@ -78,10 +79,7 @@ void SerialKill(void) {
   kprintf("[Serial] Driver deactivated!\n");
 }
 
-static int SerialWrite(Device_t *dev __unused, off_t offset __unused,
-                       const void *data, size_t len, ssize_t *donep) {
-  size_t done = 0;
-
+static int SerialWrite(Device_t *dev __unused, IoReq_t *req) {
   xSemaphoreTake(TxLock, portMAX_DELAY);
   taskENTER_CRITICAL();
   {
@@ -90,9 +88,9 @@ static int SerialWrite(Device_t *dev __unused, off_t offset __unused,
       CauseIRQ(INTF_TBE);
 
     /* Write all bytes to transmit buffer. */
-    while (1) {
-      done += RingWrite(TxBuf, data + done, len - done);
-      if (done == len)
+    for (;;) {
+      RingWrite(TxBuf, req);
+      if (!req->left)
         break;
       TxWaiter = xTaskGetCurrentTaskHandle();
       xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
@@ -101,15 +99,10 @@ static int SerialWrite(Device_t *dev __unused, off_t offset __unused,
   taskEXIT_CRITICAL();
   xSemaphoreGive(TxLock);
 
-  if (donep)
-    *donep = done;
   return 0;
 }
 
-static int SerialRead(Device_t *dev __unused, off_t offset __unused, void *data,
-                      size_t len, ssize_t *donep) {
-  size_t done;
-
+static int SerialRead(Device_t *dev __unused, IoReq_t *req) {
   xSemaphoreTake(RxLock, portMAX_DELAY);
   taskENTER_CRITICAL();
   {
@@ -117,12 +110,10 @@ static int SerialRead(Device_t *dev __unused, off_t offset __unused, void *data,
       RxWaiter = xTaskGetCurrentTaskHandle();
       xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
     }
-    done = RingRead(RxBuf, data, len);
+    RingRead(RxBuf, req);
   }
   taskEXIT_CRITICAL();
   xSemaphoreGive(RxLock);
 
-  if (donep)
-    *donep = done;
   return 0;
 }
