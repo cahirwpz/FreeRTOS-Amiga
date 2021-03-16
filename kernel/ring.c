@@ -1,6 +1,7 @@
 #include <ioreq.h>
 #include <ring.h>
 #include <string.h>
+#include <libkern.h>
 
 static inline void RingProduce(Ring_t *buf, size_t len) {
   buf->count += len;
@@ -59,4 +60,13 @@ void RingWrite(Ring_t *buf, IoReq_t *req) {
     req->left -= size;
     RingProduce(buf, size);
   }
+}
+
+Ring_t *RingAlloc(size_t size) {
+  Ring_t *buf = kmalloc(sizeof(Ring_t) + size);
+  buf->head = 0;
+  buf->tail = 0;
+  buf->count = 0;
+  buf->size = size;
+  return buf;
 }
