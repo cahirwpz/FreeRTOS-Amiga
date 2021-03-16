@@ -8,6 +8,7 @@
 #include <libkern.h>
 #include <string.h>
 #include <serial.h>
+#include <tty.h>
 
 #include "filesys.h"
 
@@ -197,7 +198,7 @@ static void vShellTask(__unused void *data) {
   static char pcOutputString[MAX_OUTPUT_LENGTH];
   static char pcInputString[MAX_INPUT_LENGTH];
 
-  File_t *ser = kopen("serial", O_RDWR);
+  File_t *ser = kopen("tty", O_RDWR);
 
   FsMount();
 
@@ -226,7 +227,7 @@ static void vShellTask(__unused void *data) {
 static TaskHandle_t shellHandle;
 
 void StartShellTask(void) {
-  SerialInit(9600);
+  AddTtyDevice("tty", SerialInit(9600));
 
   FreeRTOS_CLIRegisterCommand(&xOpenFileCmd);
   FreeRTOS_CLIRegisterCommand(&xCloseFileCmd);

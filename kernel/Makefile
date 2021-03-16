@@ -13,9 +13,11 @@ SOURCES = amigahunk.c \
 	  port.c \
 	  portasm.S \
 	  proc.c \
+	  ring.c \
 	  sysent.c \
 	  trapasm.S \
 	  trap.c \
+	  tty.c \
 	  userent.S
 
 LIBNAME = kernel.lib

@@ -7,6 +7,7 @@
 #include <filedesc.h>
 #include <proc.h>
 #include <libkern.h>
+#include <tty.h>
 
 static File_t *FloppyOpen(const char *path) {
   (void)path;
@@ -14,7 +15,7 @@ static File_t *FloppyOpen(const char *path) {
 }
 
 static void vMainTask(__unused void *data) {
-  File_t *ser = kopen("serial", O_RDWR);
+  File_t *ser = kopen("tty", O_RDWR);
   File_t *init = FloppyOpen("init");
 
   Proc_t p;
@@ -38,7 +39,7 @@ static xTaskHandle handle;
 int main(void) {
   portNOP(); /* Breakpoint for simulator. */
 
-  SerialInit(9600);
+  AddTtyDevice("tty", SerialInit(9600));
 
   xTaskCreate(vMainTask, "main", KPROC_STKSZ, NULL, 0, &handle);
 

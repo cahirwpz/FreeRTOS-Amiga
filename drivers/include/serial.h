@@ -2,5 +2,7 @@
 
 #include <sys/cdefs.h>
 
-void SerialInit(unsigned baud);
+typedef struct Device Device_t;
+
+Device_t *SerialInit(unsigned baud);
 void SerialKill(void);
