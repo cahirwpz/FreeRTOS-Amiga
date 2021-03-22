@@ -14,34 +14,66 @@ static void vMainTask(__unused void *data) {
 
 static xTaskHandle handle;
 
-extern void vPortDefaultTrapHandler(struct TrapFrame *);
+extern void vPortDefaultTrapHandler(TrapFrame_t *);
 
-/* TODO: use C bit fields to define instruction encoding */
+/* TODO: use C bit fields to define instruction encodings
+ * which are given on pages 568-569 of M68000PRM */
 typedef struct MulsInst {
 } MulsInst_t;
 
 typedef struct DivsInst {
 } DivsInst_t;
 
+/* These functions are part of libc library (`gen` subdirectory)
+ * and emulate full 32-bit multiplication and division on M68000. */
+extern int32_t __mulsi3(int32_t a, int32_t b);
+extern int32_t __divsi3(int32_t a, int32_t b);
+extern int32_t __modsi3(int32_t a, int32_t b);
+extern uint32_t __udivsi3(uint32_t a, uint32_t b);
+extern uint32_t __umodsi3(uint32_t a, uint32_t b);
+
+/* You can use these assembly inlines to use 16 x 16 -> 32 multiplication
+ * or 32 / 16 -> 16 division instructions available in M68000. */
+static inline int32_t muls16(int16_t a, int16_t b) {
+  int32_t r;
+  asm("muls %2,%0" : "=d"(r) : "0"(a), "dm"(b));
+  return r;
+}
+
+static inline int16_t divs16(int32_t a, int16_t b) {
+  int16_t r;
+  asm("divs %2,%0" : "=d"(r) : "0"(a), "dm"(b));
+  return r;
+}
+
+static inline int16_t mods16(int32_t a, int16_t b) {
+  int16_t r;
+  asm("divs %2,%0\n"
+      "swap %0"
+      : "=d"(r)
+      : "0"(a), "dm"(b));
+  return r;
+}
+
 /* Keep in mind that:
  * - PC & SR are placed at different positions in the trap frame
  *   for 68000 and 68010 processors
- * - gcc replaces 32-bit multiplication and division by calls to
- *   __mulsi3 and __divsi3 procedures
+ * - gcc replaces 32-bit multiplication and division in code
+ *   by calls to __mulsi3 and __divsi3 procedures on 68000 and 68010
  */
-static bool EmulMuls(struct TrapFrame *frame) {
+static bool EmulMuls(TrapFrame_t *frame) {
   /* TODO: implement muls.l instruction emulation */
   (void)frame;
   return false;
 }
 
-static bool EmulDivs(struct TrapFrame *frame) {
+static bool EmulDivs(TrapFrame_t *frame) {
   /* TODO: implement divsl.l instruction emulation */
   (void)frame;
   return false;
 }
 
-void vPortTrapHandler(struct TrapFrame *frame) {
+void vPortTrapHandler(TrapFrame_t *frame) {
   if (EmulMuls(frame) || EmulDivs(frame))
     return;
 
@@ -59,4 +91,6 @@ int main(void) {
   return 0;
 }
 
-void vApplicationIdleHook(void) { custom.color[0] = 0x00f; }
+void vApplicationIdleHook(void) {
+  custom.color[0] = 0x00f;
+}

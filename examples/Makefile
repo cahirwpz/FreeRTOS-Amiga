@@ -1,7 +1,7 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = startup.c
-SUBDIR = console floppy filesys graphics preemption unix
+SUBDIR = console instemul floppy filesys graphics preemption unix
 
 include $(TOPDIR)/build/build.lib.mk
 
