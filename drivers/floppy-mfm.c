@@ -256,8 +256,8 @@ static void VerifyTrackEncoding(uint32_t *data) {
  * ... so that when the track is rewritten, the sector offsets are adjusted to
  * match the way the data was written.
  *
- * TODO `sectors` should be modified to reflect new position of sectors in the
- * track.
+ * IMPORTANT! Pointers stored in `sectors` get updated as a result of moving
+ * sectors around within `track` memory.
  */
 void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]) {
   DiskSector_t *sector = (void *)track + DISK_GAP_SIZE;
@@ -277,6 +277,7 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]) {
     if (j < 0)
       j += NSECTORS;
     (void)memmove(&sector[i], sectors[j], sizeof(DiskSector_t));
+    sectors[j] = &sector[i];
   }
 
   /* Fill the gap with encoded zeros. */
