@@ -14,7 +14,7 @@
 #define __FLOPPY_DRIVER
 #include <floppy.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #include <debug.h>
 
 #define IOREQ_MAXNUM 16
@@ -298,6 +298,9 @@ static void FloppyReader(void *ptr) {
       continue;
     }
 
+    DPRINTF("[Floppy] %s(%d, %d)\n", io->write ? "Write" : "Read", io->offset,
+            io->left);
+
     bool needWrite = false;
     int16_t track = io->offset / TRACK_SIZE;
     int16_t sector = (io->offset / SECTOR_SIZE) % NSECTORS;
@@ -323,6 +326,7 @@ static void FloppyReader(void *ptr) {
         memcpy((void *)fd->rawSector[sector] + offset, io->wbuf, n);
         io->wbuf += n;
         needWrite = true;
+        fd->sectorState[sector] |= DIRTY;
       } else {
         memcpy(io->rbuf, (void *)fd->rawSector[sector] + offset, n);
         io->rbuf += n;

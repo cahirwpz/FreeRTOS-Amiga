@@ -2,6 +2,7 @@
 
 #if DEBUG
 #include <FreeRTOSConfig.h>
+#include <portmacro.h>
 #include <libkern.h>
 
 #define DASSERT(x) configASSERT(x)

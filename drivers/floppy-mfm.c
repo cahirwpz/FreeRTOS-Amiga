@@ -208,7 +208,7 @@ void EncodeSector(const RawSector_t buf, DiskSector_t *sector) {
 
 #if DEBUG
 static void VerifyTrackEncoding(uint32_t *data) {
-  short n = RAW_TRACK_SIZE / sizeof(uint32_t);
+  short n = DISK_TRACK_SIZE / sizeof(uint32_t);
   uint32_t prev = data[n - 1];
   do {
     uint32_t lw = *data;
@@ -219,10 +219,10 @@ static void VerifyTrackEncoding(uint32_t *data) {
       if (prev & 1)
         zeros |= 0x40000000;
       if (ones != 0)
-        printf("%p: two consecutive 1s (%08x)!\n", data, ones);
+        DPRINTF("%p: two consecutive 1s (%08x)!\n", data, ones);
       if (zeros != MASK)
-        printf("%p: three consecutive 0s (%08x)!\n", data, zeros);
-      configASSERT(ones == 0 && zeros == MASK);
+        DPRINTF("%p: three consecutive 0s (%08x)!\n", data, zeros);
+      DASSERT(ones == 0 && zeros == MASK);
     }
     data++;
     prev = lw;

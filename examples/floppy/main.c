@@ -73,12 +73,12 @@ static void vReaderTask(File_t *fd) {
       if (cksum != NODATA) {
         uint16_t cksum2 = Fletcher16((void *)data, SECTOR_SIZE);
 
-        kprintf("rd(%d/%d): cksum = %04x (memory), cksum = %04x (disk)\n",
+        DPRINTF("rd(%d/%d): cksum = %04x (memory), cksum = %04x (disk)\n",
                 s / NSECTORS, s % NSECTORS, cksum, cksum2);
 
-        // DASSERT(cksum == cksum2);
+        DASSERT(cksum == cksum2);
 
-        vTaskDelay(250 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
       }
     }
   }
@@ -103,7 +103,7 @@ static void vWriterTask(File_t *fd) {
     xSemaphoreGive(SectorCksumLock);
 
     uint16_t cksum = Fletcher16((void *)data, SECTOR_SIZE);
-    kprintf("wr(%d/%d): cksum = %04x\n", s / NSECTORS, s % NSECTORS, cksum);
+    DPRINTF("wr(%d/%d): cksum = %04x\n", s / NSECTORS, s % NSECTORS, cksum);
     SectorCksum[s] = cksum;
 
     /* Wait one second and repeat. */
