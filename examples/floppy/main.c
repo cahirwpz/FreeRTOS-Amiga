@@ -76,9 +76,12 @@ static void vReaderTask(File_t *fd) {
         DPRINTF("rd(%d/%d): cksum = %04x (memory), cksum = %04x (disk)\n",
                 s / NSECTORS, s % NSECTORS, cksum, cksum2);
 
+        if (cksum != cksum2)
+          khexdump(data, SECTOR_SIZE);
+
         DASSERT(cksum == cksum2);
 
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(250 / portTICK_PERIOD_MS);
       }
     }
   }
@@ -107,7 +110,7 @@ static void vWriterTask(File_t *fd) {
     SectorCksum[s] = cksum;
 
     /* Wait one second and repeat. */
-    vTaskDelay(250 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
 
