@@ -11,25 +11,39 @@
 #include <floppy.h>
 
 #define DEBUG 0
+#include <debug.h>
 
 #define FLOPPYIO_MAXNUM 8
 
-static CIATimer_t *FloppyTimer;
-static xTaskHandle FloppyIOTask;
-static QueueHandle_t FloppyIOQueue;
 
-static void TrackTransferDone(__unused void *ptr) {
+
+typedef struct FloppyDev {
+  CIATimer_t *timer;
+  xTaskHandle ioTask;
+  QueueHandle_t ioQueue;
+
+  int16_t motorOn;
+  int16_t headDir;
+  int16_t track;
+} FloppyDev_t;
+
+static FloppyDev_t FloppyDev[1];
+
+static void TrackTransferDone(void *ptr) {
+  FloppyDev_t *fd = ptr;
   /* Send notification to waiting task. */
-  vTaskNotifyGiveFromISR(FloppyIOTask, &xNeedRescheduleTask);
+  vTaskNotifyGiveFromISR(fd->ioTask, &xNeedRescheduleTask);
 }
 
 static void FloppyReader(void *);
 
 void FloppyInit(unsigned aFloppyIOTaskPrio) {
+  FloppyDev_t *fd = FloppyDev;
+
   kprintf("[Init] Floppy drive driver!\n");
 
-  FloppyTimer = AcquireTimer(TIMER_ANY);
-  configASSERT(FloppyTimer != NULL);
+  fd->timer = AcquireTimer(TIMER_ANY);
+  DASSERT(fd->timer != NULL);
 
   /* Set standard synchronization marker. */
   custom.dsksync = DSK_SYNC;
@@ -38,27 +52,29 @@ void FloppyInit(unsigned aFloppyIOTaskPrio) {
   custom.adkcon = ADKF_SETCLR | ADKF_MFMPREC | ADKF_WORDSYNC | ADKF_FAST;
 
   /* Handler that will wake up track reader task. */
-  SetIntVec(DSKBLK, TrackTransferDone, NULL);
+  SetIntVec(DSKBLK, TrackTransferDone, fd);
 
-  FloppyIOQueue = xQueueCreate(FLOPPYIO_MAXNUM, sizeof(FloppyIO_t *));
-  configASSERT(FloppyIOQueue != NULL);
+  fd->ioQueue = xQueueCreate(FLOPPYIO_MAXNUM, sizeof(FloppyIO_t *));
+  DASSERT(fd->ioQueue != NULL);
 
-  xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, NULL,
-              aFloppyIOTaskPrio, &FloppyIOTask);
-  configASSERT(FloppyIOTask != NULL);
+  xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, FloppyDev,
+              aFloppyIOTaskPrio, &fd->ioTask);
+  DASSERT(fd->ioTask != NULL);
 }
 
-static void FloppyMotorOff(void);
+static void FloppyMotorOff(FloppyDev_t *fd);
 
 void FloppyKill(void) {
+  FloppyDev_t *fd = FloppyDev;
+
   DisableINT(INTF_DSKBLK);
   DisableDMA(DMAF_DISK);
   ResetIntVec(DSKBLK);
-  FloppyMotorOff();
+  FloppyMotorOff(fd);
 
-  ReleaseTimer(FloppyTimer);
-  vTaskDelete(FloppyIOTask);
-  vQueueDelete(FloppyIOQueue);
+  ReleaseTimer(fd->timer);
+  vTaskDelete(fd->ioTask);
+  vQueueDelete(fd->ioQueue);
 }
 
 /******************************************************************************/
@@ -69,42 +85,38 @@ void FloppyKill(void) {
 #define OUTWARDS 0
 #define INWARDS 1
 
-static int16_t MotorOn;
-static int16_t HeadDir;
-static int16_t Track;
-
 #define STEP_SETTLE TIMER_MS(3)
 
-static void StepHeads(void) {
+static void StepHeads(FloppyDev_t *fd) {
   BCLR(ciab.ciaprb, CIAB_DSKSTEP);
   BSET(ciab.ciaprb, CIAB_DSKSTEP);
 
-  WaitTimerSleep(FloppyTimer, STEP_SETTLE);
+  WaitTimerSleep(fd->timer, STEP_SETTLE);
 
-  Track += HeadDir;
+  fd->track += fd->headDir;
 }
 
 #define DIRECTION_REVERSE_SETTLE TIMER_MS(18)
 
-static inline void HeadsStepDirection(int16_t inwards) {
+static inline void HeadsStepDirection(FloppyDev_t *fd, int16_t inwards) {
   if (inwards) {
     BCLR(ciab.ciaprb, CIAB_DSKDIREC);
-    HeadDir = 2;
+    fd->headDir = 2;
   } else {
     BSET(ciab.ciaprb, CIAB_DSKDIREC);
-    HeadDir = -2;
+    fd->headDir = -2;
   }
 
-  WaitTimerSleep(FloppyTimer, DIRECTION_REVERSE_SETTLE);
+  WaitTimerSleep(fd->timer, DIRECTION_REVERSE_SETTLE);
 }
 
-static inline void ChangeDiskSide(int16_t upper) {
+static inline void ChangeDiskSide(FloppyDev_t *fd, int16_t upper) {
   if (upper) {
     BCLR(ciab.ciaprb, CIAB_DSKSIDE);
-    Track++;
+    fd->track++;
   } else {
     BSET(ciab.ciaprb, CIAB_DSKSIDE);
-    Track--;
+    fd->track--;
   }
 }
 
@@ -117,12 +129,12 @@ static inline int WriteProtected(void) {
   return !(ciaa.ciapra & CIAF_DSKPROT);
 }
 
-static inline int HeadsAtTrack0() {
+static inline int HeadsAtTrack0(void) {
   return !(ciaa.ciapra & CIAF_DSKTRACK0);
 }
 
-static void FloppyMotorOn(void) {
-  if (MotorOn)
+static void FloppyMotorOn(FloppyDev_t *fd) {
+  if (fd->motorOn)
     return;
 
   BSET(ciab.ciaprb, CIAB_DSKSEL0);
@@ -131,66 +143,66 @@ static void FloppyMotorOn(void) {
 
   WaitDiskReady();
 
-  MotorOn = 1;
+  fd->motorOn = 1;
 }
 
-static void FloppyMotorOff(void) {
-  if (!MotorOn)
+static void FloppyMotorOff(FloppyDev_t *fd) {
+  if (!fd->motorOn)
     return;
 
   BSET(ciab.ciaprb, CIAB_DSKSEL0);
   BSET(ciab.ciaprb, CIAB_DSKMOTOR);
   BCLR(ciab.ciaprb, CIAB_DSKSEL0);
 
-  MotorOn = 0;
+  fd->motorOn = 0;
 }
 
 #define DISK_SETTLE TIMER_MS(15)
 #define WRITE_SETTLE TIMER_US(1300)
 
-static void FloppyReader(__unused void *ptr) {
+static void FloppyReader(void *ptr) {
+  FloppyDev_t *fd = ptr;
+
   /* Move head to track 0 */
-  FloppyMotorOn();
-  HeadsStepDirection(OUTWARDS);
+  FloppyMotorOn(fd);
+  HeadsStepDirection(fd, OUTWARDS);
   while (!HeadsAtTrack0())
-    StepHeads();
-  HeadsStepDirection(INWARDS);
-  ChangeDiskSide(LOWER);
+    StepHeads(fd);
+  HeadsStepDirection(fd, INWARDS);
+  ChangeDiskSide(fd, LOWER);
   /* Now we are at well defined position */
-  Track = 0;
+  fd->track = 0;
 
   for (;;) {
     FloppyIO_t *io;
 
-    if (xQueueReceive(FloppyIOQueue, &io, 1000 / portTICK_PERIOD_MS)) {
+    if (xQueueReceive(fd->ioQueue, &io, 1000 / portTICK_PERIOD_MS)) {
       if (io->cmd == CMD_WRITE)
-        configASSERT(!WriteProtected());
+        DASSERT(!WriteProtected());
 
       /* Turn the motor on. */
-      FloppyMotorOn();
+      FloppyMotorOn(fd);
 
       /* Switch heads if needed. */
-      if ((io->track ^ Track) & 1)
-        ChangeDiskSide(io->track & 1);
+      if ((io->track ^ fd->track) & 1)
+        ChangeDiskSide(fd, io->track & 1);
 
       /* Travel to requested track. */
-      if (io->track != Track) {
-        HeadsStepDirection(io->track > Track);
-        while (io->track != Track)
-          StepHeads();
+      if (io->track != fd->track) {
+        HeadsStepDirection(fd, io->track > fd->track);
+        while (io->track != fd->track)
+          StepHeads(fd);
       }
 
       /* Wait for the head to stabilize over the track. */
-      WaitTimerSleep(FloppyTimer, DISK_SETTLE);
+      WaitTimerSleep(fd->timer, DISK_SETTLE);
 
       /* Make sure the DMA for the disk is turned off. */
       custom.dsklen = 0;
 
-#if DEBUG
-      printf("[Floppy] %s track %d into %p.\n",
-             (io->cmd == CMD_WRITE) ? "Write" : "Read", (int)io->track,
-             io->buffer);
-#endif
+      DPRINTF("[Floppy] %s track %d into %p.\n",
+              (io->cmd == CMD_WRITE) ? "Write" : "Read", (int)io->track,
+              io->buffer);
 
       uint16_t adkconSet = ADKF_SETCLR | ADKF_MFMPREC | ADKF_FAST;
       uint16_t adkconClr = ADKF_WORDSYNC | ADKF_MSBSYNC;
@@ -221,7 +233,7 @@ static void FloppyReader(__unused void *ptr) {
       (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
       if (io->cmd == CMD_WRITE)
-        WaitTimerSleep(FloppyTimer, WRITE_SETTLE);
+        WaitTimerSleep(fd->timer, WRITE_SETTLE);
 
       /* Disable DMA & interrupts. */
       custom.dsklen = 0;
@@ -231,15 +243,17 @@ static void FloppyReader(__unused void *ptr) {
       /* Wake up the task that requested transfer. */
       xQueueSend(io->replyQueue, &io, portMAX_DELAY);
     } else {
-      FloppyMotorOff();
+      FloppyMotorOff(fd);
     }
   }
 }
 
 void FloppySendIO(FloppyIO_t *io) {
-  configASSERT(io->track < TRACK_COUNT);
-  configASSERT(io->replyQueue != NULL);
-  configASSERT(io->buffer != NULL);
+  FloppyDev_t *fd = FloppyDev;
 
-  xQueueSend(FloppyIOQueue, &io, portMAX_DELAY);
+  DASSERT(io->track < TRACK_COUNT);
+  DASSERT(io->replyQueue != NULL);
+  DASSERT(io->buffer != NULL);
+
+  xQueueSend(fd->ioQueue, &io, portMAX_DELAY);
 }
