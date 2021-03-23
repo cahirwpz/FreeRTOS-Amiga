@@ -6,7 +6,7 @@ static const char hex2char[16] = "0123456789abcdef";
 #pragma GCC push_options
 #pragma GCC optimize("-O2")
 
-void FileHexDump(File_t *f, void *ptr, size_t length) {
+void kfhexdump(File_t *f, void *ptr, size_t length) {
   unsigned char *data = ptr;
   char buf[80];
   char *s = buf;

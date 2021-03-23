@@ -1,6 +1,7 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
 
+#include <cpu.h>
 #include <custom.h>
 #include <trap.h>
 
@@ -32,28 +33,9 @@ extern int32_t __modsi3(int32_t a, int32_t b);
 extern uint32_t __udivsi3(uint32_t a, uint32_t b);
 extern uint32_t __umodsi3(uint32_t a, uint32_t b);
 
-/* You can use these assembly inlines to use 16 x 16 -> 32 multiplication
- * or 32 / 16 -> 16 division instructions available in M68000. */
-static inline int32_t muls16(int16_t a, int16_t b) {
-  int32_t r;
-  asm("muls %2,%0" : "=d"(r) : "0"(a), "dm"(b));
-  return r;
-}
-
-static inline int16_t divs16(int32_t a, int16_t b) {
-  int16_t r;
-  asm("divs %2,%0" : "=d"(r) : "0"(a), "dm"(b));
-  return r;
-}
-
-static inline int16_t mods16(int32_t a, int16_t b) {
-  int16_t r;
-  asm("divs %2,%0\n"
-      "swap %0"
-      : "=d"(r)
-      : "0"(a), "dm"(b));
-  return r;
-}
+/* You can invoke assembly inlines from <cpu.h> to force compiler to use
+ * 16 x 16 -> 32 multiplication or 32 / 16 -> 16 division instructions
+ * available in M68000. */
 
 /* Keep in mind that:
  * - PC & SR are placed at different positions in the trap frame

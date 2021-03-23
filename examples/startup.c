@@ -5,6 +5,9 @@
 #include <boot.h>
 #include <libkern.h>
 
+#define DEBUG 0
+#include <debug.h>
+
 extern int main(void);
 
 void _start(BootData_t *aBootData) {
@@ -17,9 +20,9 @@ void _start(BootData_t *aBootData) {
     kprintf("MEM[%d]: %08x - %08x\n", i, aBootData->bd_region[i].mr_lower,
             aBootData->bd_region[i].mr_upper);
 
-  configASSERT(custom.intenar == 0);
-  configASSERT((custom.dmaconr & DMAF_ALL) == 0);
-  configASSERT((portGetSR() & 0x2700) == 0x2700);
+  DASSERT(custom.intenar == 0);
+  DASSERT((custom.dmaconr & DMAF_ALL) == 0);
+  DASSERT((portGetSR() & 0x2700) == 0x2700);
 
   CpuModel = aBootData->bd_cpumodel;
 

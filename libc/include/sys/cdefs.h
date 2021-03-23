@@ -61,3 +61,6 @@
   __asm(".weak " #alias "\n" #alias " = " #sym)
 #define __strong_alias(alias, sym)                                             \
   __asm(".global " #alias "\n" #alias " = " #sym)
+
+/* To be used when an empty body is required. */
+#define __nothing ((void)0)

@@ -23,3 +23,20 @@
 #define CF_68060 BIT(CFB_68060)
 
 extern uint8_t CpuModel;
+
+static inline int32_t muls16(int16_t a, int16_t b) {
+  int32_t r;
+  asm("muls %2,%0" : "=d"(r) : "0"(a), "dmi"(b));
+  return r;
+}
+
+typedef struct div16 {
+  int16_t rem;  /* remainder */
+  int16_t quot; /* quotient */
+} div16_t;
+
+static inline div16_t divs16(int32_t a, int16_t b) {
+  div16_t r;
+  asm("divs %2,%0" : "=d"(r) : "0"(a), "dmi"(b));
+  return r;
+}
