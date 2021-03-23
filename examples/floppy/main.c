@@ -27,9 +27,7 @@ static void vMinusTask(File_t *ser) {
 #define FIRSTSEC (ALLSECS / 2)
 #define LASTSEC (ALLSECS - 1)
 
-#define NODATA 0xffffU
-
-static uint16_t SectorCksum[ALLSECS]; /* initially filled with NODATA */
+static uint32_t SectorCksum[ALLSECS];
 static SemaphoreHandle_t SectorCksumLock;
 
 static uint32_t FastRand(void) {
@@ -41,18 +39,7 @@ static uint32_t FastRand(void) {
   return x;
 }
 
-/* Produced value will never have 0xff on upper on lower byte. */
-static uint16_t Fletcher16(uint8_t *data, int count) {
-  uint16_t sum1 = 0, sum2 = 0;
-  int index;
-
-  for (index = 0; index < count; index++) {
-    sum1 = (sum1 + data[index]) % 255;
-    sum2 = (sum2 + sum1) % 255;
-  }
-
-  return (sum2 << 8) | sum1;
-}
+extern uint32_t crc32(const uint8_t *frame, size_t frame_len);
 
 static void vReaderTask(File_t *fd) {
   void *data = pvPortMalloc(SECTOR_SIZE);
@@ -61,19 +48,19 @@ static void vReaderTask(File_t *fd) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     for (short s = FIRSTSEC; s <= LASTSEC; s++) {
-      uint16_t cksum;
+      uint32_t cksum;
       xSemaphoreTake(SectorCksumLock, portMAX_DELAY);
       cksum = SectorCksum[s];
-      if (cksum != NODATA) {
+      if (cksum) {
         kfseek(fd, s * SECTOR_SIZE, SEEK_SET);
         kfread(fd, data, SECTOR_SIZE);
       }
       xSemaphoreGive(SectorCksumLock);
 
-      if (cksum != NODATA) {
-        uint16_t cksum2 = Fletcher16((void *)data, SECTOR_SIZE);
+      if (cksum) {
+        uint32_t cksum2 = crc32((void *)data, SECTOR_SIZE);
 
-        DPRINTF("rd(%d/%d): cksum = %04x (memory), cksum = %04x (disk)\n",
+        DPRINTF("rd(%d/%d): cksum = %08x (memory), cksum = %08x (disk)\n",
                 s / NSECTORS, s % NSECTORS, cksum, cksum2);
 
         if (cksum != cksum2)
@@ -100,13 +87,13 @@ static void vWriterTask(File_t *fd) {
       data[i] = FastRand();
 
     xSemaphoreTake(SectorCksumLock, portMAX_DELAY);
-    SectorCksum[s] = -1;
+    SectorCksum[s] = 0;
     kfseek(fd, s * SECTOR_SIZE, SEEK_SET);
     kfwrite(fd, data, SECTOR_SIZE);
     xSemaphoreGive(SectorCksumLock);
 
-    uint16_t cksum = Fletcher16((void *)data, SECTOR_SIZE);
-    DPRINTF("wr(%d/%d): cksum = %04x\n", s / NSECTORS, s % NSECTORS, cksum);
+    uint32_t cksum = crc32((void *)data, SECTOR_SIZE);
+    DPRINTF("wr(%d/%d): cksum = %08x\n", s / NSECTORS, s % NSECTORS, cksum);
     SectorCksum[s] = cksum;
 
     /* Wait one second and repeat. */
@@ -147,7 +134,7 @@ int main(void) {
 
   SectorCksumLock = xSemaphoreCreateMutex();
 
-  memset(SectorCksum, 0xff, sizeof(SectorCksum));
+  memset(SectorCksum, 0, sizeof(SectorCksum));
 
   xTaskCreate((TaskFunction_t)vPlusTask, "plus", configMINIMAL_STACK_SIZE, ser,
               PLUS_TASK_PRIO, &plusHandle);
