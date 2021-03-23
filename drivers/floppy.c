@@ -169,6 +169,17 @@ static void FloppyMotorOff(FloppyDev_t *fd) {
   fd->motorOn = 0;
 }
 
+static void FloppyHeadToTrack0(FloppyDev_t *fd) {
+  FloppyMotorOn(fd);
+  HeadsStepDirection(fd, OUTWARDS);
+  while (!HeadsAtTrack0())
+    StepHeads(fd);
+  HeadsStepDirection(fd, INWARDS);
+  ChangeDiskSide(fd, LOWER);
+  /* Now we are at well defined position */
+  fd->track = 0;
+}
+
 #define DISK_SETTLE TIMER_MS(15)
 #define WRITE_SETTLE TIMER_US(1300)
 
@@ -245,15 +256,7 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, FloppyIO_t *io) {
 static void FloppyReader(void *ptr) {
   FloppyDev_t *fd = ptr;
 
-  /* Move head to track 0 */
-  FloppyMotorOn(fd);
-  HeadsStepDirection(fd, OUTWARDS);
-  while (!HeadsAtTrack0())
-    StepHeads(fd);
-  HeadsStepDirection(fd, INWARDS);
-  ChangeDiskSide(fd, LOWER);
-  /* Now we are at well defined position */
-  fd->track = 0;
+  FloppyHeadToTrack0(fd);
 
   for (;;) {
     FloppyIO_t *io;
