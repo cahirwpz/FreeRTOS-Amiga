@@ -9,5 +9,6 @@
 #define EINVAL 22 /* Invalid argument */
 #define EMFILE 24 /* Too many open files */
 #define ESPIPE 29 /* Illegal seek */
+#define EROFS 30  /* Read-only file system */
 #define EAGAIN 35 /* Resource temporarily unavailable */
 #define ENOSYS 78 /* Function not implemented */

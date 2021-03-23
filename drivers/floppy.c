@@ -9,6 +9,7 @@
 #include <libkern.h>
 #include <device.h>
 #include <ioreq.h>
+#include <sys/errno.h>
 
 #include <floppy.h>
 
@@ -171,6 +172,76 @@ static void FloppyMotorOff(FloppyDev_t *fd) {
 #define DISK_SETTLE TIMER_MS(15)
 #define WRITE_SETTLE TIMER_US(1300)
 
+static int FloppyReadWriteTrack(FloppyDev_t *fd, FloppyIO_t *io) {
+  if (io->cmd == CMD_WRITE && WriteProtected())
+    return EROFS;
+
+  /* Turn the motor on. */
+  FloppyMotorOn(fd);
+
+  /* Switch heads if needed. */
+  if ((io->track ^ fd->track) & 1)
+    ChangeDiskSide(fd, io->track & 1);
+
+  /* Travel to requested track. */
+  if (io->track != fd->track) {
+    HeadsStepDirection(fd, io->track > fd->track);
+    while (io->track != fd->track)
+      StepHeads(fd);
+  }
+
+  /* Wait for the head to stabilize over the track. */
+  WaitTimerSleep(fd->timer, DISK_SETTLE);
+
+  /* Make sure the DMA for the disk is turned off. */
+  custom.dsklen = 0;
+
+  DPRINTF("[Floppy] %s track %d into %p.\n",
+          (io->cmd == CMD_WRITE) ? "Write" : "Read", (int)io->track,
+          io->buffer);
+
+  uint16_t adkconSet = ADKF_SETCLR | ADKF_MFMPREC | ADKF_FAST;
+  uint16_t adkconClr = ADKF_WORDSYNC | ADKF_MSBSYNC;
+  if (io->cmd == CMD_READ)
+    adkconSet |= ADKF_WORDSYNC;
+  if (io->track < TRACK_COUNT / 2)
+    adkconClr |= ADKF_PRECOMP1 | ADKF_PRECOMP0;
+  else
+    adkconSet |= ADKF_PRECOMP0;
+  custom.adkcon = adkconClr;
+  custom.adkcon = adkconSet;
+
+  /* Prepare for transfer. */
+  ClearIRQ(INTF_DSKBLK);
+  EnableINT(INTF_DSKBLK);
+  EnableDMA(DMAF_DISK);
+
+  /* Buffer in chip memory. */
+  custom.dskpt = io->buffer;
+
+  /* Write track size twice to initiate DMA transfer. */
+  uint16_t dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
+  if (io->cmd == CMD_WRITE)
+    dsklen |= DSK_WRITE;
+  custom.dsklen = dsklen;
+  custom.dsklen = dsklen;
+
+  (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+  if (io->cmd == CMD_WRITE)
+    WaitTimerSleep(fd->timer, WRITE_SETTLE);
+
+  /* Disable DMA & interrupts. */
+  custom.dsklen = 0;
+  DisableINT(INTF_DSKBLK);
+  DisableDMA(DMAF_DISK);
+
+  /* Wake up the task that requested transfer. */
+  xQueueSend(io->replyQueue, &io, portMAX_DELAY);
+
+  return 0;
+}
+
 static void FloppyReader(void *ptr) {
   FloppyDev_t *fd = ptr;
 
@@ -188,71 +259,7 @@ static void FloppyReader(void *ptr) {
     FloppyIO_t *io;
 
     if (xQueueReceive(fd->ioQueue, &io, 1000 / portTICK_PERIOD_MS)) {
-      if (io->cmd == CMD_WRITE)
-        DASSERT(!WriteProtected());
-
-      /* Turn the motor on. */
-      FloppyMotorOn(fd);
-
-      /* Switch heads if needed. */
-      if ((io->track ^ fd->track) & 1)
-        ChangeDiskSide(fd, io->track & 1);
-
-      /* Travel to requested track. */
-      if (io->track != fd->track) {
-        HeadsStepDirection(fd, io->track > fd->track);
-        while (io->track != fd->track)
-          StepHeads(fd);
-      }
-
-      /* Wait for the head to stabilize over the track. */
-      WaitTimerSleep(fd->timer, DISK_SETTLE);
-
-      /* Make sure the DMA for the disk is turned off. */
-      custom.dsklen = 0;
-
-      DPRINTF("[Floppy] %s track %d into %p.\n",
-              (io->cmd == CMD_WRITE) ? "Write" : "Read", (int)io->track,
-              io->buffer);
-
-      uint16_t adkconSet = ADKF_SETCLR | ADKF_MFMPREC | ADKF_FAST;
-      uint16_t adkconClr = ADKF_WORDSYNC | ADKF_MSBSYNC;
-      if (io->cmd == CMD_READ)
-        adkconSet |= ADKF_WORDSYNC;
-      if (io->track < TRACK_COUNT / 2)
-        adkconClr |= ADKF_PRECOMP1 | ADKF_PRECOMP0;
-      else
-        adkconSet |= ADKF_PRECOMP0;
-      custom.adkcon = adkconClr;
-      custom.adkcon = adkconSet;
-
-      /* Prepare for transfer. */
-      ClearIRQ(INTF_DSKBLK);
-      EnableINT(INTF_DSKBLK);
-      EnableDMA(DMAF_DISK);
-
-      /* Buffer in chip memory. */
-      custom.dskpt = io->buffer;
-
-      /* Write track size twice to initiate DMA transfer. */
-      uint16_t dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
-      if (io->cmd == CMD_WRITE)
-        dsklen |= DSK_WRITE;
-      custom.dsklen = dsklen;
-      custom.dsklen = dsklen;
-
-      (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-      if (io->cmd == CMD_WRITE)
-        WaitTimerSleep(fd->timer, WRITE_SETTLE);
-
-      /* Disable DMA & interrupts. */
-      custom.dsklen = 0;
-      DisableINT(INTF_DSKBLK);
-      DisableDMA(DMAF_DISK);
-
-      /* Wake up the task that requested transfer. */
-      xQueueSend(io->replyQueue, &io, portMAX_DELAY);
+      FloppyReadWriteTrack(fd, io);
     } else {
       FloppyMotorOff(fd);
     }
