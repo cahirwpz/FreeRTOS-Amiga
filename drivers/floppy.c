@@ -359,7 +359,7 @@ static int FloppyReadWrite(Device_t *dev, IoReq_t *io) {
     io->left = FLOPPY_SIZE - io->offset;
   if (io->left == 0)
     return 0;
-  xQueueSend(fd->ioQueue, io, portMAX_DELAY);
+  xQueueSend(fd->ioQueue, &io, portMAX_DELAY);
   IoReqNotifyWait(io, NULL);
   return io->error;
 }

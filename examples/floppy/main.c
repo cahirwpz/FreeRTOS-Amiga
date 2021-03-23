@@ -1,5 +1,6 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
+#include <FreeRTOS/semphr.h>
 
 #include <floppy.h>
 #include <interrupt.h>
@@ -22,26 +23,16 @@ static void vMinusTask(File_t *ser) {
     kfputchar(ser, '+');
 }
 
-static void vReaderTask(File_t *fd) {
-  void *buf = pvPortMalloc(SECTOR_SIZE);
+#define ALLSECS (NTRACKS * NSECTORS)
+#define FIRSTSEC (ALLSECS / 2)
+#define LASTSEC (ALLSECS - 1)
 
-  for (;;) {
-    short sector = 0;
+#define NODATA 0xffffU
 
-    kfseek(fd, 0, SEEK_SET);
+static uint16_t SectorCksum[ALLSECS]; /* initially filled with NODATA */
+static SemaphoreHandle_t SectorCksumLock;
 
-    do {
-      kfread(fd, buf, SECTOR_SIZE);
-    } while (++sector < NTRACKS * NSECTORS);
-
-    /* Wait two seconds and repeat. */
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-  }
-}
-
-#define SECTOR(dectrk, i) ((void *)(dectrk) + (i)*SECTOR_SIZE)
-
-static uint32_t fastrand(void) {
+static uint32_t FastRand(void) {
   static uint32_t x = 0xDEADC0DE;
   /* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
   x ^= x << 13;
@@ -50,57 +41,73 @@ static uint32_t fastrand(void) {
   return x;
 }
 
-static void SectorFillRandom(uint32_t *rawsec) {
-  for (short i = 0; i < (int)(SECTOR_SIZE / sizeof(uint32_t)); i++)
-    rawsec[i] = fastrand();
+/* Produced value will never have 0xff on upper on lower byte. */
+static uint16_t Fletcher16(uint8_t *data, int count) {
+  uint16_t sum1 = 0, sum2 = 0;
+  int index;
+
+  for (index = 0; index < count; index++) {
+    sum1 = (sum1 + data[index]) % 255;
+    sum2 = (sum2 + sum1) % 255;
+  }
+
+  return (sum2 << 8) | sum1;
 }
 
-static void CompareSectors(int trknum, uint32_t *saveTrk, uint32_t *readTrk) {
-  for (short i = 0; i < NSECTORS; i++) {
-    uint32_t *old = SECTOR(saveTrk, i);
-    uint32_t *new = SECTOR(readTrk, i);
-    for (short j = 0; j < (int)(SECTOR_SIZE / sizeof(uint32_t)); j++) {
-      if (old[j] != new[j]) {
-        kprintf("trk(%3d), sec(%2d), off(%3d): %08x (old) vs. %08x (new)\n",
-                trknum, i, j * sizeof(uint32_t), old[j], new[j]);
-        portBREAK();
-        return;
+static void vReaderTask(File_t *fd) {
+  void *data = pvPortMalloc(SECTOR_SIZE);
+
+  for (;;) {
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    for (short s = FIRSTSEC; s <= LASTSEC; s++) {
+      uint16_t cksum;
+      xSemaphoreTake(SectorCksumLock, portMAX_DELAY);
+      cksum = SectorCksum[s];
+      if (cksum != NODATA) {
+        kfseek(fd, s * SECTOR_SIZE, SEEK_SET);
+        kfread(fd, data, SECTOR_SIZE);
+      }
+      xSemaphoreGive(SectorCksumLock);
+
+      if (cksum != NODATA) {
+        uint16_t cksum2 = Fletcher16((void *)data, SECTOR_SIZE);
+
+        kprintf("rd(%d/%d): cksum = %04x (memory), cksum = %04x (disk)\n",
+                s / NSECTORS, s % NSECTORS, cksum, cksum2);
+
+        // DASSERT(cksum == cksum2);
+
+        vTaskDelay(250 / portTICK_PERIOD_MS);
       }
     }
   }
 }
 
-static void vWriterTask(File_t *fd __unused) {
-  uint32_t *saveTrk = pvPortMalloc(TRACK_SIZE);
-  DASSERT(saveTrk != NULL);
-  uint32_t *readTrk = pvPortMalloc(TRACK_SIZE);
-  DASSERT(readTrk != NULL);
+static void vWriterTask(File_t *fd) {
+  uint32_t *data = pvPortMalloc(SECTOR_SIZE);
+  DASSERT(data != NULL);
 
   for (;;) {
     /* Assume we can freely overwrite second half of floppy disk. */
-    short trknum = fastrand() % (NTRACKS / 2) + NTRACKS / 2;
+    short s = FastRand() % (ALLSECS / 2) + ALLSECS / 2;
 
-    /* Fill in some of decoded sectors buffer with random data. */
-    for (short i = 0; i < NSECTORS; i++) {
-      uint32_t *rawsec = SECTOR(saveTrk, i);
-      if (fastrand() % 2) {
-        // DecodeSector(sectors[i], rawsec);
-      } else {
-        SectorFillRandom(rawsec);
-        // EncodeSector(rawsec, sectors[i]);
-      }
-    }
+    /* Fill in sector buffer with random data. */
+    for (short i = 0; i < (int)(SECTOR_SIZE / sizeof(uint32_t)); i++)
+      data[i] = FastRand();
 
-    /* Read the track from disk. */
-    // DoIO(&io, CMD_READ, trknum);
-    // DecodeTrack(io.buffer, sectors);
-    // for (int j = 0; j < SECTOR_COUNT; j++)
-    //  DecodeSector(sectors[j], SECTOR(readTrk, j));
+    xSemaphoreTake(SectorCksumLock, portMAX_DELAY);
+    SectorCksum[s] = -1;
+    kfseek(fd, s * SECTOR_SIZE, SEEK_SET);
+    kfwrite(fd, data, SECTOR_SIZE);
+    xSemaphoreGive(SectorCksumLock);
 
-    CompareSectors(trknum, saveTrk, readTrk);
+    uint16_t cksum = Fletcher16((void *)data, SECTOR_SIZE);
+    kprintf("wr(%d/%d): cksum = %04x\n", s / NSECTORS, s % NSECTORS, cksum);
+    SectorCksum[s] = cksum;
 
     /* Wait one second and repeat. */
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
   }
 }
 
@@ -134,6 +141,10 @@ int main(void) {
 
   File_t *ser = kopen("serial", O_RDWR);
   File_t *fd = kopen("floppy", O_RDWR);
+
+  SectorCksumLock = xSemaphoreCreateMutex();
+
+  memset(SectorCksum, 0xff, sizeof(SectorCksum));
 
   xTaskCreate((TaskFunction_t)vPlusTask, "plus", configMINIMAL_STACK_SIZE, ser,
               PLUS_TASK_PRIO, &plusHandle);
