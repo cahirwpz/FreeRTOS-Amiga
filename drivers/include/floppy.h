@@ -1,9 +1,5 @@
 #pragma once
 
-#include <FreeRTOS/FreeRTOS.h>
-#include <FreeRTOS/queue.h>
-#include <stdint.h>
-
 typedef struct Device Device_t;
 
 /*
@@ -18,31 +14,25 @@ typedef struct Device Device_t;
 #define SECTOR_COUNT 11
 #define SECTOR_SIZE 512
 #define TRACK_COUNT 160
+#define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
+
+Device_t *FloppyInit(unsigned aFloppyIOTaskPrio);
+void FloppyKill(void);
+
+#ifdef __FLOPPY_DRIVER
+
+#include <sys/types.h>
+
 #define TRACK_SIZE 12800
 #define GAP_SIZE 832
-#define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
 
 typedef uint16_t DiskTrack_t[TRACK_SIZE / sizeof(uint16_t)];
 typedef struct DiskSector DiskSector_t;
 typedef uint32_t RawSector_t[SECTOR_SIZE / sizeof(uint32_t)];
 
-#define CMD_READ 1
-#define CMD_WRITE 2
-
-typedef struct FloppyIO {
-  uint16_t cmd;            /* command code */
-  uint16_t track;          /* track number to transfer */
-  DiskTrack_t *buffer;     /* chip memory buffer */
-  xQueueHandle replyQueue; /* after request is handled it'll be replied here */
-} FloppyIO_t;
-
-Device_t *FloppyInit(unsigned aFloppyIOTaskPrio);
-void FloppyKill(void);
-
-#define AllocTrack() pvPortMallocChip(TRACK_SIZE)
-
-void FloppySendIO(FloppyIO_t *io);
 void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
 void DecodeSector(const DiskSector_t *disksec, RawSector_t sec);
 void EncodeSector(const RawSector_t sec, DiskSector_t *disksec);
 void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
+
+#endif /* !_FLOPPY_DRIVER */

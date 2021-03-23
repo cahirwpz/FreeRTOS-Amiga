@@ -16,6 +16,7 @@ typedef struct IoReq {
     const char *wbuf; /* valid if this is a write request */
   };
   size_t left;
+  uint8_t write : 1; /* is it read or write request ? */
   /* When `async` is set the operation returns EAGAIN instead of blocking,
    * a notification is sent to `origin` when operation can be safely resumed
    * without blocking. */
@@ -33,13 +34,15 @@ typedef struct IoReq {
 #define IOREQ_READ(_offset, _buf, _len)                                        \
   (IoReq_t) {                                                                  \
     .offset = (_offset), .rbuf = (_buf), .left = (_len), .async = 0,           \
-    .origin = xTaskGetCurrentTaskHandle(), .notifyBits = 0, .error = 0,        \
+    .write = 0, .origin = xTaskGetCurrentTaskHandle(), .notifyBits = 0,        \
+    .error = 0,                                                                \
   }
 
 #define IOREQ_WRITE(_offset, _buf, _len)                                       \
   (IoReq_t) {                                                                  \
     .offset = (_offset), .wbuf = (_buf), .left = (_len), .async = 0,           \
-    .origin = xTaskGetCurrentTaskHandle(), .notifyBits = 0, .error = 0,        \
+    .write = 1, .origin = xTaskGetCurrentTaskHandle(), .notifyBits = 0,        \
+    .error = 0,                                                                \
   }
 
 #define IoReqNotify(req)                                                       \

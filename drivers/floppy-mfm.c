@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <custom.h>
+#define __FLOPPY_DRIVER
 #include <floppy.h>
 
 #define DEBUG 0

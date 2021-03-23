@@ -11,26 +11,29 @@
 #include <ioreq.h>
 #include <sys/errno.h>
 
+#define __FLOPPY_DRIVER
 #include <floppy.h>
 
 #define DEBUG 0
 #include <debug.h>
 
-#define FLOPPYIO_MAXNUM 8
+#define IOREQ_MAXNUM 16
 
-static int FloppyRead(Device_t *, IoReq_t *);
-static int FloppyWrite(Device_t *, IoReq_t *);
+static int FloppyReadWrite(Device_t *, IoReq_t *);
 
-static DeviceOps_t FloppyOps = {.read = FloppyRead, .write = FloppyWrite};
+static DeviceOps_t FloppyOps = {.read = FloppyReadWrite,
+                                .write = FloppyReadWrite};
 
 typedef struct FloppyDev {
   CIATimer_t *timer;
   xTaskHandle ioTask;
   QueueHandle_t ioQueue;
+  DiskTrack_t *trackBuf;
 
-  int16_t motorOn;
-  int16_t headDir;
-  int16_t track;
+  int16_t trackNum; /* track currently stored in `trackBuf` or -1 */
+  int16_t motorOn;  /* motor is turned on or off */
+  int16_t headDir;  /* head moves outward on inwards by two tracks */
+  int16_t curTrack; /* head is positioned over this track */
 } FloppyDev_t;
 
 static FloppyDev_t FloppyDev[1];
@@ -60,12 +63,15 @@ Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
   /* Handler that will wake up track reader task. */
   SetIntVec(DSKBLK, TrackTransferDone, fd);
 
-  fd->ioQueue = xQueueCreate(FLOPPYIO_MAXNUM, sizeof(FloppyIO_t *));
+  fd->ioQueue = xQueueCreate(IOREQ_MAXNUM, sizeof(IoReq_t *));
   DASSERT(fd->ioQueue != NULL);
 
   xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, FloppyDev,
               aFloppyIOTaskPrio, &fd->ioTask);
   DASSERT(fd->ioTask != NULL);
+
+  fd->trackBuf = pvPortMallocChip(TRACK_SIZE);
+  DASSERT(fd->trackBuf != NULL);
 
   Device_t *dev;
   AddDevice("floppy", &FloppyOps, &dev);
@@ -105,7 +111,7 @@ static void StepHeads(FloppyDev_t *fd) {
 
   WaitTimerSleep(fd->timer, STEP_SETTLE);
 
-  fd->track += fd->headDir;
+  fd->curTrack += fd->headDir;
 }
 
 #define DIRECTION_REVERSE_SETTLE TIMER_MS(18)
@@ -125,10 +131,10 @@ static inline void HeadsStepDirection(FloppyDev_t *fd, int16_t inwards) {
 static inline void ChangeDiskSide(FloppyDev_t *fd, int16_t upper) {
   if (upper) {
     BCLR(ciab.ciaprb, CIAB_DSKSIDE);
-    fd->track++;
+    fd->curTrack++;
   } else {
     BSET(ciab.ciaprb, CIAB_DSKSIDE);
-    fd->track--;
+    fd->curTrack--;
   }
 }
 
@@ -177,14 +183,16 @@ static void FloppyHeadToTrack0(FloppyDev_t *fd) {
   HeadsStepDirection(fd, INWARDS);
   ChangeDiskSide(fd, LOWER);
   /* Now we are at well defined position */
-  fd->track = 0;
+  fd->curTrack = 0;
 }
 
 #define DISK_SETTLE TIMER_MS(15)
 #define WRITE_SETTLE TIMER_US(1300)
 
-static int FloppyReadWriteTrack(FloppyDev_t *fd, FloppyIO_t *io) {
-  if (io->cmd == CMD_WRITE && WriteProtected())
+static int FloppyReadWriteTrack(FloppyDev_t *fd, IoReq_t *io);
+#if 0
+{
+  if (io->write && WriteProtected())
     return EROFS;
 
   /* Turn the motor on. */
@@ -252,6 +260,7 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, FloppyIO_t *io) {
 
   return 0;
 }
+#endif
 
 static void FloppyReader(void *ptr) {
   FloppyDev_t *fd = ptr;
@@ -259,32 +268,29 @@ static void FloppyReader(void *ptr) {
   FloppyHeadToTrack0(fd);
 
   for (;;) {
-    FloppyIO_t *io;
+    IoReq_t *io;
 
-    if (xQueueReceive(fd->ioQueue, &io, 1000 / portTICK_PERIOD_MS)) {
-      FloppyReadWriteTrack(fd, io);
-    } else {
+    if (!xQueueReceive(fd->ioQueue, &io, 1000 / portTICK_PERIOD_MS)) {
       FloppyMotorOff(fd);
+      continue;
     }
+
+    while (io->left) {
+    }
+
+    FloppyReadWriteTrack(fd, io);
   }
 }
 
-void FloppySendIO(FloppyIO_t *io) {
-  FloppyDev_t *fd = FloppyDev;
-
-  DASSERT(io->track < TRACK_COUNT);
-  DASSERT(io->replyQueue != NULL);
-  DASSERT(io->buffer != NULL);
-
-  xQueueSend(fd->ioQueue, &io, portMAX_DELAY);
-}
-
-static int FloppyRead(Device_t *dev, IoReq_t *req) {
-  (void)dev, (void)req;
-  return 0;
-}
-
-static int FloppyWrite(Device_t *dev, IoReq_t *req) {
-  (void)dev, (void)req;
-  return 0;
+static int FloppyReadWrite(Device_t *dev, IoReq_t *req) {
+  FloppyDev_t *fd = dev->data;
+  if (req->offset >= FLOPPY_SIZE)
+    return EINVAL;
+  if (req->offset + req->left > FLOPPY_SIZE)
+    req->left = FLOPPY_SIZE - req->offset;
+  if (req->left == 0)
+    return 0;
+  xQueueSend(fd->ioQueue, req, portMAX_DELAY);
+  IoReqNotifyWait(req, NULL);
+  return req->error;
 }
