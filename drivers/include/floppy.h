@@ -24,8 +24,8 @@ void FloppyKill(void);
 
 #include <sys/types.h>
 
-#define RAW_TRACK_SIZE 12800
-#define GAP_SIZE 832
+#define DISK_TRACK_SIZE 12800
+#define DISK_GAP_SIZE 832
 
 typedef enum SectorState { DECODED = 1, DIRTY = 2 } __packed SectorState_t;
 

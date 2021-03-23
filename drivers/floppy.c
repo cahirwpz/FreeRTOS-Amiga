@@ -31,7 +31,7 @@ typedef struct FloppyDev {
   int16_t headTrk; /* head is positioned over this track */
 
   DiskSector_t *diskSector[NSECTORS];
-  RawSector_t sector[NSECTORS];
+  RawSector_t rawSector[NSECTORS];
   SectorState_t sectorState[NSECTORS];
 } FloppyDev_t;
 
@@ -73,7 +73,7 @@ Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
               aFloppyIOTaskPrio, &fd->ioTask);
   DASSERT(fd->ioTask != NULL);
 
-  fd->diskTrack = pvPortMallocChip(RAW_TRACK_SIZE);
+  fd->diskTrack = pvPortMallocChip(DISK_TRACK_SIZE);
   fd->track = -1;
   DASSERT(fd->diskTrack != NULL);
 
@@ -201,10 +201,10 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
     if (WriteProtected())
       return EROFS;
 
-    /* Encode sectors that need to be written to disk. */
+    /* Encode sectors that have been modified. */
     for (short i = 0; i < NSECTORS; i++) {
       if (fd->sectorState[i] & DIRTY) {
-        EncodeSector(fd->sector[i], fd->diskSector[i]);
+        EncodeSector(fd->rawSector[i], fd->diskSector[i]);
         fd->sectorState[i] &= ~DIRTY;
       }
     }
@@ -253,16 +253,17 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
   EnableINT(INTF_DSKBLK);
   EnableDMA(DMAF_DISK);
 
-  /* Buffer in chip memory. */
+  /* The buffer must in chip memory. */
   custom.dskpt = fd->diskTrack;
 
   /* Write track size twice to initiate DMA transfer. */
-  uint16_t dsklen = DSK_DMAEN | (RAW_TRACK_SIZE / sizeof(int16_t));
+  uint16_t dsklen = DSK_DMAEN | (DISK_TRACK_SIZE / sizeof(int16_t));
   if (cmd == WRITE)
     dsklen |= DSK_WRITE;
   custom.dsklen = dsklen;
   custom.dsklen = dsklen;
 
+  /* Wake up when the transfer finishes. */
   (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
   if (cmd == WRITE)
@@ -276,6 +277,8 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
   if (cmd == READ) {
     fd->track = track;
     memset(fd->sectorState, 0, NSECTORS);
+
+    /* Find encoded sector positions within the track. */
     DecodeTrack(fd->diskTrack, fd->diskSector);
   }
 
@@ -295,7 +298,7 @@ static void FloppyReader(void *ptr) {
       continue;
     }
 
-    uint8_t needWrite = 0;
+    bool needWrite = false;
     int16_t track = io->offset / TRACK_SIZE;
     int16_t sector = (io->offset / SECTOR_SIZE) % NSECTORS;
     int32_t offset = io->offset % SECTOR_SIZE;
@@ -308,22 +311,21 @@ static void FloppyReader(void *ptr) {
         FloppyReadWriteTrack(fd, READ, track);
 
       /* let's see if sector we want to read from is decoded */
-      if (fd->sectorState[sector] & DECODED) {
-        DecodeSector(fd->diskSector[sector], fd->sector[sector]);
+      if (!(fd->sectorState[sector] & DECODED)) {
+        DecodeSector(fd->diskSector[sector], fd->rawSector[sector]);
         fd->sectorState[sector] |= DECODED;
       }
 
+      /* Read as much as you can, but do not cross sector boundary. */
       size_t n = min(io->left, SECTOR_SIZE - offset);
 
-      if (!io->write) {
-        /* copy the data from decoded sector */
-        memcpy(io->rbuf, (void *)fd->sector[sector] + offset, n);
-        io->rbuf += n;
-      } else {
-        /* copy the data into decoded sector */
-        memcpy((void *)fd->sector[sector] + offset, io->wbuf, n);
+      if (io->write) {
+        memcpy((void *)fd->rawSector[sector] + offset, io->wbuf, n);
         io->wbuf += n;
-        needWrite = -1;
+        needWrite = true;
+      } else {
+        memcpy(io->rbuf, (void *)fd->rawSector[sector] + offset, n);
+        io->rbuf += n;
       }
 
       io->left -= n;
@@ -335,7 +337,7 @@ static void FloppyReader(void *ptr) {
         sector = 0;
         if (needWrite) {
           FloppyReadWriteTrack(fd, WRITE, track);
-          needWrite = 0;
+          needWrite = false;
         }
         track++;
       }

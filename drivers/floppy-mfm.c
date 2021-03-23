@@ -257,7 +257,7 @@ static void VerifyTrackEncoding(uint32_t *data) {
  * match the way the data was written.
  */
 void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]) {
-  DiskSector_t *sector = (void *)track + GAP_SIZE;
+  DiskSector_t *sector = (void *)track + DISK_GAP_SIZE;
 
   /* Find sector with the highest address. */
   DiskSector_t *last = NULL;
@@ -277,7 +277,7 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]) {
   }
 
   /* Fill the gap with encoded zeros. */
-  (void)memset(track, 0xAA, GAP_SIZE);
+  (void)memset(track, 0xAA, DISK_GAP_SIZE);
 
   /* Fix sector header encoding */
   short gapDist = NSECTORS;
