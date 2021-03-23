@@ -4,6 +4,8 @@
 #include <FreeRTOS/queue.h>
 #include <stdint.h>
 
+typedef struct Device Device_t;
+
 /*
  * 3 1/2 inch dual density micro floppy disk drive specifications:
  * http://www.techtravels.org/wp-content/uploads/pefiles/SAMSUNG-SFD321B-070103.pdf
@@ -34,7 +36,7 @@ typedef struct FloppyIO {
   xQueueHandle replyQueue; /* after request is handled it'll be replied here */
 } FloppyIO_t;
 
-void FloppyInit(unsigned aFloppyIOTaskPrio);
+Device_t *FloppyInit(unsigned aFloppyIOTaskPrio);
 void FloppyKill(void);
 
 #define AllocTrack() pvPortMallocChip(TRACK_SIZE)

@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 #include <libkern.h>
+#include <device.h>
+#include <ioreq.h>
 
 #include <floppy.h>
 
@@ -15,7 +17,10 @@
 
 #define FLOPPYIO_MAXNUM 8
 
+static int FloppyRead(Device_t *, IoReq_t *);
+static int FloppyWrite(Device_t *, IoReq_t *);
 
+static DeviceOps_t FloppyOps = {.read = FloppyRead, .write = FloppyWrite};
 
 typedef struct FloppyDev {
   CIATimer_t *timer;
@@ -37,7 +42,7 @@ static void TrackTransferDone(void *ptr) {
 
 static void FloppyReader(void *);
 
-void FloppyInit(unsigned aFloppyIOTaskPrio) {
+Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
   FloppyDev_t *fd = FloppyDev;
 
   kprintf("[Init] Floppy drive driver!\n");
@@ -60,6 +65,12 @@ void FloppyInit(unsigned aFloppyIOTaskPrio) {
   xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, FloppyDev,
               aFloppyIOTaskPrio, &fd->ioTask);
   DASSERT(fd->ioTask != NULL);
+
+  Device_t *dev;
+  AddDevice("floppy", &FloppyOps, &dev);
+  dev->data = FloppyDev;
+  dev->size = FLOPPY_SIZE;
+  return dev;
 }
 
 static void FloppyMotorOff(FloppyDev_t *fd);
@@ -256,4 +267,14 @@ void FloppySendIO(FloppyIO_t *io) {
   DASSERT(io->buffer != NULL);
 
   xQueueSend(fd->ioQueue, &io, portMAX_DELAY);
+}
+
+static int FloppyRead(Device_t *dev, IoReq_t *req) {
+  (void)dev, (void)req;
+  return 0;
+}
+
+static int FloppyWrite(Device_t *dev, IoReq_t *req) {
+  (void)dev, (void)req;
+  return 0;
 }
