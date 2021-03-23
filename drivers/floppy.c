@@ -5,6 +5,7 @@
 #include <custom.h>
 #include <cia.h>
 
+#include <cpu.h>
 #include <string.h>
 #include <libkern.h>
 #include <device.h>
@@ -302,8 +303,8 @@ static void FloppyReader(void *ptr) {
             io->left);
 
     bool needWrite = false;
-    int16_t track = io->offset / TRACK_SIZE;
-    int16_t sector = (io->offset / SECTOR_SIZE) % NSECTORS;
+    int16_t track = divs16(io->offset, TRACK_SIZE).quot;
+    int16_t sector = divs16(io->offset / SECTOR_SIZE, NSECTORS).rem;
     int32_t offset = io->offset % SECTOR_SIZE;
 
     /* The loop processes one sector at a time. */

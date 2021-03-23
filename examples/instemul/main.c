@@ -33,7 +33,7 @@ extern int32_t __modsi3(int32_t a, int32_t b);
 extern uint32_t __udivsi3(uint32_t a, uint32_t b);
 extern uint32_t __umodsi3(uint32_t a, uint32_t b);
 
-/* You can invoke assembly inlines from <cpu.h> to force compiler to use 
+/* You can invoke assembly inlines from <cpu.h> to force compiler to use
  * 16 x 16 -> 32 multiplication or 32 / 16 -> 16 division instructions
  * available in M68000. */
 
