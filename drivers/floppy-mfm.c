@@ -64,7 +64,7 @@ static inline SectorHeader_t DecodeHeader(const DiskSector_t *sec) {
   return ((SectorHeader_u)DecodeLong(sec->info)).hdr;
 }
 
-void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
+void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]) {
   /* We always start after the DSK_SYNC word but the first one may be corrupted.
    * In case we start with the sync marker move to the sector header. */
   uint16_t *data = (uint16_t *)track;
@@ -73,15 +73,15 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
     data++;
 
   DiskSector_t *sector = HeaderToSector(data);
-  short secnum = SECTOR_COUNT;
+  short secnum = NSECTORS;
 
   do {
     SectorHeader_t hdr = DecodeHeader(sector);
 
     DPRINTF("[MFM] Read: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
             (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
-    DASSERT(hdr.sectorNum <= SECTOR_COUNT);
-    DASSERT(hdr.trackNum <= TRACK_COUNT);
+    DASSERT(hdr.sectorNum <= NSECTORS);
+    DASSERT(hdr.trackNum <= NTRACKS);
 
     sectors[hdr.sectorNum] = sector++;
     /* Handle the gap. */
@@ -208,7 +208,7 @@ void EncodeSector(const RawSector_t buf, DiskSector_t *sector) {
 
 #if DEBUG
 static void VerifyTrackEncoding(uint32_t *data) {
-  short n = TRACK_SIZE / sizeof(uint32_t);
+  short n = RAW_TRACK_SIZE / sizeof(uint32_t);
   uint32_t prev = data[n - 1];
   do {
     uint32_t lw = *data;
@@ -234,7 +234,7 @@ static void VerifyTrackEncoding(uint32_t *data) {
  * Floppy drive rotational speed can vary (at most +/- 5%) !!!
  *
  * It's suprising that physical track may be somewhat longer or shorter than
- * TRACK_SIZE. When physical track is shorter than TRACK_SIZE there's a real
+ * RAW_TRACK_SIZE. When physical track is shorter than TRACK_SIZE there's a real
  * danger of overwriting data at the beginning of track. Hence we reorganize
  * encoded track buffer in such a way that it begins with a zero-filled GAP
  * and ends with last sector to be recorded.
@@ -256,13 +256,13 @@ static void VerifyTrackEncoding(uint32_t *data) {
  * ... so that when the track is rewritten, the sector offsets are adjusted to
  * match the way the data was written.
  */
-void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
+void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]) {
   DiskSector_t *sector = (void *)track + GAP_SIZE;
 
   /* Find sector with the highest address. */
   DiskSector_t *last = NULL;
   short lastNum = -1;
-  for (short i = 0; i < SECTOR_COUNT; i++) {
+  for (short i = 0; i < NSECTORS; i++) {
     if (sectors[i] > last) {
       last = sectors[i];
       lastNum = i;
@@ -270,9 +270,9 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   }
 
   /* Compact sectors towards the end of track buffer. */
-  for (short i = SECTOR_COUNT - 1, j = lastNum; i >= 0; i--, j--) {
+  for (short i = NSECTORS - 1, j = lastNum; i >= 0; i--, j--) {
     if (j < 0)
-      j += SECTOR_COUNT;
+      j += NSECTORS;
     (void)memmove(&sector[i], sectors[j], sizeof(DiskSector_t));
   }
 
@@ -280,7 +280,7 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]) {
   (void)memset(track, 0xAA, GAP_SIZE);
 
   /* Fix sector header encoding */
-  short gapDist = SECTOR_COUNT;
+  short gapDist = NSECTORS;
 
   do {
     /* Magic longword and sync word of first sector have not been read

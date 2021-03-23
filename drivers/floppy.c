@@ -5,7 +5,7 @@
 #include <custom.h>
 #include <cia.h>
 
-#include <stdint.h>
+#include <string.h>
 #include <libkern.h>
 #include <device.h>
 #include <ioreq.h>
@@ -14,26 +14,25 @@
 #define __FLOPPY_DRIVER
 #include <floppy.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #include <debug.h>
 
 #define IOREQ_MAXNUM 16
-
-static int FloppyReadWrite(Device_t *, IoReq_t *);
-
-static DeviceOps_t FloppyOps = {.read = FloppyReadWrite,
-                                .write = FloppyReadWrite};
 
 typedef struct FloppyDev {
   CIATimer_t *timer;
   xTaskHandle ioTask;
   QueueHandle_t ioQueue;
-  DiskTrack_t *trackBuf;
+  DiskTrack_t *diskTrack;
 
-  int16_t trackNum; /* track currently stored in `trackBuf` or -1 */
-  int16_t motorOn;  /* motor is turned on or off */
-  int16_t headDir;  /* head moves outward on inwards by two tracks */
-  int16_t curTrack; /* head is positioned over this track */
+  int16_t track;   /* track currently stored in `trackBuf` or -1 */
+  int16_t motorOn; /* motor is turned on or off */
+  int16_t headDir; /* head moves outward on inwards by two tracks */
+  int16_t headTrk; /* head is positioned over this track */
+
+  DiskSector_t *diskSector[NSECTORS];
+  RawSector_t sector[NSECTORS];
+  SectorState_t sectorState[NSECTORS];
 } FloppyDev_t;
 
 static FloppyDev_t FloppyDev[1];
@@ -45,6 +44,10 @@ static void TrackTransferDone(void *ptr) {
 }
 
 static void FloppyReader(void *);
+static int FloppyReadWrite(Device_t *, IoReq_t *);
+
+static DeviceOps_t FloppyOps = {.read = FloppyReadWrite,
+                                .write = FloppyReadWrite};
 
 Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
   FloppyDev_t *fd = FloppyDev;
@@ -70,8 +73,9 @@ Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
               aFloppyIOTaskPrio, &fd->ioTask);
   DASSERT(fd->ioTask != NULL);
 
-  fd->trackBuf = pvPortMallocChip(TRACK_SIZE);
-  DASSERT(fd->trackBuf != NULL);
+  fd->diskTrack = pvPortMallocChip(RAW_TRACK_SIZE);
+  fd->track = -1;
+  DASSERT(fd->diskTrack != NULL);
 
   Device_t *dev;
   AddDevice("floppy", &FloppyOps, &dev);
@@ -97,6 +101,9 @@ void FloppyKill(void) {
 
 /******************************************************************************/
 
+#define READ 0
+#define WRITE 1
+
 #define LOWER 0
 #define UPPER 1
 
@@ -111,7 +118,7 @@ static void StepHeads(FloppyDev_t *fd) {
 
   WaitTimerSleep(fd->timer, STEP_SETTLE);
 
-  fd->curTrack += fd->headDir;
+  fd->headTrk += fd->headDir;
 }
 
 #define DIRECTION_REVERSE_SETTLE TIMER_MS(18)
@@ -131,10 +138,10 @@ static inline void HeadsStepDirection(FloppyDev_t *fd, int16_t inwards) {
 static inline void ChangeDiskSide(FloppyDev_t *fd, int16_t upper) {
   if (upper) {
     BCLR(ciab.ciaprb, CIAB_DSKSIDE);
-    fd->curTrack++;
+    fd->headTrk++;
   } else {
     BSET(ciab.ciaprb, CIAB_DSKSIDE);
-    fd->curTrack--;
+    fd->headTrk--;
   }
 }
 
@@ -183,29 +190,41 @@ static void FloppyHeadToTrack0(FloppyDev_t *fd) {
   HeadsStepDirection(fd, INWARDS);
   ChangeDiskSide(fd, LOWER);
   /* Now we are at well defined position */
-  fd->curTrack = 0;
+  fd->headTrk = 0;
 }
 
 #define DISK_SETTLE TIMER_MS(15)
 #define WRITE_SETTLE TIMER_US(1300)
 
-static int FloppyReadWriteTrack(FloppyDev_t *fd, IoReq_t *io);
-#if 0
-{
-  if (io->write && WriteProtected())
-    return EROFS;
+static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
+  if (cmd == WRITE) {
+    if (WriteProtected())
+      return EROFS;
+
+    /* Encode sectors that need to be written to disk. */
+    for (short i = 0; i < NSECTORS; i++) {
+      if (fd->sectorState[i] & DIRTY) {
+        EncodeSector(fd->sector[i], fd->diskSector[i]);
+        fd->sectorState[i] &= ~DIRTY;
+      }
+    }
+
+    /* Before a track is written to disk we need to realign it
+     * and fix MFM encoding. */
+    RealignTrack(fd->diskTrack, fd->diskSector);
+  }
 
   /* Turn the motor on. */
   FloppyMotorOn(fd);
 
   /* Switch heads if needed. */
-  if ((io->track ^ fd->track) & 1)
-    ChangeDiskSide(fd, io->track & 1);
+  if ((track ^ fd->headTrk) & 1)
+    ChangeDiskSide(fd, track & 1);
 
   /* Travel to requested track. */
-  if (io->track != fd->track) {
-    HeadsStepDirection(fd, io->track > fd->track);
-    while (io->track != fd->track)
+  if (track != fd->headTrk) {
+    HeadsStepDirection(fd, track > fd->headTrk);
+    while (track != fd->headTrk)
       StepHeads(fd);
   }
 
@@ -215,15 +234,14 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, IoReq_t *io);
   /* Make sure the DMA for the disk is turned off. */
   custom.dsklen = 0;
 
-  DPRINTF("[Floppy] %s track %d into %p.\n",
-          (io->cmd == CMD_WRITE) ? "Write" : "Read", (int)io->track,
-          io->buffer);
+  DPRINTF("[Floppy] %s track %d.\n", (cmd == WRITE) ? "Write" : "Read",
+          (int)track);
 
   uint16_t adkconSet = ADKF_SETCLR | ADKF_MFMPREC | ADKF_FAST;
   uint16_t adkconClr = ADKF_WORDSYNC | ADKF_MSBSYNC;
-  if (io->cmd == CMD_READ)
+  if (cmd == READ)
     adkconSet |= ADKF_WORDSYNC;
-  if (io->track < TRACK_COUNT / 2)
+  if (track < NTRACKS / 2)
     adkconClr |= ADKF_PRECOMP1 | ADKF_PRECOMP0;
   else
     adkconSet |= ADKF_PRECOMP0;
@@ -236,18 +254,18 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, IoReq_t *io);
   EnableDMA(DMAF_DISK);
 
   /* Buffer in chip memory. */
-  custom.dskpt = io->buffer;
+  custom.dskpt = fd->diskTrack;
 
   /* Write track size twice to initiate DMA transfer. */
-  uint16_t dsklen = DSK_DMAEN | (TRACK_SIZE / sizeof(int16_t));
-  if (io->cmd == CMD_WRITE)
+  uint16_t dsklen = DSK_DMAEN | (RAW_TRACK_SIZE / sizeof(int16_t));
+  if (cmd == WRITE)
     dsklen |= DSK_WRITE;
   custom.dsklen = dsklen;
   custom.dsklen = dsklen;
 
   (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-  if (io->cmd == CMD_WRITE)
+  if (cmd == WRITE)
     WaitTimerSleep(fd->timer, WRITE_SETTLE);
 
   /* Disable DMA & interrupts. */
@@ -255,12 +273,14 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, IoReq_t *io);
   DisableINT(INTF_DSKBLK);
   DisableDMA(DMAF_DISK);
 
-  /* Wake up the task that requested transfer. */
-  xQueueSend(io->replyQueue, &io, portMAX_DELAY);
+  if (cmd == READ) {
+    fd->track = track;
+    memset(fd->sectorState, 0, NSECTORS);
+    DecodeTrack(fd->diskTrack, fd->diskSector);
+  }
 
   return 0;
 }
-#endif
 
 static void FloppyReader(void *ptr) {
   FloppyDev_t *fd = ptr;
@@ -275,22 +295,69 @@ static void FloppyReader(void *ptr) {
       continue;
     }
 
-    while (io->left) {
+    uint8_t needWrite = 0;
+    int16_t track = io->offset / TRACK_SIZE;
+    int16_t sector = (io->offset / SECTOR_SIZE) % NSECTORS;
+    int32_t offset = io->offset % SECTOR_SIZE;
+
+    /* The loop processes one sector at a time. */
+    while (io->left > 0) {
+      /* if `trackBuf` stores another track or is empty,
+       * then we need to read a track */
+      if (fd->track != track)
+        FloppyReadWriteTrack(fd, READ, track);
+
+      /* let's see if sector we want to read from is decoded */
+      if (fd->sectorState[sector] & DECODED) {
+        DecodeSector(fd->diskSector[sector], fd->sector[sector]);
+        fd->sectorState[sector] |= DECODED;
+      }
+
+      size_t n = min(io->left, SECTOR_SIZE - offset);
+
+      if (!io->write) {
+        /* copy the data from decoded sector */
+        memcpy(io->rbuf, (void *)fd->sector[sector] + offset, n);
+        io->rbuf += n;
+      } else {
+        /* copy the data into decoded sector */
+        memcpy((void *)fd->sector[sector] + offset, io->wbuf, n);
+        io->wbuf += n;
+        needWrite = -1;
+      }
+
+      io->left -= n;
+
+      /* Assume we crossed sector boundary, otherwise we quit the loop anyway,
+       * and update sector / track counter appropriately. */
+      offset = 0;
+      if (++sector == NSECTORS) {
+        sector = 0;
+        if (needWrite) {
+          FloppyReadWriteTrack(fd, WRITE, track);
+          needWrite = 0;
+        }
+        track++;
+      }
     }
 
-    FloppyReadWriteTrack(fd, io);
+    if (needWrite)
+      FloppyReadWriteTrack(fd, WRITE, track);
+
+    io->error = 0;
+    IoReqNotify(io);
   }
 }
 
-static int FloppyReadWrite(Device_t *dev, IoReq_t *req) {
+static int FloppyReadWrite(Device_t *dev, IoReq_t *io) {
   FloppyDev_t *fd = dev->data;
-  if (req->offset >= FLOPPY_SIZE)
+  if (io->offset >= (off_t)FLOPPY_SIZE)
     return EINVAL;
-  if (req->offset + req->left > FLOPPY_SIZE)
-    req->left = FLOPPY_SIZE - req->offset;
-  if (req->left == 0)
+  if (io->offset + io->left > FLOPPY_SIZE)
+    io->left = FLOPPY_SIZE - io->offset;
+  if (io->left == 0)
     return 0;
-  xQueueSend(fd->ioQueue, req, portMAX_DELAY);
-  IoReqNotifyWait(req, NULL);
-  return req->error;
+  xQueueSend(fd->ioQueue, io, portMAX_DELAY);
+  IoReqNotifyWait(io, NULL);
+  return io->error;
 }

@@ -11,10 +11,11 @@ typedef struct Device Device_t;
  * 832 bytes between the end of sector #10 and beginning of sector #0.
  */
 
-#define SECTOR_COUNT 11
-#define SECTOR_SIZE 512
-#define TRACK_COUNT 160
-#define FLOPPY_SIZE (SECTOR_SIZE * SECTOR_COUNT * TRACK_COUNT)
+#define NSECTORS 11
+#define SECTOR_SIZE 512U
+#define NTRACKS 160
+#define TRACK_SIZE (SECTOR_SIZE * NSECTORS)
+#define FLOPPY_SIZE (TRACK_SIZE * NTRACKS)
 
 Device_t *FloppyInit(unsigned aFloppyIOTaskPrio);
 void FloppyKill(void);
@@ -23,16 +24,18 @@ void FloppyKill(void);
 
 #include <sys/types.h>
 
-#define TRACK_SIZE 12800
+#define RAW_TRACK_SIZE 12800
 #define GAP_SIZE 832
+
+typedef enum SectorState { DECODED = 1, DIRTY = 2 } __packed SectorState_t;
 
 typedef uint16_t DiskTrack_t[TRACK_SIZE / sizeof(uint16_t)];
 typedef struct DiskSector DiskSector_t;
 typedef uint32_t RawSector_t[SECTOR_SIZE / sizeof(uint32_t)];
 
-void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
+void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]);
 void DecodeSector(const DiskSector_t *disksec, RawSector_t sec);
 void EncodeSector(const RawSector_t sec, DiskSector_t *disksec);
-void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[SECTOR_COUNT]);
+void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]);
 
 #endif /* !_FLOPPY_DRIVER */
