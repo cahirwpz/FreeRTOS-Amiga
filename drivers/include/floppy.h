@@ -27,7 +27,10 @@ void FloppyKill(void);
 #define DISK_TRACK_SIZE 12800
 #define DISK_GAP_SIZE 832
 
-typedef enum SectorState { DECODED = 1, DIRTY = 2 } __packed SectorState_t;
+typedef enum SectorState {
+  DECODED = 1,
+  DIRTY = 2,
+} __packed SectorState_t;
 
 typedef uint16_t DiskTrack_t[TRACK_SIZE / sizeof(uint16_t)];
 typedef struct DiskSector DiskSector_t;
