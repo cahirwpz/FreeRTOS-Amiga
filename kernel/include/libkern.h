@@ -1,9 +1,10 @@
 #pragma once
 
-#include <file.h>
+#include <uae.h>
 #include <sys/fcntl.h>
+#include <sys/types.h>
 
-extern File_t *KernCons; /* Kernel console file (parallel port by default) */
+typedef struct File File_t;
 
 File_t *kopen(const char *name, int oflag);
 long kfread(File_t *f, void *buf, size_t len);
@@ -13,10 +14,7 @@ void kfputchar(File_t *f, char c);
 void kfprintf(File_t *f, const char *fmt, ...);
 void kfhexdump(File_t *f, void *ptr, size_t length);
 
-#define kputchar(c) kfputchar(KernCons, (c))
-#define kprintf(...) kfprintf(KernCons, __VA_ARGS__)
-#define khexdump(ptr, len) kfhexdump(KernCons, (ptr), (len))
-#define khexdump_s(ptr) kfhexdump(KernCons, (ptr), sizeof(*(ptr)))
+#define klog(...) UaeLog(__VA_ARGS__)
 
 void *kmalloc(size_t size);
 void kfree(void *ptr);

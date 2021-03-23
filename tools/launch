@@ -146,7 +146,7 @@ if __name__ == '__main__':
         if args.debug:
             session.select_window(debugger.name)
         else:
-            session.select_window(args.window or par_port.name)
+            session.select_window(args.window or uae.name)
         session.attach_session()
     finally:
         try:

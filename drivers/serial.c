@@ -57,7 +57,7 @@ static void RecvIntHandler(void *ptr) {
 }
 
 Device_t *SerialInit(unsigned baud) {
-  kprintf("[Serial] Initializing driver!\n");
+  klog("[Serial] Initializing driver!\n");
 
   custom.serper = CLOCK / baud - 1;
 
@@ -86,7 +86,7 @@ void SerialKill(void) {
   vSemaphoreDelete(SerialDev->rxLock);
   vSemaphoreDelete(SerialDev->txLock);
 
-  kprintf("[Serial] Driver deactivated!\n");
+  klog("[Serial] Driver deactivated!\n");
 }
 
 static int SerialWrite(Device_t *dev, IoReq_t *req) {

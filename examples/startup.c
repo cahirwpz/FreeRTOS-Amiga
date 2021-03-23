@@ -11,14 +11,14 @@
 extern int main(void);
 
 void _start(BootData_t *aBootData) {
-  kprintf("FreeRTOS running on Amiga!\n");
-  kprintf("VBR at $%08x\n", aBootData->bd_vbr);
-  kprintf("CPU model $%02x\n", aBootData->bd_cpumodel);
-  kprintf("Entry point at $%08x\n", aBootData->bd_entry);
+  klog("FreeRTOS running on Amiga!\n");
+  klog("VBR at $%08x\n", aBootData->bd_vbr);
+  klog("CPU model $%02x\n", aBootData->bd_cpumodel);
+  klog("Entry point at $%08x\n", aBootData->bd_entry);
 
   for (int i = 0; i < aBootData->bd_nregions; i++)
-    kprintf("MEM[%d]: %08x - %08x\n", i, aBootData->bd_region[i].mr_lower,
-            aBootData->bd_region[i].mr_upper);
+    klog("MEM[%d]: %08x - %08x\n", i, aBootData->bd_region[i].mr_lower,
+         aBootData->bd_region[i].mr_upper);
 
   DASSERT(custom.intenar == 0);
   DASSERT((custom.dmaconr & DMAF_ALL) == 0);

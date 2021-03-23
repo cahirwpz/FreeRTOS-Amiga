@@ -63,9 +63,6 @@ static void vReaderTask(File_t *fd) {
         DPRINTF("rd(%d/%d): cksum = %08x (memory), cksum = %08x (disk)\n",
                 s / NSECTORS, s % NSECTORS, cksum, cksum2);
 
-        if (cksum != cksum2)
-          khexdump(data, SECTOR_SIZE);
-
         DASSERT(cksum == cksum2);
 
         vTaskDelay(250 / portTICK_PERIOD_MS);

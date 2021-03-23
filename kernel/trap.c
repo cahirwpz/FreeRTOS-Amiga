@@ -55,17 +55,17 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
   }
 
   /* clang-format off */
-  kprintf("Exception (in %s mode): %s!\n"
-          " D0: %08x D1: %08x D2: %08x D3: %08x\n"
-          " D4: %08x D5: %08x D6: %08x D7: %08x\n"
-          " A0: %08x A1: %08x A2: %08x A3: %08x\n"
-          " A4: %08x A5: %08x A6: %08x SP: %08x\n"
-          " PC: %08x SR: %04x\n",
-          supervisor ? "supervisor" : "user", trapname[trap],
-          frame->d0, frame->d1, frame->d2, frame->d3,
-          frame->d4, frame->d5, frame->d6, frame->d7,
-          frame->a0, frame->a1, frame->a2, frame->a3,
-          frame->a4, frame->a5, frame->a6, sp, pc, sr);
+  klog("Exception (in %s mode): %s!\n"
+       " D0: %08x D1: %08x D2: %08x D3: %08x\n"
+       " D4: %08x D5: %08x D6: %08x D7: %08x\n"
+       " A0: %08x A1: %08x A2: %08x A3: %08x\n"
+       " A4: %08x A5: %08x A6: %08x SP: %08x\n"
+       " PC: %08x SR: %04x\n",
+       supervisor ? "supervisor" : "user", trapname[trap],
+       frame->d0, frame->d1, frame->d2, frame->d3,
+       frame->d4, frame->d5, frame->d6, frame->d7,
+       frame->a0, frame->a1, frame->a2, frame->a3,
+       frame->a4, frame->a5, frame->a6, sp, pc, sr);
   /* clang-format on */
 
   if (memflt) {
@@ -82,8 +82,8 @@ void vPortDefaultTrapHandler(struct TrapFrame *frame) {
       read = frame->m68000_memacc.status & 16;
     }
 
-    kprintf("%s %s at $%08x!\n", (data ? "Instruction" : "Data"),
-            (read ? "read" : "write"), addr);
+    klog("%s %s at $%08x!\n", (data ? "Instruction" : "Data"),
+         (read ? "read" : "write"), addr);
   }
 
   portPANIC();

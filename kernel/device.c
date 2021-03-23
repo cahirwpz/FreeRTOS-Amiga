@@ -58,7 +58,7 @@ int AddDevice(const char *name, DeviceOps_t *ops, Device_t **devp) {
   if (devp)
     *devp = dev;
 
-  kprintf("Registered \'%s\' device.\n", name);
+  klog("Registered \'%s\' device.\n", name);
 
 leave:
   xTaskResumeAll();

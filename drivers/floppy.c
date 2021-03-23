@@ -53,7 +53,7 @@ static DeviceOps_t FloppyOps = {.read = FloppyReadWrite,
 Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
   FloppyDev_t *fd = FloppyDev;
 
-  kprintf("[Init] Floppy drive driver!\n");
+  klog("[Init] Floppy drive driver!\n");
 
   fd->timer = AcquireTimer(TIMER_ANY);
   DASSERT(fd->timer != NULL);

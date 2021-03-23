@@ -356,7 +356,7 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
 
 #define msg(...)                                                               \
   if (verbose) {                                                               \
-    kprintf(__VA_ARGS__);                                                      \
+    klog(__VA_ARGS__);                                                         \
   }
 
 static void ar_check(arena_t *ar, int verbose) {

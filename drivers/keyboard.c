@@ -190,7 +190,7 @@ static void KeyboardIntHandler(CIA_t cia) {
 INTSERVER_DEFINE(KeyboardInt, -10, (ISR_t)KeyboardIntHandler, (void *)CIAA);
 
 void KeyboardInit(KeyEventNotify_t notify) {
-  kprintf("[Init] Keyboard driver!\n");
+  klog("[Init] Keyboard driver!\n");
 
   KeyboardTimer = AcquireTimer(TIMER_ANY);
   configASSERT(KeyboardTimer != NULL);

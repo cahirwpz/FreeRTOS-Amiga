@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
+import logging
 
 
 feature_xml = """<?xml version="1.0"?>
@@ -64,7 +65,7 @@ class GdbConnection():
     async def recv_ack(self):
         # read a character
         data = await self.reader.read(1)
-        print("(gdb) <- {}".format(data))
+        logging.debug("(gdb) <- {}".format(data))
 
         # fail if not acknowledge and not retransmission marker
         if data not in [b'+', b'-']:
@@ -74,7 +75,7 @@ class GdbConnection():
 
     async def recv_break(self):
         data = await self.reader.read(1)
-        print("(gdb) <- {}".format(data))
+        logging.debug("(gdb) <- {}".format(data))
         assert data == b'\x03'
 
     async def recv_packet(self):
@@ -97,7 +98,7 @@ class GdbConnection():
             packet = raw_packet.decode()[:-1]
             raw_chksum = await self.reader.read(2)
             chksum = int(raw_chksum.decode(), 16)
-            print("(gdb) <- '{}'".format(packet))
+            logging.debug("(gdb) <- '{}'".format(packet))
 
             # check if check sum matches
             if chksum != self.chksum(packet):
@@ -106,20 +107,20 @@ class GdbConnection():
         return packet
 
     def send_nack(self, packet=None):
-        print("(gdb) -> '-'")
+        logging.debug("(gdb) -> '-'")
         self.writer.write(b'-')
         if packet is not None:
             self.send(packet)
 
     def send_ack(self, packet=None):
-        print("(gdb) -> '+'")
+        logging.debug("(gdb) -> '+'")
         self.writer.write(b'+')
         if packet is not None:
             self.send(packet)
 
     def send(self, packet):
         data = '${}#{:02x}'.format(packet, self.chksum(packet))
-        print("(gdb) -> '{}'".format(packet))
+        logging.debug("(gdb) -> '{}'".format(packet))
         self.writer.write(data.encode())
 
 

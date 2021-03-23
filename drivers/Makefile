@@ -3,8 +3,6 @@ TOPDIR = $(realpath ..)
 SOURCES = \
 	  blt-copy.c \
 	  blt-line.c \
-	  bootcons.c \
-	  bootcons-putc.S \
 	  cia-frame.c \
 	  cia-icr.c \
 	  cia-line.c \
@@ -14,6 +12,7 @@ SOURCES = \
 	  keyboard.c \
 	  memdev.c \
 	  mouse.c \
+	  parallel-putc.S \
 	  serial.c \
 	  sprite.c
 

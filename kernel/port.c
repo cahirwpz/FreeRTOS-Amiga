@@ -156,11 +156,11 @@ void vPortSetupExceptionVector(BootData_t *aBootData) {
 }
 
 void vApplicationMallocFailedHook(void) {
-  kprintf("Memory exhausted!\n");
+  klog("Memory exhausted!\n");
   portPANIC();
 }
 
 void vApplicationStackOverflowHook(void) {
-  kprintf("Stack overflow!\n");
+  klog("Stack overflow!\n");
   portPANIC();
 }

@@ -26,7 +26,7 @@ static void RandMalloc(void) {
 
   int sz = 1 + (rand() % MAXBLKSZ);
   void *p = kmalloc(sz);
-  kprintf("malloc(%d) = %x\n", sz, p);
+  klog("malloc(%d) = %x\n", sz, p);
   Slot[FreeSlot++] = p;
 }
 
@@ -37,7 +37,7 @@ static void RandFree(void) {
   int n = rand() % FreeSlot;
   void *p = Slot[n];
   kfree(p);
-  kprintf("free(%p)\n", p);
+  klog("free(%p)\n", p);
   Slot[n] = NULL;
 
   int last = --FreeSlot;
@@ -53,7 +53,7 @@ static void RandRealloc(void) {
   void *p = Slot[n];
   int sz = 1 + (rand() % MAXBLKSZ);
   void *q = krealloc(p, sz);
-  kprintf("realloc(%p, %d) = %p\n", p, sz, q);
+  klog("realloc(%p, %d) = %p\n", p, sz, q);
   Slot[n] = q;
 }
 

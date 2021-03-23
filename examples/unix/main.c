@@ -26,7 +26,7 @@ static void vMainTask(__unused void *data) {
   if (ProcLoadImage(&p, init)) {
     ProcSetArgv(&p, (char *[]){"init", NULL});
     ProcEnter(&p);
-    kprintf("Program returned: %d\n", p.exitcode);
+    klog("Program returned: %d\n", p.exitcode);
   }
   ProcFini(&p);
 
