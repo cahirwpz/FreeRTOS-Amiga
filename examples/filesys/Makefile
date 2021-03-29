@@ -1,7 +1,7 @@
 TOPDIR = $(realpath ../..)
 
 PROGRAM = filesys
-SOURCES = main.c filesys.c reader.c shell.c
+SOURCES = main.c filesys.c reader.c shell.c fs.c
 OBJECTS = ../startup.o
 LAUNCHOPTS = --window serial
 ADF-EXTRA = $(wildcard *.c *.h)

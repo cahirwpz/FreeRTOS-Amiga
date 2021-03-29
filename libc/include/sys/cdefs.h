@@ -42,6 +42,7 @@
 #define BSET(x, b) ((x) |= BIT(b))
 #define BCLR(x, b) ((x) &= ~BIT(b))
 
+#define howmany(x, y) (((x) + (y)-1) / (y))
 #define roundup(x, y) ((((x) + ((y) - 1)) / (y)) * (y))
 #define rounddown(x, y) (((x) / (y)) * (y))
 
@@ -64,3 +65,8 @@
 
 /* To be used when an empty body is required. */
 #define __nothing ((void)0)
+
+/* Static assertion (introduced by C11 standard) */
+#if !defined(static_assert) && !defined(__cplusplus)
+#define static_assert _Static_assert
+#endif

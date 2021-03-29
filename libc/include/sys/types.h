@@ -9,7 +9,9 @@ typedef unsigned short u_short;
 typedef unsigned int u_int;
 typedef unsigned long u_long;
 
-typedef uint16_t ino_t;
+typedef uint32_t daddr_t;  /* disk address */
+typedef uint32_t ino_t;    /* i-node number */
+typedef uint32_t blkcnt_t; /* fs block count */
 typedef uint8_t dev_t;
 typedef uint8_t mode_t;
 typedef int32_t off_t;
