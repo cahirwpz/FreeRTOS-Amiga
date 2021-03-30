@@ -5,6 +5,7 @@ SOURCES = amigahunk.c \
 	  device.c \
 	  file.c \
 	  filedesc.c \
+	  fs.c \
 	  hexdump.c \
 	  intr.S \
 	  intsrv.c \
