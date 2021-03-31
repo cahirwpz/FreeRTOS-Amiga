@@ -22,14 +22,14 @@
 
 /* File system super block on the disk. */
 typedef struct FsSuperBlock {
-  uint32_t magic;    /* magic number */
-  uint32_t ninodes;  /* number of all inodes */
-  uint32_t nblocks;  /* number of all blocks */
-  uint32_t nfreeblk; /* number of free blocks */
-  uint32_t nfreeino; /* number of free inodes */
+  uint32_t magic;      /* magic number */
+  uint32_t ninodes;    /* number of all inodes */
+  uint32_t nblocks;    /* number of all blocks */
+  uint32_t nfreeblk;   /* number of free blocks */
+  uint32_t nfreeino;   /* number of free inodes */
   uint32_t inodestart; /* first block with i-nodes */
-  uint32_t bmapstart; /* first block with used blocks bitmap */
-  uint32_t datastart; /* first block with user data */
+  uint32_t bmapstart;  /* first block with used blocks bitmap */
+  uint32_t datastart;  /* first block with user data */
 } FsSuperBlock_t;
 
 static_assert(sizeof(FsSuperBlock_t) == 32,
@@ -42,7 +42,7 @@ static_assert(sizeof(FsSuperBlock_t) == 32,
 #define FS_NINOBLK (FS_BLKSIZE / sizeof(FsInode_t))
 
 #define FS_NDADDR 10 /* Direct addresses in inode. */
-#define FS_NIADDR 3 /* Indirect addresses in inode. */
+#define FS_NIADDR 3  /* Indirect addresses in inode. */
 #define FS_NADDR (FS_NDADDR + FS_NIADDR)
 
 /* Structure of an inode on the disk. */
