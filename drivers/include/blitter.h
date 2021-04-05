@@ -72,14 +72,14 @@ static inline void WaitBlitter(void) {
 }
 
 /* Blitter copying state & routines. */
-typedef struct {
+typedef struct BltCopy {
   /* public fields */
   struct {
-    const bitmap_t *bm; /* destination bitmap */
+    const Bitmap_t *bm; /* destination bitmap */
     short x, y;
   } dst;
   struct {
-    const bitmap_t *bm; /* source bitmap */
+    const Bitmap_t *bm; /* source bitmap */
     short x, y;         /* x must be 16 pixels aligned */
     short w, h;         /* w must be 16 pixels aligned */
   } src;
@@ -89,12 +89,12 @@ typedef struct {
   intptr_t _dststart;
   uint16_t _bltsize;
   bool _fast;
-} bltcopy_t;
+} BltCopy_t;
 
-void BltCopySetup(bltcopy_t *bc);
-void BltCopy(bltcopy_t *bc, void *dstbpl, void *srcbpl, void *mskbpl);
+void BltCopySetup(BltCopy_t *bc);
+void BltCopy(BltCopy_t *bc, void *dstbpl, void *srcbpl, void *mskbpl);
 
-static inline void BltCopySetSrc(bltcopy_t *bc, const bitmap_t *bm, short x,
+static inline void BltCopySetSrc(BltCopy_t *bc, const Bitmap_t *bm, short x,
                                  short y, short w, short h) {
   bc->src.bm = bm;
   bc->src.x = x;
@@ -103,14 +103,14 @@ static inline void BltCopySetSrc(bltcopy_t *bc, const bitmap_t *bm, short x,
   bc->src.h = h < 0 ? bm->height : h;
 }
 
-static inline void BltCopySetDst(bltcopy_t *bc, const bitmap_t *bm, short x,
+static inline void BltCopySetDst(BltCopy_t *bc, const Bitmap_t *bm, short x,
                                  short y) {
   bc->dst.bm = bm;
   bc->dst.x = x;
   bc->dst.y = y;
 }
 
-static inline void BitmapCopy(bltcopy_t *bc) {
+static inline void BitmapCopy(BltCopy_t *bc) {
   BltCopySetup(bc);
   for (int i = 0; i < min(bc->src.bm->depth, bc->dst.bm->depth); i++)
     BltCopy(bc, bc->dst.bm->planes[i], bc->src.bm->planes[i], bc->src.bm->mask);

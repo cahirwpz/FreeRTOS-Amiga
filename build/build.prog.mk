@@ -45,18 +45,6 @@ $(PROGRAM).adf: $(TOPDIR)/bootloader.bin $(PROGRAM).exe $(ADF-EXTRA)
 	@echo "[AS] $(addprefix $(DIR),$^) -> $(DIR)$@"
 	$(VASM) -Fbin $(VASMFLAGS) -o $@ $(realpath $<)
 
-data/%.c: data/%.png
-	@echo "[PNG2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
-	$(PNG2C) $(PNG2C.$*) $(realpath $<) > $@
-
-data/%.c: data/%.psfu
-	@echo "[PSF2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
-	$(PSF2C) $(PSF2C.$*) $(realpath $<) > $@
-
-data/%.c: data/%.wav
-	@echo "[WAV2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
-	$(WAV2C) $(WAV2C.$*) $(realpath $<) > $@
-
 $(TOPDIR)/%.lib: dummy
 	$(MAKE) -C $(dir $@) $(notdir $@)
 

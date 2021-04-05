@@ -4,25 +4,24 @@
 #include <interrupt.h>
 #include <libkern.h>
 #include <file.h>
+#include <console.h>
 
-#include "console.h"
 #include "event.h"
-#include "tty.h"
 
 #define mainINPUT_TASK_PRIORITY 3
 
 static void vInputTask(void *data) {
-  File_t *tty = data;
+  File_t *cons = data;
   for (;;) {
     Event_t ev;
     if (!PopEvent(&ev))
       continue;
     if (ev.type == EV_MOUSE) {
-      kfprintf(tty, "MOUSE: x = %d, y = %d, button = %x\n", ev.mouse.x,
+      kfprintf(cons, "MOUSE: x = %d, y = %d, button = %x\n", ev.mouse.x,
                ev.mouse.y, ev.mouse.button);
       ConsoleMovePointer(ev.mouse.x, ev.mouse.y);
     } else if (ev.type == EV_KEY) {
-      kfprintf(tty, "KEY: ascii = '%c', code = %02x, modifier = %02x\n",
+      kfprintf(cons, "KEY: ascii = '%c', code = %02x, modifier = %02x\n",
                ev.key.ascii, ev.key.code, ev.key.modifier);
     }
   }
@@ -45,9 +44,14 @@ int main(void) {
   /* Configure system clock. */
   AddIntServer(VertBlankChain, SystemClockTick);
 
-  ConsoleInit();
+  (void)ConsoleInit();
+  EventQueueInit();
+  MouseInit(PushMouseEventFromISR, 0, 0, 319, 255);
+  KeyboardInit(PushKeyEventFromISR);
 
-  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, TtyOpen(),
+  File_t *cons = kopen("console", O_RDWR);
+
+  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, cons,
               mainINPUT_TASK_PRIORITY, &input_handle);
 
   vTaskStartScheduler();

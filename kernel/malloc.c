@@ -462,6 +462,8 @@ void *pvPortMallocChip(size_t xSize) {
   return _pvPortMallocBelow(xSize, MEM_CHIP);
 }
 
+__strong_alias(kmalloc_chip, pvPortMallocChip);
+
 void vPortFree(void *p) {
   if (p != NULL)
     ar_free(arena_of(p), p);

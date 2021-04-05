@@ -31,7 +31,7 @@ static uint16_t LastWordMask[16] = {
  *  - there's always enough space in `dst` to copy area from `src`
  *  - `sx` is aligned to word boundary
  */
-void BltCopySetup(bltcopy_t *bc) {
+void BltCopySetup(BltCopy_t *bc) {
   uint16_t xo = dx & 15;
   uint16_t width = xo + sw;
   uint16_t wo = width & 15;
@@ -72,7 +72,7 @@ void BltCopySetup(bltcopy_t *bc) {
   custom.bltdmod = dstmod;
 }
 
-void BltCopy(bltcopy_t *bc, void *dstbpl, void *srcbpl, void *mskbpl) {
+void BltCopy(BltCopy_t *bc, void *dstbpl, void *srcbpl, void *mskbpl) {
   void *mskbpt = mskbpl + _srcstart;
   void *srcbpt = srcbpl + _srcstart;
   void *dstbpt = dstbpl + _dststart;

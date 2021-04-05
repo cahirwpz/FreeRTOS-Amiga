@@ -1,41 +1,30 @@
 #pragma once
 
-#include <copper.h>
+#include <sys/cdefs.h>
+
+typedef union CopIns CopIns_t;
+typedef struct CopList CopList_t;
 
 #define MAXDEPTH 8
 
-#define BM_INTERLEAVED 1
+typedef enum BmFlags {
+  BM_NORMAL = 0,
+  BM_INTERLEAVED = 1,
+} __packed BmFlags_t;
 
-typedef struct bitmap {
+typedef struct Bitmap {
   int16_t width;
   int16_t height;
   int8_t depth;
-  int8_t flags;
+  BmFlags_t flags;
   int16_t bytesPerRow;
   void *mask;
   void *planes[MAXDEPTH];
-} bitmap_t;
+} Bitmap_t;
 
-static inline void CopSetupScreen(coplist_t *list, const bitmap_t *bm,
-                                  uint16_t mode, uint16_t xs, uint16_t ys) {
-  CopSetupMode(list, mode, bm->depth);
-  CopSetupDisplayWindow(list, mode, xs, ys, bm->width, bm->height);
-  CopSetupBitplaneFetch(list, mode, xs, bm->width);
-}
+void BitmapInit(Bitmap_t *bm, uint16_t width, uint16_t height, uint16_t depth,
+                BmFlags_t flags);
 
-static inline void CopSetupBitplanes(coplist_t *list, const bitmap_t *bm,
-                                     copins_t **bplptr) {
-  for (int i = 0; i < bm->depth; i++) {
-    copins_t *ins = CopMove32(list, bplpt[i], bm->planes[i]);
-    if (bplptr)
-      *bplptr++ = ins;
-  }
-
-  short modulo = 0;
-
-  if (bm->flags & BM_INTERLEAVED)
-    modulo = (short)bm->bytesPerRow * (short)(bm->depth - 1);
-
-  CopMove16(list, bpl1mod, modulo);
-  CopMove16(list, bpl2mod, modulo);
-}
+void CopSetupScreen(CopList_t *list, const Bitmap_t *bm, uint16_t mode,
+                    uint16_t xs, uint16_t ys);
+void CopSetupBitplanes(CopList_t *list, const Bitmap_t *bm, CopIns_t **bplptr);

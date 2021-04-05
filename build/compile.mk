@@ -36,7 +36,19 @@ $(DEPENDENCY-FILES): $(SOURCES_GEN)
 
 %.S: %.c
 	@echo "[CC] $(DIR)$< -> $(DIR)$@"
-	$(CC) $(CFLAGS) $(CPPFLAGS) -S -o $@ $(realpath $<)
+	$(CC) $(CFLAGS) $(CFLAGS.$*) $(CPPFLAGS) -S -o $@ $(realpath $<)
+
+%.c: %.png
+	@echo "[PNG2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
+	$(PNG2C) $(PNG2C.$(notdir $*)) $(realpath $<) > $@
+
+%.c: %.psfu
+	@echo "[PSF2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
+	$(PSF2C) $(PSF2C.$(notdir $*)) $(realpath $<) > $@
+
+%.c: %.wav
+	@echo "[WAV2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
+	$(WAV2C) $(WAV2C.$(notdir $*)) $(realpath $<) > $@
 
 ifeq ($(words $(findstring $(MAKECMDGOALS), clean)), 0)
   -include $(DEPENDENCY-FILES)
