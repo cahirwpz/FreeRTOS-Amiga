@@ -51,7 +51,7 @@ typedef long ssize_t;
 
 static const char hexdigits[16] = "0123456789abcdef";
 
-static void kprintn(putchar_t, UINTMAX_T, int, int, int);
+static void kprintn(putchar_t, void *, UINTMAX_T, int, int, int);
 
 #define LONG 0x01
 #define ALT 0x04
@@ -60,26 +60,27 @@ static void kprintn(putchar_t, UINTMAX_T, int, int, int);
 #define SIGN 0x20
 #define ZEROPAD 0x40
 #define NEGATIVE 0x80
-#define KPRINTN(base) kprintn(put, ul, base, lflag, width)
+#define KPRINTN(base) kprintn(put, data, ul, base, lflag, width)
+#define PUT(c) put(data, (c))
 #define RADJUSTZEROPAD()                                                       \
   {                                                                            \
     if ((lflag & (ZEROPAD | LADJUST)) == ZEROPAD) {                            \
       while (width-- > 0)                                                      \
-        put('0');                                                              \
+        PUT('0');                                                              \
     }                                                                          \
   }
 #define LADJUSTPAD()                                                           \
   {                                                                            \
     if (lflag & LADJUST) {                                                     \
       while (width-- > 0)                                                      \
-        put(' ');                                                              \
+        PUT(' ');                                                              \
     }                                                                          \
   }
 #define RADJUSTPAD()                                                           \
   {                                                                            \
     if ((lflag & (ZEROPAD | LADJUST)) == 0) {                                  \
       while (width-- > 0)                                                      \
-        put(' ');                                                              \
+        PUT(' ');                                                              \
     }                                                                          \
   }
 
@@ -89,7 +90,7 @@ static void kprintn(putchar_t, UINTMAX_T, int, int, int);
     KPRINTN(base);                                                             \
   }
 
-void kvprintf(putchar_t put, const char *fmt, va_list ap) {
+void kvprintf(putchar_t put, void *data, const char *fmt, va_list ap) {
   char *p;
   int ch;
   UINTMAX_T ul;
@@ -101,7 +102,7 @@ void kvprintf(putchar_t put, const char *fmt, va_list ap) {
     while ((ch = *fmt++) != '%') {
       if (ch == '\0')
         return;
-      put(ch);
+      PUT(ch);
     }
     lflag = 0;
     width = 0;
@@ -158,7 +159,7 @@ void kvprintf(putchar_t put, const char *fmt, va_list ap) {
         ch = va_arg(ap, int);
         --width;
         RADJUSTPAD();
-        put(ch & 0xFF);
+        PUT(ch & 0xFF);
         LADJUSTPAD();
         break;
       case 's':
@@ -170,7 +171,7 @@ void kvprintf(putchar_t put, const char *fmt, va_list ap) {
         width -= q - p;
         RADJUSTPAD();
         while ((ch = (unsigned char)*p++))
-          put(ch);
+          PUT(ch);
         LADJUSTPAD();
         break;
       case 'd':
@@ -196,14 +197,14 @@ void kvprintf(putchar_t put, const char *fmt, va_list ap) {
       default:
         if (ch == '\0')
           return;
-        put(ch);
+        PUT(ch);
         break;
     }
   }
 }
 
-static void kprintn(putchar_t put, UINTMAX_T ul, int base, int lflag,
-                    int width) {
+static void kprintn(putchar_t put, void *data, UINTMAX_T ul, int base,
+                    int lflag, int width) {
   /* hold a INTMAX_T in base 8 */
   char *p, buf[(sizeof(INTMAX_T) * NBBY / 3) + 1 + 2 /* ALT + SIGN */];
   char *q;
@@ -230,12 +231,12 @@ static void kprintn(putchar_t put, UINTMAX_T ul, int base, int lflag,
   width -= p - buf;
   if (lflag & ZEROPAD) {
     while (p > q)
-      put(*--p);
+      PUT(*--p);
   }
   RADJUSTPAD();
   RADJUSTZEROPAD();
   do {
-    put(*--p);
+    PUT(*--p);
   } while (p > buf);
   LADJUSTPAD();
 }

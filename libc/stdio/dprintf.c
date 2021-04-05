@@ -1,17 +1,22 @@
 #include <stdio.h>
 #include <unistd.h>
 
+typedef struct out {
+  size_t n;
+  int fd;
+} out_t;
+
+static void dputchar(out_t *out, char c) {
+  write(out->fd, &c, 1);
+  out->n++;
+}
+
 int dprintf(int fd, const char *fmt, ...) {
-  size_t n = 0;
+  out_t out = {0, fd};
   va_list ap;
 
-  void dputchar(char c) {
-    write(fd, &c, 1);
-    n++;
-  }
-
   va_start(ap, fmt);
-  kvprintf(dputchar, fmt, ap);
+  kvprintf((putchar_t)dputchar, &out, fmt, ap);
   va_end(ap);
-  return n;
+  return out.n;
 }

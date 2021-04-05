@@ -23,21 +23,45 @@ File_t *kopen(const char *name, int oflag) {
   return f;
 }
 
+#define BUFSIZ 80
+
 void kfputchar(File_t *f, char c) {
   long r;
   FileWrite(f, &c, 1, &r);
 }
 
-void kfprintf(File_t *f, const char *fmt, ...) {
-  void PutChar(char c) {
-    kfputchar(f, c);
-  }
+typedef struct FileBuf {
+  File_t *file;
+  short cur;
+  char buf[BUFSIZ];
+} FileBuf_t;
 
+static void FBPutChar(FileBuf_t *fb, char c) {
+  if (fb->cur < BUFSIZ) {
+    fb->buf[fb->cur++] = c;
+  } else {
+    long r;
+    FileWrite(fb->file, fb->buf, BUFSIZ, &r);
+    fb->cur = 0;
+  }
+}
+
+static void FBFlush(FileBuf_t *fb) {
+  if (fb->cur > 0) {
+    long r;
+    FileWrite(fb->file, fb->buf, fb->cur, &r);
+  }
+}
+
+void kfprintf(File_t *f, const char *fmt, ...) {
+  FileBuf_t buf = {f, 0, ""};
   va_list ap;
 
   va_start(ap, fmt);
-  kvprintf(PutChar, fmt, ap);
+  kvprintf((putchar_t)FBPutChar, &buf, fmt, ap);
   va_end(ap);
+
+  FBFlush(&buf);
 }
 
 long kfread(File_t *f, void *buf, size_t nbyte) {
