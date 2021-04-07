@@ -10,6 +10,9 @@
 #include <device.h>
 #include <sys/errno.h>
 
+#define DEBUG 0
+#include <debug.h>
+
 #define CLOCK 3546895
 #define BUFLEN 64
 
@@ -39,10 +42,14 @@ static void SendIntHandler(void *ptr) {
   SerialDev_t *ser = ptr;
   /* Send one byte into the wire. */
   int byte = RingGetByte(ser->txBuf);
-  if (byte >= 0)
+  if (byte >= 0) {
     SendByte(byte);
-  if (RingEmpty(ser->txBuf) && ser->txReq)
+  } else if (ser->txReq) {
     IoReqNotifyFromISR(ser->txReq);
+    DPRINTF("serial: writer wakeup!\n");
+  } else {
+    DPRINTF("serial: tx buffer empty!\n");
+  }
 }
 
 static void RecvIntHandler(void *ptr) {
@@ -102,10 +109,6 @@ static int SerialWrite(Device_t *dev, IoReq_t *req) {
     ser->txReq = req;
   }
 
-  /* Trigger interrupt if serdat register and TxBuf are empty. */
-  if (RingEmpty(ser->txBuf) && custom.serdatr & SERDATF_TBE)
-    CauseIRQ(INTF_TBE);
-
   /* Write all data to transmit buffer. This may involve waiting for the
    * interupt handler to free enough space in the ring buffer. */
   for (;;) {
@@ -118,13 +121,21 @@ static int SerialWrite(Device_t *dev, IoReq_t *req) {
        * without finishing the request. */
       if (req->left < n)
         break;
+      DPRINTF("serial: tx buffer full!\n");
       taskEXIT_CRITICAL();
       return EAGAIN;
     }
     IoReqNotifyWait(req, NULL);
   }
 
+  /* Trigger interrupt if transmit buffer is empty. */
+  if (custom.serdatr & SERDATF_TBE) {
+    CauseIRQ(INTF_TBE);
+    DPRINTF("serial: initiate tx!\n");
+  }
+
   /* Finish processing the request. */
+  DPRINTF("serial: tx request finished!\n");
   ser->txReq = NULL;
   taskEXIT_CRITICAL();
   xSemaphoreGive(ser->txLock);

@@ -8,6 +8,7 @@
 #define EEXIST 17 /* File exists */
 #define EINVAL 22 /* Invalid argument */
 #define EMFILE 24 /* Too many open files */
+#define ENOSPC 28 /* No space left on device */
 #define ESPIPE 29 /* Illegal seek */
 #define EROFS 30  /* Read-only file system */
 #define EAGAIN 35 /* Resource temporarily unavailable */

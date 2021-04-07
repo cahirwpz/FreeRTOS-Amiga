@@ -18,7 +18,8 @@ SOURCES = \
 	  palette.c \
 	  parallel-putc.S \
 	  serial.c \
-	  sprite.c
+	  sprite.c \
+	  tty.c
 
 SOURCES_GEN = data/drdos8x8.c \
 	      data/koi8r.8x8.c \

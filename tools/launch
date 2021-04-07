@@ -64,8 +64,8 @@ class SOCAT(Launchable):
     def configure(self, tcp_port):
         # The simulator will only open the server after some time has
         # passed.  To minimize the delay, keep reconnecting until success.
-        self.options = [
-            'STDIO', 'tcp:localhost:%d,retry,forever,interval=0.01' % tcp_port]
+        self.options = ['STDIO,cfmakeraw',
+                'tcp:localhost:%d,retry,forever,interval=0.01' % tcp_port]
 
 
 class GDB(Launchable):

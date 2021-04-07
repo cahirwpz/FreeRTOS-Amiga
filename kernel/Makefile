@@ -17,7 +17,6 @@ SOURCES = amigahunk.c \
 	  sysent.c \
 	  trapasm.S \
 	  trap.c \
-	  tty.c \
 	  userent.S
 
 LIBNAME = kernel.lib
