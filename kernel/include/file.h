@@ -10,12 +10,14 @@ typedef struct Device Device_t;
 typedef int (*FileRead_t)(File_t *f, void *buf, size_t nbyte, long *donep);
 typedef int (*FileWrite_t)(File_t *f, const void *buf, size_t nbyte,
                            long *donep);
+typedef int (*FileIoctl_t)(File_t *f, u_long cmd, void *data);
 typedef int (*FileSeek_t)(File_t *f, long offset, int whence);
 typedef int (*FileClose_t)(File_t *f);
 
 typedef struct FileOps {
   FileRead_t read;
   FileWrite_t write;
+  FileIoctl_t ioctl;
   FileSeek_t seek;
   FileClose_t close;
 } FileOps_t;
@@ -50,5 +52,6 @@ void FileDrop(File_t *f);
 /* These behave like read/write/lseek known from UNIX */
 int FileRead(File_t *f, void *buf, size_t nbyte, long *donep);
 int FileWrite(File_t *f, const void *buf, size_t nbyte, long *donep);
+int FileIoctl(File_t *f, u_long cmd, void *data);
 int FileSeek(File_t *f, long offset, int whence);
 int FileClose(File_t *f);

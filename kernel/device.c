@@ -11,12 +11,14 @@
 
 static int DevRead(File_t *, void *, size_t, long *);
 static int DevWrite(File_t *, const void *, size_t, long *);
+static int DevIoctl(File_t *, u_long cmd, void *);
 static int DevSeek(File_t *, long, int);
 static int DevClose(File_t *);
 
 static FileOps_t DevFileOps = {
   .read = DevRead,
   .write = DevWrite,
+  .ioctl = DevIoctl,
   .seek = DevSeek,
   .close = DevClose,
 };
@@ -116,6 +118,13 @@ static int DevWrite(File_t *f, const void *buf, size_t len, long *donep) {
   int error = write(f->device, &req);
   *donep = len - req.left;
   return error;
+}
+
+static int DevIoctl(File_t *f, u_long cmd, void *data) {
+  DeviceIoctl_t ioctl = f->device->ops->ioctl;
+  if (!ioctl)
+    return ENOSYS;
+  return ioctl(f->device, cmd, data);
 }
 
 static int DevSeek(File_t *f, long offset, int whence) {

@@ -43,6 +43,16 @@ static int SysWrite(Proc_t *p, long *arg, long *res) {
   return FileWrite(f, (const void *)arg[1], (size_t)arg[2], res);
 }
 
+static int SysIoctl(Proc_t *p, long *arg, long *res __unused) {
+  File_t *f;
+  int error;
+
+  if ((error = FdGet(p, arg[0], &f)))
+    return error;
+
+  return FileIoctl(f, arg[1], (void *)arg[2]);
+}
+
 static int SysExecv(Proc_t *p, long *arg, long *res) {
   /* TODO */
   (void)p, (void)arg, (void)res;
@@ -158,6 +168,7 @@ static SysCall_t SysEnt[] = {
   [SYS_stat] = SysStat,
   [SYS_unlink] = SysUnlink,
   [SYS_wait] = SysWait,
+  [SYS_ioctl] = SysIoctl,
   /* clang-format on */
 };
 

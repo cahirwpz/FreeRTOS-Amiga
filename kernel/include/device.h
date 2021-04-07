@@ -10,10 +10,12 @@ typedef struct DeviceOps DeviceOps_t;
 
 typedef int (*DeviceRead_t)(Device_t *dev, IoReq_t *req);
 typedef int (*DeviceWrite_t)(Device_t *dev, IoReq_t *req);
+typedef int (*DeviceIoctl_t)(Device_t *dev, u_long cmd, void *data);
 
 struct DeviceOps {
   DeviceRead_t read;
   DeviceWrite_t write;
+  DeviceIoctl_t ioctl;
 };
 
 struct Device {

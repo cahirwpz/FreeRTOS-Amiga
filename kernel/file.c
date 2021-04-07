@@ -36,6 +36,12 @@ int FileWrite(File_t *f, const void *buf, size_t nbyte, long *donep) {
   return error;
 }
 
+int FileIoctl(File_t *f, u_long cmd, void *data) {
+  if (!f->ops->ioctl)
+    return ENOSYS;
+  return f->ops->ioctl(f, cmd, data);
+}
+
 int FileSeek(File_t *f, long offset, int whence) {
   if (!f->seekable)
     return ESPIPE;
