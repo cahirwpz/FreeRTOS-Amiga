@@ -5,10 +5,12 @@ SOURCES = amigahunk.c \
 	  file.c \
 	  filedesc.c \
 	  hexdump.c \
+	  event.c \
 	  intr.S \
 	  intsrv.c \
 	  kernio.c \
 	  malloc.c \
+	  msgport.c \
 	  pipe.c \
 	  port.c \
 	  portasm.S \

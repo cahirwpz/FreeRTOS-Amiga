@@ -21,8 +21,8 @@ typedef struct SerialDev {
   SemaphoreHandle_t txLock;
   Ring_t *rxBuf;
   Ring_t *txBuf;
-  IoReq_t *rxReq;
-  IoReq_t *txReq;
+  xTaskHandle rxTask;
+  xTaskHandle txTask;
 } SerialDev_t;
 
 static SerialDev_t SerialDev[1];
@@ -44,8 +44,8 @@ static void SendIntHandler(void *ptr) {
   int byte = RingGetByte(ser->txBuf);
   if (byte >= 0) {
     SendByte(byte);
-  } else if (ser->txReq) {
-    IoReqNotifyFromISR(ser->txReq);
+  } else if (ser->txTask) {
+    xTaskNotifyFromISR(ser->txTask, 0, eNoAction, &xNeedRescheduleTask);
     DPRINTF("serial: writer wakeup!\n");
   } else {
     DPRINTF("serial: tx buffer empty!\n");
@@ -59,8 +59,8 @@ static void RecvIntHandler(void *ptr) {
     return;
   SerialDev_t *ser = ptr;
   RingPutByte(ser->rxBuf, code);
-  if (ser->rxReq)
-    IoReqNotifyFromISR(ser->rxReq);
+  if (ser->rxTask)
+    xTaskNotifyFromISR(ser->rxTask, 0, eNoAction, &xNeedRescheduleTask);
 }
 
 Device_t *SerialInit(unsigned baud) {
@@ -99,34 +99,31 @@ void SerialKill(void) {
 static int SerialWrite(Device_t *dev, IoReq_t *req) {
   SerialDev_t *ser = dev->data;
   size_t n = req->left;
+  int error = 0;
 
-  /* Should continue processing asynchronous request? */
-  if (ser->txReq == req) {
-    taskENTER_CRITICAL();
-  } else {
-    xSemaphoreTake(ser->txLock, portMAX_DELAY);
-    taskENTER_CRITICAL();
-    ser->txReq = req;
-  }
+  xSemaphoreTake(ser->txLock, portMAX_DELAY);
+  taskENTER_CRITICAL();
+
+  ser->txTask = xTaskGetCurrentTaskHandle();
 
   /* Write all data to transmit buffer. This may involve waiting for the
    * interupt handler to free enough space in the ring buffer. */
-  for (;;) {
+  do {
     RingWrite(ser->txBuf, req);
     if (!req->left)
       break;
-    if (req->async) {
-      /* Asynchronous mode: if the request was partially filled then return with
-       * short count, otherwise signify that we would have blocked and leave
-       * without finishing the request. */
+    if (req->nonblock) {
+      /* Nonblocking mode: if the request was partially filled then return with
+       * short count, otherwise signify that we would have blocked and leave. */
       if (req->left < n)
         break;
       DPRINTF("serial: tx buffer full!\n");
-      taskEXIT_CRITICAL();
-      return EAGAIN;
+      error = EAGAIN;
+      break;
     }
-    IoReqNotifyWait(req, NULL);
-  }
+  } while (xTaskNotifyWait(0, 0, NULL, portMAX_DELAY));
+
+  ser->txTask = NULL;
 
   /* Trigger interrupt if transmit buffer is empty. */
   if (custom.serdatr & SERDATF_TBE) {
@@ -134,43 +131,41 @@ static int SerialWrite(Device_t *dev, IoReq_t *req) {
     DPRINTF("serial: initiate tx!\n");
   }
 
-  /* Finish processing the request. */
   DPRINTF("serial: tx request finished!\n");
-  ser->txReq = NULL;
   taskEXIT_CRITICAL();
   xSemaphoreGive(ser->txLock);
 
-  return 0;
+  return error;
 }
 
 static int SerialRead(Device_t *dev, IoReq_t *req) {
   SerialDev_t *ser = dev->data;
+  int error = 0;
 
-  /* Should continue processing asynchronous request? */
-  if (ser->rxReq == req) {
-    taskENTER_CRITICAL();
-  } else {
-    xSemaphoreTake(ser->rxLock, portMAX_DELAY);
-    taskENTER_CRITICAL();
-    ser->rxReq = req;
-  }
+  xSemaphoreTake(ser->rxLock, portMAX_DELAY);
+  taskENTER_CRITICAL();
+
+  ser->rxTask = xTaskGetCurrentTaskHandle();
 
   /* Wait for the interrupt handler to put data into the ring buffer. */
   while (RingEmpty(ser->rxBuf)) {
-    if (req->async) {
-      /* Asynchronous mode: if there's no data in the ring buffer signify that
-       * we would have blocked and leave without finishing the request. */
-      taskEXIT_CRITICAL();
-      return EAGAIN;
+    /* Nonblocking mode: if there's no data in the ring buffer signify that
+     * we would have blocked and leave. */
+    if (req->nonblock) {
+      error = EAGAIN;
+      break;
     }
-    IoReqNotifyWait(req, NULL);
+    (void)xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
   }
 
-  /* Finish processing the request. */
-  RingRead(ser->rxBuf, req);
-  ser->rxReq = NULL;
+  ser->rxTask = NULL;
+
+  if (!error)
+    RingRead(ser->rxBuf, req);
+
+  DPRINTF("serial: rx request finished!\n");
   taskEXIT_CRITICAL();
   xSemaphoreGive(ser->rxLock);
 
-  return 0;
+  return error;
 }

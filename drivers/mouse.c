@@ -19,7 +19,7 @@ typedef struct MouseDev {
   QueueHandle_t eventQ;
   SemaphoreHandle_t lock;
   IntServer_t intr;
-  IoReq_t *io;
+  xTaskHandle task;
   int8_t xctr, yctr;
   uint8_t button;
 } MouseDev_t;
@@ -33,17 +33,15 @@ static DeviceOps_t MouseOps = {
 static int MouseRead(Device_t *dev, IoReq_t *io) {
   MouseDev_t *ms = dev->data;
 
-  if (ms->io != io) {
-    xSemaphoreTake(ms->lock, portMAX_DELAY);
-    ms->io = io;
-  }
+  xSemaphoreTake(ms->lock, portMAX_DELAY);
+  ms->task = xTaskGetCurrentTaskHandle();
 
   int error;
   if ((error = InputEventRead(ms->eventQ, io)))
     return error;
 
   /* Finish processing the request. */
-  ms->io = NULL;
+  ms->task = NULL;
   xSemaphoreGive(ms->lock);
 
   return 0;
@@ -101,8 +99,8 @@ static void MouseIntHandler(void *data) {
   if (evcnt > 0) {
     DPRINTF("mouse: inject %d events\n", evcnt);
     InputEventInjectFromISR(ms->eventQ, ev, evcnt);
-    if (ms->io) {
-      IoReqNotifyFromISR(ms->io);
+    if (ms->task) {
+      xTaskNotifyFromISR(ms->task, 0, eNoAction, &xNeedRescheduleTask);
       DPRINTF("mouse: send notification\n");
     }
   }

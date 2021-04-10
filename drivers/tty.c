@@ -3,6 +3,8 @@
 
 #include <tty.h>
 #include <device.h>
+#include <msgport.h>
+#include <event.h>
 #include <ioreq.h>
 #include <libkern.h>
 #include <string.h>
@@ -36,10 +38,10 @@ typedef struct TtyState {
   TaskHandle_t task;
   Device_t *cons;
   /* Used for communication with file-like objects. */
-  IoReq_t *writeReq;
-  SemaphoreHandle_t writeLock;
-  IoReq_t *readReq;
-  SemaphoreHandle_t readLock;
+  Msg_t *readMsg;
+  MsgPort_t *readMp;
+  Msg_t *writeMsg;
+  MsgPort_t *writeMp;
   /* Used for communication with hardware terminal. */
   IoReq_t rxReq;
   IoReq_t txReq;
@@ -68,8 +70,8 @@ static DeviceOps_t TtyOps = {
   .write = TtyWrite,
 };
 
-#define INPUTQ BIT(0)
-#define OUTPUTQ BIT(1)
+#define RXRDY BIT(0)
+#define TXRDY BIT(1)
 
 #define TTY_TASK_PRIO 2
 
@@ -81,8 +83,9 @@ int AddTtyDevice(const char *name, Device_t *cons) {
   if (!(tty = kmalloc(sizeof(TtyState_t))))
     return ENOMEM;
   tty->cons = cons;
-  tty->readLock = xSemaphoreCreateMutex();
-  tty->writeLock = xSemaphoreCreateMutex();
+
+  tty->readMp = MsgPortCreate();
+  tty->writeMp = MsgPortCreate();
 
   tty->input.len = 0;
   tty->input.eol = 0;
@@ -99,10 +102,7 @@ int AddTtyDevice(const char *name, Device_t *cons) {
   xTaskCreate((TaskFunction_t)TtyTask, name, configMINIMAL_STACK_SIZE, tty,
               TTY_TASK_PRIO, &tty->task);
 
-  tty->rxReq.origin = tty->txReq.origin = tty->task;
-  tty->rxReq.async = tty->txReq.async = 1;
-  tty->rxReq.notifyBits = INPUTQ;
-  tty->txReq.notifyBits = OUTPUTQ;
+  tty->rxReq.nonblock = tty->txReq.nonblock = 1;
   return 0;
 }
 
@@ -126,7 +126,7 @@ static int HandleRxReady(TtyState_t *tty) {
 }
 
 static void HandleReadReq(TtyState_t *tty) {
-  IoReq_t *req = tty->readReq;
+  IoReq_t *req = tty->readMsg->data;
 
   /* Copy up to line length or BUFSIZ if no EOL was found. */
   size_t n = (tty->input.len == BUFSIZ) ? BUFSIZ : tty->input.eol;
@@ -155,8 +155,8 @@ static void HandleReadReq(TtyState_t *tty) {
   tty->input.done -= n;
 
   /* The request was handled, so return it to the owner. */
-  tty->readReq = NULL;
-  IoReqNotify(req);
+  ReplyMsg(tty->readMsg);
+  tty->readMsg = NULL;
 }
 
 static int HandleTxReady(TtyState_t *tty) {
@@ -196,7 +196,7 @@ static void StoreChar(TtyState_t *tty, uint8_t c) {
 }
 
 static int HandleWriteReq(TtyState_t *tty) {
-  IoReq_t *req = tty->writeReq;
+  IoReq_t *req = tty->writeMsg->data;
 
   while (req->left > 0) {
     uint8_t ch = *req->wbuf;
@@ -215,8 +215,8 @@ static int HandleWriteReq(TtyState_t *tty) {
   }
 
   /* The request was handled, so return it to the owner. */
-  tty->writeReq = NULL;
-  IoReqNotify(req);
+  ReplyMsg(tty->writeMsg);
+  tty->writeMsg = NULL;
   return 0;
 }
 
@@ -249,34 +249,32 @@ static void ProcessInput(TtyState_t *tty) {
 
 static void TtyTask(void *data) {
   TtyState_t *tty = data;
-  uint32_t value;
+
+  (void)DeviceEvent(tty->cons, EV_READ, RXRDY);
+  (void)DeviceEvent(tty->cons, EV_WRITE, TXRDY);
 
   do {
-    int error;
+    if (!tty->readMsg)
+      tty->readMsg = GetMsg(tty->readMp);
+
+    if (!tty->writeMsg)
+      tty->writeMsg = GetMsg(tty->writeMp);
 
     HandleRxReady(tty);
     ProcessInput(tty);
-    if (tty->readReq)
+    if (tty->readMsg)
       HandleReadReq(tty);
-
-    /* Retry if terminal tx buffer was full but device tx buffer was not. */
-    do {
-      error = tty->writeReq ? HandleWriteReq(tty) : 0;
-    } while (!HandleTxReady(tty) && (error == EAGAIN));
-  } while (xTaskNotifyWait(0, INPUTQ | OUTPUTQ, &value, portMAX_DELAY));
+    if (tty->writeMsg)
+      HandleWriteReq(tty);
+    HandleTxReady(tty);
+  } while (xTaskNotifyWait(0, 0, NULL, portMAX_DELAY));
 }
 
 static int TtyRead(Device_t *dev, IoReq_t *req) {
   TtyState_t *tty = dev->data;
   size_t n = req->left;
 
-  xSemaphoreTake(tty->readLock, portMAX_DELAY);
-  {
-    tty->readReq = req;
-    xTaskNotify(tty->task, INPUTQ, eSetBits);
-    IoReqNotifyWait(req, NULL);
-  }
-  xSemaphoreGive(tty->readLock);
+  DoMsg(tty->readMp, req);
 
   return req->left < n ? 0 : req->error;
 }
@@ -285,13 +283,7 @@ static int TtyWrite(Device_t *dev, IoReq_t *req) {
   TtyState_t *tty = dev->data;
   size_t n = req->left;
 
-  xSemaphoreTake(tty->writeLock, portMAX_DELAY);
-  {
-    tty->writeReq = req;
-    xTaskNotify(tty->task, OUTPUTQ, eSetBits);
-    IoReqNotifyWait(req, NULL);
-  }
-  xSemaphoreGive(tty->writeLock);
+  DoMsg(tty->writeMp, req);
 
   return req->left < n ? 0 : req->error;
 }

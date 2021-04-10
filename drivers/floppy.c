@@ -9,6 +9,7 @@
 #include <string.h>
 #include <libkern.h>
 #include <device.h>
+#include <msgport.h>
 #include <ioreq.h>
 #include <sys/errno.h>
 
@@ -23,7 +24,7 @@
 typedef struct FloppyDev {
   CIATimer_t *timer;
   xTaskHandle ioTask;
-  QueueHandle_t ioQueue;
+  MsgPort_t *ioPort;
   DiskTrack_t *diskTrack;
 
   int16_t track;   /* track currently stored in `trackBuf` or -1 */
@@ -67,8 +68,7 @@ Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
   /* Handler that will wake up track reader task. */
   SetIntVec(DSKBLK, TrackTransferDone, fd);
 
-  fd->ioQueue = xQueueCreate(IOREQ_MAXNUM, sizeof(IoReq_t *));
-  DASSERT(fd->ioQueue != NULL);
+  fd->ioPort = MsgPortCreate();
 
   xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, FloppyDev,
               aFloppyIOTaskPrio, &fd->ioTask);
@@ -97,7 +97,7 @@ void FloppyKill(void) {
 
   ReleaseTimer(fd->timer);
   vTaskDelete(fd->ioTask);
-  vQueueDelete(fd->ioQueue);
+  MsgPortDelete(fd->ioPort);
 }
 
 /******************************************************************************/
@@ -292,12 +292,15 @@ static void FloppyReader(void *ptr) {
   FloppyHeadToTrack0(fd);
 
   for (;;) {
-    IoReq_t *io;
-
-    if (!xQueueReceive(fd->ioQueue, &io, 1000 / portTICK_PERIOD_MS)) {
+    if (!xTaskNotifyWait(0, 0, NULL, 1000 / portTICK_PERIOD_MS)) {
       FloppyMotorOff(fd);
       continue;
     }
+
+    Msg_t *msg = GetMsg(fd->ioPort);
+    DASSERT(msg != NULL);
+
+    IoReq_t *io = msg->data;
 
     DPRINTF("[Floppy] %s(%d, %d)\n", io->write ? "Write" : "Read", io->offset,
             io->left);
@@ -352,7 +355,7 @@ static void FloppyReader(void *ptr) {
       FloppyReadWriteTrack(fd, WRITE, track);
 
     io->error = 0;
-    IoReqNotify(io);
+    ReplyMsg(msg);
   }
 }
 
@@ -364,7 +367,6 @@ static int FloppyReadWrite(Device_t *dev, IoReq_t *io) {
     io->left = FLOPPY_SIZE - io->offset;
   if (io->left == 0)
     return 0;
-  xQueueSend(fd->ioQueue, &io, portMAX_DELAY);
-  IoReqNotifyWait(io, NULL);
+  DoMsg(fd->ioPort, &io);
   return io->error;
 }

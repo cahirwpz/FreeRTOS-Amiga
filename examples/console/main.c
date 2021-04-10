@@ -4,6 +4,7 @@
 #include <console.h>
 #include <device.h>
 #include <file.h>
+#include <event.h>
 #include <input.h>
 #include <interrupt.h>
 #include <ioreq.h>
@@ -31,45 +32,46 @@ static void vInputTask(void *data) {
   Device_t *ms = MouseInit();
   Device_t *kbd = KeyboardInit();
 
-  IoReq_t kbdIo, msIo;
-  InputEvent_t ev;
-  uint32_t value = 0;
+  (void)DeviceEvent(ms, EV_READ, MOUSE);
+  (void)DeviceEvent(kbd, EV_READ, KEYBOARD);
 
-  do {
-    int kbdErr, msErr;
+  while (xTaskNotifyWait(0, MOUSE | KEYBOARD, NULL, portMAX_DELAY)) {
+    InputEvent_t ev;
 
-    do {
-      kbdIo = IOREQ_READ(0, &ev, sizeof(InputEvent_t));
-      kbdIo.async = 1;
-      kbdIo.notifyBits = KEYBOARD;
+    for (;;) {
+      IoReq_t io = IOREQ_READ_NB(0, &ev, sizeof(InputEvent_t));
 
-      if (!(kbdErr = kbd->ops->read(kbd, &kbdIo))) {
-        char c = (ev.value >= 0x20 && ev.value < 0x7f) ? ev.value : ' ';
-        kfprintf(cons, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
-                 (uint16_t)ev.value, c);
+      if (kbd->ops->read(kbd, &io))
+        break;
+
+      char c = (ev.value >= 0x20 && ev.value < 0x7f) ? ev.value : ' ';
+      kfprintf(cons, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
+               (uint16_t)ev.value, c);
+    }
+
+    for (;;) {
+      IoReq_t io = IOREQ_READ_NB(0, &ev, sizeof(InputEvent_t));
+
+      if (!ms->ops->read(ms, &io))
+        break;
+
+      static short x = 0, y = 0;
+
+      kfprintf(cons, "%s: value = %d\n", EventName[ev.kind], ev.value);
+
+      if (ev.kind == IE_MOUSE_DELTA_X) {
+        x += ev.value;
+        x = max(0, x);
+        x = min(x, 319);
       }
-
-      msIo = IOREQ_READ(0, &ev, sizeof(InputEvent_t));
-      msIo.async = 1;
-      msIo.notifyBits = KEYBOARD;
-
-      if (!(msErr = ms->ops->read(ms, &msIo))) {
-        static short x = 0, y = 0;
-        kfprintf(cons, "%s: value = %d\n", EventName[ev.kind], ev.value);
-        if (ev.kind == IE_MOUSE_DELTA_X) {
-          x += ev.value;
-          x = max(0, x);
-          x = min(x, 319);
-        }
-        if (ev.kind == IE_MOUSE_DELTA_Y) {
-          y += ev.value;
-          y = max(0, y);
-          y = min(y, 255);
-        }
-        ConsoleMovePointer(x, y);
+      if (ev.kind == IE_MOUSE_DELTA_Y) {
+        y += ev.value;
+        y = max(0, y);
+        y = min(y, 255);
       }
-    } while (!kbdErr || !msErr);
-  } while (xTaskNotifyWait(0, MOUSE | KEYBOARD, &value, portMAX_DELAY));
+      ConsoleMovePointer(x, y);
+    }
+  }
 }
 
 static void SystemClockTickHandler(__unused void *data) {
