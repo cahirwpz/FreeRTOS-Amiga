@@ -12,6 +12,7 @@ SOURCES = \
 	  copper.c \
 	  floppy.c \
 	  floppy-mfm.c \
+	  input.c \
 	  keyboard.c \
 	  memdev.c \
 	  mouse.c \

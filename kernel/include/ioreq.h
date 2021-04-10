@@ -33,16 +33,16 @@ typedef struct IoReq {
 
 #define IOREQ_READ(_offset, _buf, _len)                                        \
   (IoReq_t) {                                                                  \
-    .offset = (_offset), .rbuf = (_buf), .left = (_len), .async = 0,           \
+    .offset = (_offset), .rbuf = (char *)(_buf), .left = (_len), .async = 0,   \
     .write = 0, .origin = xTaskGetCurrentTaskHandle(), .notifyBits = 0,        \
     .error = 0,                                                                \
   }
 
 #define IOREQ_WRITE(_offset, _buf, _len)                                       \
   (IoReq_t) {                                                                  \
-    .offset = (_offset), .wbuf = (_buf), .left = (_len), .async = 0,           \
-    .write = 1, .origin = xTaskGetCurrentTaskHandle(), .notifyBits = 0,        \
-    .error = 0,                                                                \
+    .offset = (_offset), .wbuf = (const char *)(_buf), .left = (_len),         \
+    .async = 0, .write = 1, .origin = xTaskGetCurrentTaskHandle(),             \
+    .notifyBits = 0, .error = 0,                                               \
   }
 
 #define IoReqNotify(req)                                                       \

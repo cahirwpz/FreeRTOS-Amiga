@@ -1,173 +1,306 @@
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/semphr.h>
+
+#include <FreeRTOS/semphr.h>
 #include <interrupt.h>
 #include <cia.h>
+#include <device.h>
+#include <input.h>
+#include <ioreq.h>
 #include <keyboard.h>
+#include <keysym.h>
 #include <libkern.h>
+#include <sys/errno.h>
 
-#define LO(K, V) [K] = V
-#define HI(K, V) [K | 0x80] = V
+#define DEBUG 0
+#include <debug.h>
 
-/* clang-format off */
-static const char KeyMap[256] = {
-  LO(KEY_BACKQUOTE, '`'),
-  LO(KEY_1, '1'),
-  LO(KEY_2, '2'),
-  LO(KEY_3, '3'),
-  LO(KEY_4, '4'),
-  LO(KEY_5, '5'),
-  LO(KEY_6, '6'),
-  LO(KEY_7, '7'),
-  LO(KEY_8, '8'),
-  LO(KEY_9, '9'),
-  LO(KEY_0, '0'),
-  LO(KEY_MINUS, '-'),
-  LO(KEY_EQUAL, '='),
-  LO(KEY_BACKSLASH, '\\'),
-  LO(KEY_KP_0, '0'),
-  LO(KEY_Q, 'q'),
-  LO(KEY_W, 'w'),
-  LO(KEY_E, 'e'),
-  LO(KEY_R, 'r'),
-  LO(KEY_T, 't'),
-  LO(KEY_Y, 'y'),
-  LO(KEY_U, 'u'),
-  LO(KEY_I, 'i'),
-  LO(KEY_O, 'o'),
-  LO(KEY_P, 'p'),
-  LO(KEY_LBRACKET, '['),
-  LO(KEY_RBRACKET, ']'),
-  LO(KEY_KP_1, '1'),
-  LO(KEY_KP_2, '2'),
-  LO(KEY_KP_3, '3'),
-  LO(KEY_A, 'a'),
-  LO(KEY_S, 's'),
-  LO(KEY_D, 'd'),
-  LO(KEY_F, 'f'),
-  LO(KEY_G, 'g'),
-  LO(KEY_H, 'h'),
-  LO(KEY_J, 'j'),
-  LO(KEY_K, 'k'),
-  LO(KEY_L, 'l'),
-  LO(KEY_SEMICOLON, ';'),
-  LO(KEY_QUOTE, '\''),
-  LO(KEY_KP_4, '4'),
-  LO(KEY_KP_5, '5'),
-  LO(KEY_KP_6, '6'),
-  LO(KEY_Z, 'z'),
-  LO(KEY_X, 'x'),
-  LO(KEY_C, 'c'),
-  LO(KEY_V, 'v'),
-  LO(KEY_B, 'b'),
-  LO(KEY_N, 'n'),
-  LO(KEY_M, 'm'),
-  LO(KEY_COMMA, ','),
-  LO(KEY_PERIOD, '.'),
-  LO(KEY_SLASH, '/'),
-  LO(KEY_KP_PERIOD, '.'),
-  LO(KEY_KP_7, '7'),
-  LO(KEY_KP_8, '8'),
-  LO(KEY_KP_9, '9'),
-  LO(KEY_SPACE, ' '),
-  LO(KEY_BACKSPACE, '\b'),
-  LO(KEY_TAB, '\t'),
-  LO(KEY_KP_ENTER, '\n'),
-  LO(KEY_RETURN, '\n'),
-  LO(KEY_ESCAPE, '\033'),
-  LO(KEY_KP_MINUS, '-'),
-  LO(KEY_KP_LPAREN, '('),
-  LO(KEY_KP_RPAREN, ')'),
-  LO(KEY_KP_DIVIDE, '/'),
-  LO(KEY_KP_MULTIPLY, '*'),
-  LO(KEY_KP_PLUS, '+'),
-  LO(KEY_LSHIFT, MOD_LSHIFT),
-  LO(KEY_RSHIFT, MOD_RSHIFT),
-  LO(KEY_CONTROL, MOD_CONTROL),
-  LO(KEY_LALT, MOD_LALT),
-  LO(KEY_RALT, MOD_RALT),
-  LO(KEY_LAMIGA, MOD_LAMIGA),
-  LO(KEY_RAMIGA, MOD_RAMIGA),
-  HI(KEY_BACKQUOTE, '~'),
-  HI(KEY_1, '!'),
-  HI(KEY_2, '@'),
-  HI(KEY_3, '#'),
-  HI(KEY_4, '$'),
-  HI(KEY_5, '%'),
-  HI(KEY_6, '^'),
-  HI(KEY_7, '&'),
-  HI(KEY_8, '*'),
-  HI(KEY_9, '('),
-  HI(KEY_0, ')'),
-  HI(KEY_MINUS, '_'),
-  HI(KEY_EQUAL, '+'),
-  HI(KEY_BACKSLASH, '|'),
-  HI(KEY_Q, 'Q'),
-  HI(KEY_W, 'W'),
-  HI(KEY_E, 'E'),
-  HI(KEY_R, 'R'),
-  HI(KEY_T, 'T'),
-  HI(KEY_Y, 'Y'),
-  HI(KEY_U, 'U'),
-  HI(KEY_I, 'I'),
-  HI(KEY_O, 'O'),
-  HI(KEY_P, 'P'),
-  HI(KEY_LBRACKET, '{'),
-  HI(KEY_RBRACKET, '}'),
-  HI(KEY_A, 'A'),
-  HI(KEY_S, 'S'),
-  HI(KEY_D, 'D'),
-  HI(KEY_F, 'F'),
-  HI(KEY_G, 'G'),
-  HI(KEY_H, 'H'),
-  HI(KEY_J, 'J'),
-  HI(KEY_K, 'K'),
-  HI(KEY_L, 'L'),
-  HI(KEY_SEMICOLON, ':'),
-  HI(KEY_QUOTE, '"'),
-  HI(KEY_Z, 'Z'),
-  HI(KEY_X, 'X'),
-  HI(KEY_C, 'C'),
-  HI(KEY_V, 'V'),
-  HI(KEY_B, 'B'),
-  HI(KEY_N, 'N'),
-  HI(KEY_M, 'M'),
-  HI(KEY_COMMA, '<'),
-  HI(KEY_PERIOD, '>'),
-  HI(KEY_SLASH, '?'),
+typedef enum KeyCode {
+  KEY_GRAVE = 0x00,
+  KEY_1 = 0x01,
+  KEY_2 = 0x02,
+  KEY_3 = 0x03,
+  KEY_4 = 0x04,
+  KEY_5 = 0x05,
+  KEY_6 = 0x06,
+  KEY_7 = 0x07,
+  KEY_8 = 0x08,
+  KEY_9 = 0x09,
+  KEY_0 = 0x0a,
+  KEY_MINUS = 0x0b,
+  KEY_EQUAL = 0x0c,
+  KEY_BACKSLASH = 0x0d,
+  KEY_KP_0 = 0x0f,
+  KEY_Q = 0x10,
+  KEY_W = 0x11,
+  KEY_E = 0x12,
+  KEY_R = 0x13,
+  KEY_T = 0x14,
+  KEY_Y = 0x15,
+  KEY_U = 0x16,
+  KEY_I = 0x17,
+  KEY_O = 0x18,
+  KEY_P = 0x19,
+  KEY_LBRACKET = 0x1a,
+  KEY_RBRACKET = 0x1b,
+  KEY_KP_1 = 0x1d,
+  KEY_KP_2 = 0x1e,
+  KEY_KP_3 = 0x1f,
+  KEY_A = 0x20,
+  KEY_S = 0x21,
+  KEY_D = 0x22,
+  KEY_F = 0x23,
+  KEY_G = 0x24,
+  KEY_H = 0x25,
+  KEY_J = 0x26,
+  KEY_K = 0x27,
+  KEY_L = 0x28,
+  KEY_SEMICOLON = 0x29,
+  KEY_QUOTE = 0x2a,
+  KEY_DEAD1 = 0x2b,
+  KEY_KP_4 = 0x2d,
+  KEY_KP_5 = 0x2e,
+  KEY_KP_6 = 0x2f,
+  KEY_DEAD2 = 0x30,
+  KEY_Z = 0x31,
+  KEY_X = 0x32,
+  KEY_C = 0x33,
+  KEY_V = 0x34,
+  KEY_B = 0x35,
+  KEY_N = 0x36,
+  KEY_M = 0x37,
+  KEY_COMMA = 0x38,
+  KEY_PERIOD = 0x39,
+  KEY_SLASH = 0x3a,
+  KEY_KP_DECIMAL = 0x3c,
+  KEY_KP_7 = 0x3d,
+  KEY_KP_8 = 0x3e,
+  KEY_KP_9 = 0x3f,
+  KEY_SPACE = 0x40,
+  KEY_BACKSPACE = 0x41,
+  KEY_TAB = 0x42,
+  KEY_KP_ENTER = 0x43,
+  KEY_RETURN = 0x44,
+  KEY_ESCAPE = 0x45,
+  KEY_DELETE = 0x46,
+  KEY_KP_SUBSTRACT = 0x4a,
+  KEY_UP = 0x4c,
+  KEY_DOWN = 0x4d,
+  KEY_RIGHT = 0x4e,
+  KEY_LEFT = 0x4f,
+  KEY_F1 = 0x50,
+  KEY_F2 = 0x51,
+  KEY_F3 = 0x52,
+  KEY_F4 = 0x53,
+  KEY_F5 = 0x54,
+  KEY_F6 = 0x55,
+  KEY_F7 = 0x56,
+  KEY_F8 = 0x57,
+  KEY_F9 = 0x58,
+  KEY_F10 = 0x59,
+  KEY_KP_LPAREN = 0x5a,
+  KEY_KP_RPAREN = 0x5b,
+  KEY_KP_DIVIDE = 0x5c,
+  KEY_KP_MULTIPLY = 0x5d,
+  KEY_KP_ADD = 0x5e,
+  KEY_HELP = 0x5f,
+  KEY_LSHIFT = 0x60,
+  KEY_RSHIFT = 0x61,
+  KEY_CAPSLOCK = 0x62,
+  KEY_CONTROL = 0x63,
+  KEY_LALT = 0x64,
+  KEY_RALT = 0x65,
+  KEY_LAMIGA = 0x66,
+  KEY_RAMIGA = 0x67,
+} __packed KeyCode_t;
 
-  /* Error codes have value set to -1 */
-  [0x78] = -1, /* Reset warning. */
-  [0xf9] = -1, /* Last key code bad. */
-  [0xfa] = -1, /* Keyboard key buffer overflow. */
-  [0xfc] = -1, /* Keyboard self-test fail. */
-  [0xfd] = -1, /* Initiate power-up key stream. */
-  [0xfe] = -1, /* Terminate power-up key stream. */
-  [0xff] = -1  /* ??? */
+static const KeySym_t KeyMap[][2] = {
+  [KEY_GRAVE] = {KS_grave, KS_asciitilde},
+  [KEY_1] = {KS_1, KS_exclam},
+  [KEY_2] = {KS_2, KS_at},
+  [KEY_3] = {KS_3, KS_numbersign},
+  [KEY_4] = {KS_4, KS_dollar},
+  [KEY_5] = {KS_5, KS_percent},
+  [KEY_6] = {KS_6, KS_asciicircum},
+  [KEY_7] = {KS_7, KS_ampersand},
+  [KEY_8] = {KS_8, KS_asterisk},
+  [KEY_9] = {KS_9, KS_parenleft},
+  [KEY_0] = {KS_0, KS_parenright},
+  [KEY_MINUS] = {KS_minus, KS_underscore},
+  [KEY_EQUAL] = {KS_equal, KS_plus},
+  [KEY_BACKSLASH] = {KS_backslash, KS_bar},
+  [KEY_KP_0] = {KS_KP_0, KS_KP_Insert},
+  [KEY_Q] = {KS_q, KS_Q},
+  [KEY_W] = {KS_w, KS_W},
+  [KEY_E] = {KS_e, KS_E},
+  [KEY_R] = {KS_r, KS_R},
+  [KEY_T] = {KS_t, KS_T},
+  [KEY_Y] = {KS_y, KS_Y},
+  [KEY_U] = {KS_u, KS_U},
+  [KEY_I] = {KS_i, KS_I},
+  [KEY_O] = {KS_o, KS_O},
+  [KEY_P] = {KS_p, KS_P},
+  [KEY_LBRACKET] = {KS_bracketleft, KS_braceleft},
+  [KEY_RBRACKET] = {KS_bracketright, KS_braceright},
+  [KEY_KP_1] = {KS_KP_1, KS_KP_End},
+  [KEY_KP_2] = {KS_KP_2, KS_KP_Down},
+  [KEY_KP_3] = {KS_KP_3, KS_KP_Next},
+  [KEY_A] = {KS_a, KS_A},
+  [KEY_S] = {KS_s, KS_S},
+  [KEY_D] = {KS_d, KS_D},
+  [KEY_F] = {KS_f, KS_F},
+  [KEY_G] = {KS_g, KS_G},
+  [KEY_H] = {KS_h, KS_H},
+  [KEY_J] = {KS_j, KS_J},
+  [KEY_K] = {KS_k, KS_K},
+  [KEY_L] = {KS_l, KS_L},
+  [KEY_SEMICOLON] = {KS_semicolon, KS_colon},
+  [KEY_QUOTE] = {KS_apostrophe, KS_quotedbl},
+  [KEY_KP_4] = {KS_KP_4, KS_KP_Left},
+  [KEY_KP_5] = {KS_KP_5},
+  [KEY_KP_6] = {KS_KP_6, KS_KP_Right},
+  [KEY_Z] = {KS_z, KS_Z},
+  [KEY_X] = {KS_x, KS_X},
+  [KEY_C] = {KS_c, KS_C},
+  [KEY_V] = {KS_v, KS_V},
+  [KEY_B] = {KS_b, KS_B},
+  [KEY_N] = {KS_n, KS_N},
+  [KEY_M] = {KS_m, KS_M},
+  [KEY_COMMA] = {KS_comma, KS_less},
+  [KEY_PERIOD] = {KS_period, KS_greater},
+  [KEY_SLASH] = {KS_slash, KS_question},
+  [KEY_KP_DECIMAL] = {KS_KP_Decimal, KS_KP_Delete},
+  [KEY_KP_7] = {KS_KP_7, KS_KP_Home},
+  [KEY_KP_8] = {KS_KP_8, KS_KP_Up},
+  [KEY_KP_9] = {KS_KP_9, KS_KP_Prior},
+  [KEY_SPACE] = {KS_space, KS_space},
+  [KEY_BACKSPACE] = {KS_Backspace},
+  [KEY_TAB] = {KS_Tab},
+  [KEY_KP_ENTER] = {KS_KP_Enter},
+  [KEY_RETURN] = {KS_Return},
+  [KEY_ESCAPE] = {KS_Escape},
+  [KEY_DELETE] = {KS_Delete},
+  [KEY_KP_SUBSTRACT] = {KS_KP_Subtract},
+  [KEY_UP] = {KS_Up},
+  [KEY_DOWN] = {KS_Down},
+  [KEY_RIGHT] = {KS_Right},
+  [KEY_LEFT] = {KS_Left},
+  [KEY_F1] = {KS_f1},
+  [KEY_F2] = {KS_f2},
+  [KEY_F3] = {KS_f3},
+  [KEY_F4] = {KS_f4},
+  [KEY_F5] = {KS_f5},
+  [KEY_F6] = {KS_f6},
+  [KEY_F7] = {KS_f7},
+  [KEY_F8] = {KS_f8},
+  [KEY_F9] = {KS_f9},
+  [KEY_F10] = {KS_f10},
+  [KEY_KP_LPAREN] = {KS_KP_Paren_Left},
+  [KEY_KP_RPAREN] = {KS_KP_Paren_Right},
+  [KEY_KP_DIVIDE] = {KS_KP_Divide},
+  [KEY_KP_MULTIPLY] = {KS_KP_Multiply},
+  [KEY_KP_ADD] = {KS_KP_Add},
+  [KEY_HELP] = {KS_Help},
+  [KEY_LSHIFT] = {KS_Shift_L},
+  [KEY_RSHIFT] = {KS_Shift_R},
+  [KEY_CAPSLOCK] = {KS_Caps_Lock},
+  [KEY_CONTROL] = {KS_Control_L},
+  [KEY_LALT] = {KS_Alt_L},
+  [KEY_RALT] = {KS_Alt_R},
+  [KEY_LAMIGA] = {KS_Meta_L},
+  [KEY_RAMIGA] = {KS_Meta_R},
+
+  /* Error codes. */
+  [0x78] = {KS_unknown}, /* Reset warning. */
+  [0xf9] = {KS_unknown}, /* Last key code bad. */
+  [0xfa] = {KS_unknown}, /* Keyboard key buffer overflow. */
+  [0xfc] = {KS_unknown}, /* Keyboard self-test fail. */
+  [0xfd] = {KS_unknown}, /* Initiate power-up key stream. */
+  [0xfe] = {KS_unknown}, /* Terminate power-up key stream. */
+  [0xff] = {KS_unknown}, /* ??? */
 };
-/* clang-format on */
 
-static KeyEventNotify_t KeyEventNotify;
-static KeyEvent_t KeyEvent = {.type = EV_KEY};
+typedef enum KeyMod {
+  MOD_LSHIFT = BIT(0),
+  MOD_RSHIFT = BIT(1),
+  MOD_CAPSLOCK = BIT(2),
+  MOD_CONTROL = BIT(3),
+  MOD_LALT = BIT(4),
+  MOD_RALT = BIT(5),
+  MOD_LAMIGA = BIT(6),
+  MOD_RAMIGA = BIT(7),
 
-static void ReadKeyEvent(KeyEvent_t *ev, uint8_t raw) {
-  uint8_t code = raw & 0x7f;
-  uint8_t change = code >= KEY_LSHIFT ? KeyMap[code] : 0;
+  MOD_SHIFT = MOD_LSHIFT | MOD_RSHIFT,
+} __packed KeyMod_t;
 
-  /* Process key modifiers */
-  if (raw & 0x80)
-    ev->modifier &= ~(change | MOD_PRESSED);
-  else
-    ev->modifier |= (change | MOD_PRESSED);
+static int KeyboardRead(Device_t *, IoReq_t *);
 
-  ev->code = code;
+static DeviceOps_t KeyboardOps = {
+  .read = KeyboardRead,
+};
 
-  if (code < KEY_LSHIFT)
-    ev->ascii = KeyMap[code + ((ev->modifier & MOD_SHIFT) ? 128 : 0)];
-  else
-    ev->ascii = 0;
+typedef struct KeyboardDev {
+  IntServer_t intr;
+  QueueHandle_t eventQ;
+  SemaphoreHandle_t lock;
+  IoReq_t *io;
+  CIATimer_t *timer;
+  KeyMod_t modifier;
+  KeyCode_t code;
+} KeyboardDev_t;
+
+static int KeyboardRead(Device_t *dev, IoReq_t *io) {
+  KeyboardDev_t *kbd = dev->data;
+
+  if (kbd->io != io) {
+    xSemaphoreTake(kbd->lock, portMAX_DELAY);
+    kbd->io = io;
+  }
+
+  int error;
+  if ((error = InputEventRead(kbd->eventQ, io)))
+    return error;
+
+  /* Finish processing the request. */
+  kbd->io = NULL;
+  xSemaphoreGive(kbd->lock);
+
+  return 0;
 }
 
-static CIATimer_t *KeyboardTimer;
+static void ReadKeyEvent(KeyboardDev_t *kbd, uint8_t raw) {
+  DPRINTF("keyboard: reported raw code $%02x\n", raw);
 
-static void KeyboardIntHandler(CIA_t cia) {
+  KeyCode_t code = raw & 0x7f;
+  KeyMod_t change = code >= KEY_LSHIFT ? BIT(code - KEY_LSHIFT) : 0;
+  InputEvent_t ev;
+
+  /* Process key modifiers */
+  if (raw & 0x80) {
+    kbd->modifier &= ~change;
+    ev.kind = IE_KEYBOARD_UP;
+  } else {
+    kbd->modifier |= change;
+    ev.kind = IE_KEYBOARD_DOWN;
+  }
+
+  int shift = ((kbd->modifier & MOD_SHIFT) && (code < KEY_LSHIFT)) ? 1 : 0;
+  ev.value = KeyMap[code][shift];
+
+  /* Report if not a dead key. */
+  if (ev.value) {
+    InputEventInjectFromISR(kbd->eventQ, &ev, 1);
+
+    if (kbd->io) {
+      IoReqNotifyFromISR(kbd->io);
+      DPRINTF("keyboard: send notification\n");
+    }
+  }
+}
+
+static void KeyboardIntHandler(void *data) {
+  KeyboardDev_t *kbd = data;
+  CIA_t cia = CIAA;
   if (SampleICR(cia, CIAICRF_SP)) {
     /* Read keyboard data register. Yeah, it's negated. */
     uint8_t sdr = ~cia->ciasdr;
@@ -176,39 +309,34 @@ static void KeyboardIntHandler(CIA_t cia) {
      * 2) Wait for at least 85us for handshake to be registered.
      * 3) Set back to input mode. */
     BSET(cia->ciacra, CIACRAB_SPMODE);
-    WaitTimerSpin(KeyboardTimer, TIMER_US(85));
+    WaitTimerSpin(kbd->timer, TIMER_US(85));
     BCLR(cia->ciacra, CIACRAB_SPMODE);
     /* Save raw key in the queue. Filter out exceptional conditions. */
     uint8_t raw = (sdr >> 1) | (sdr << 7);
-    if (KeyMap[raw] != -1) {
-      ReadKeyEvent(&KeyEvent, raw);
-      KeyEventNotify(&KeyEvent);
-    }
+    if ((raw & 0x7f) <= KEY_RAMIGA)
+      ReadKeyEvent(kbd, raw);
   }
 }
 
-INTSERVER_DEFINE(KeyboardInt, -10, (ISR_t)KeyboardIntHandler, (void *)CIAA);
+Device_t *KeyboardInit(void) {
+  KeyboardDev_t *kbd = kcalloc(1, sizeof(KeyboardDev_t));
 
-void KeyboardInit(KeyEventNotify_t notify) {
-  klog("[Init] Keyboard driver!\n");
+  klog("[Keyboard] Initializing driver!\n");
 
-  KeyboardTimer = AcquireTimer(TIMER_ANY);
-  configASSERT(KeyboardTimer != NULL);
+  kbd->timer = AcquireTimer(TIMER_ANY);
+  DASSERT(kbd->timer != NULL);
 
-  /* Register notification procedure called from ISR */
-  KeyEventNotify = notify;
+  kbd->lock = xSemaphoreCreateMutex();
+  kbd->eventQ = InputEventQueueCreate();
 
   /* Register keyboard interrupt. */
-  AddIntServer(PortsChain, KeyboardInt);
+  kbd->intr = INTSERVER(-10, (ISR_t)KeyboardIntHandler, (void *)kbd);
+  AddIntServer(PortsChain, &kbd->intr);
   /* Set to input mode. */
   BCLR(ciaa.ciacra, CIACRAB_SPMODE);
   /* Enable keyboard interrupt.
    * The keyboard is attached to CIA-A serial port. */
   WriteICR(CIAA, CIAICRF_SETCLR | CIAICRF_SP);
-}
 
-void KeyboardKill() {
-  RemIntServer(KeyboardInt);
-  ReleaseTimer(KeyboardTimer);
-  KeyEventNotify = NULL;
+  return AddDeviceAux("keyboard", &KeyboardOps, (void *)kbd);
 }

@@ -29,3 +29,5 @@ struct Device {
 
 int AddDevice(const char *name, DeviceOps_t *ops, Device_t **devp);
 int OpenDevice(const char *name, File_t **fp);
+
+Device_t *AddDeviceAux(const char *name, DeviceOps_t *ops, void *data);

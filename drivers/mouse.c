@@ -1,131 +1,129 @@
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/semphr.h>
+
 #include <interrupt.h>
 #include <custom.h>
 #include <cia.h>
+#include <device.h>
+#include <input.h>
+#include <ioreq.h>
 #include <mouse.h>
 #include <strings.h>
 #include <libkern.h>
+#include <sys/errno.h>
 
-typedef struct {
-  MouseEvent_t event;
+#define DEBUG 0
+#include <debug.h>
 
+typedef struct MouseDev {
+  QueueHandle_t eventQ;
+  SemaphoreHandle_t lock;
+  IntServer_t intr;
+  IoReq_t *io;
   int8_t xctr, yctr;
   uint8_t button;
+} MouseDev_t;
 
-  int16_t left;
-  int16_t right;
-  int16_t top;
-  int16_t bottom;
-} MouseData_t;
+static int MouseRead(Device_t *, IoReq_t *);
 
-static MouseData_t MouseData;
-static MouseEventNotify_t MouseEventNotify;
+static DeviceOps_t MouseOps = {
+  .read = MouseRead,
+};
 
-static bool GetMouseMove(MouseData_t *mouse) {
-  uint16_t joy0dat = custom.joy0dat;
+static int MouseRead(Device_t *dev, IoReq_t *io) {
+  MouseDev_t *ms = dev->data;
 
-  int8_t xctr = joy0dat;
-  int8_t xrel = xctr - mouse->xctr;
-
-  if (xrel) {
-    int16_t x = mouse->event.x + xrel;
-
-    if (x < mouse->left)
-      x = mouse->left;
-    if (x > mouse->right)
-      x = mouse->right;
-
-    mouse->event.x = x;
-    mouse->event.xrel = xrel;
-    mouse->xctr = xctr;
+  if (ms->io != io) {
+    xSemaphoreTake(ms->lock, portMAX_DELAY);
+    ms->io = io;
   }
 
-  int8_t yctr = joy0dat >> 8;
-  int8_t yrel = yctr - mouse->yctr;
+  int error;
+  if ((error = InputEventRead(ms->eventQ, io)))
+    return error;
 
-  if (yrel) {
-    int16_t y = mouse->event.y + yrel;
+  /* Finish processing the request. */
+  ms->io = NULL;
+  xSemaphoreGive(ms->lock);
 
-    if (y < mouse->top)
-      y = mouse->top;
-    if (y > mouse->bottom)
-      y = mouse->bottom;
-
-    mouse->event.y = y;
-    mouse->event.yrel = yrel;
-    mouse->yctr = yctr;
-  }
-
-  return xrel || yrel;
+  return 0;
 }
 
 static uint8_t ReadButtonState(void) {
   uint8_t state = 0;
 
   if (!(ciaa.ciapra & CIAF_GAMEPORT0))
-    state |= LMB_PRESSED;
+    state |= LMB;
   if (!(custom.potinp & DATLY))
-    state |= RMB_PRESSED;
+    state |= RMB;
 
   return state;
 }
 
-static bool GetMouseButton(MouseData_t *mouse) {
-  uint8_t button = ReadButtonState();
-  uint8_t change = (mouse->button ^ button) & (LMB_PRESSED | RMB_PRESSED);
-
-  if (!change)
-    return false;
-
-  mouse->button = button;
-
-  if (change & LMB_PRESSED)
-    mouse->event.button |= (button & LMB_PRESSED) ? LMB_PRESSED : LMB_RELEASED;
-
-  if (change & RMB_PRESSED)
-    mouse->event.button |= (button & RMB_PRESSED) ? RMB_PRESSED : RMB_RELEASED;
-
-  return true;
-}
-
 static void MouseIntHandler(void *data) {
-  MouseData_t *mouse = (MouseData_t *)data;
+  MouseDev_t *ms = data;
+  static InputEvent_t ev[4];
+  size_t evcnt = 0;
 
-  mouse->event.button = 0;
+  uint16_t joy0dat = custom.joy0dat;
 
   /* Register mouse position change first. */
-  if (GetMouseMove(mouse))
-    MouseEventNotify(&mouse->event);
+  int8_t xctr = joy0dat;
+  int8_t xrel = xctr - ms->xctr;
+
+  if (xrel) {
+    ev[evcnt++] = (InputEvent_t){.kind = IE_MOUSE_DELTA_X, .value = xrel};
+    ms->xctr = xctr;
+  }
+
+  int8_t yctr = joy0dat >> 8;
+  int8_t yrel = yctr - ms->yctr;
+
+  if (yrel) {
+    ev[evcnt++] = (InputEvent_t){.kind = IE_MOUSE_DELTA_Y, .value = yrel};
+    ms->yctr = yctr;
+  }
 
   /* After that a change in mouse button state. */
-  if (GetMouseButton(mouse))
-    MouseEventNotify(&mouse->event);
+  uint8_t button = ReadButtonState();
+  uint8_t change = ms->button ^ button;
+
+  ms->button = button;
+
+  if (change & LMB)
+    ev[evcnt++] = (InputEvent_t){
+      .kind = (button & LMB) ? IE_MOUSE_DOWN : IE_MOUSE_UP, .value = LMB};
+
+  if (change & RMB)
+    ev[evcnt++] = (InputEvent_t){
+      .kind = (button & RMB) ? IE_MOUSE_DOWN : IE_MOUSE_UP, .value = RMB};
+
+  if (evcnt > 0) {
+    DPRINTF("mouse: inject %d events\n", evcnt);
+    InputEventInjectFromISR(ms->eventQ, ev, evcnt);
+    if (ms->io) {
+      IoReqNotifyFromISR(ms->io);
+      DPRINTF("mouse: send notification\n");
+    }
+  }
 }
 
-INTSERVER_DEFINE(MouseInterrupt, -5, MouseIntHandler, (void *)&MouseData);
+Device_t *MouseInit(void) {
+  MouseDev_t *ms = kcalloc(1, sizeof(MouseDev_t));
+  DASSERT(ms != NULL);
 
-void MouseInit(MouseEventNotify_t notify, int16_t minX, int16_t minY,
-               int16_t maxX, int16_t maxY) {
-  klog("[Init] Mouse driver!\n");
+  klog("[Mouse] Initializing driver!\n");
 
-  /* Register notification procedure called from ISR */
-  MouseEventNotify = notify;
+  ms->lock = xSemaphoreCreateMutex();
+  ms->eventQ = InputEventQueueCreate();
 
   /* Settings from MouseData structure. */
-  MouseData.left = minX;
-  MouseData.right = maxX;
-  MouseData.top = minY;
-  MouseData.bottom = maxY;
-  MouseData.xctr = custom.joy0dat & 0xff;
-  MouseData.yctr = custom.joy0dat >> 8;
-  MouseData.button = ReadButtonState();
-  MouseData.event.x = minX;
-  MouseData.event.y = minY;
-  MouseData.event.type = EV_MOUSE;
+  ms->xctr = custom.joy0dat & 0xff;
+  ms->yctr = custom.joy0dat >> 8;
+  ms->button = ReadButtonState();
 
-  AddIntServer(VertBlankChain, MouseInterrupt);
-}
+  ms->intr = INTSERVER(-5, MouseIntHandler, (void *)ms);
+  AddIntServer(VertBlankChain, &ms->intr);
 
-void MouseKill(void) {
-  RemIntServer(MouseInterrupt);
-  MouseEventNotify = NULL;
+  return AddDeviceAux("mouse", &MouseOps, (void *)ms);
 }

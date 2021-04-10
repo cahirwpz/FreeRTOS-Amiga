@@ -20,12 +20,12 @@
 
 /* Horizontal position relative to display window. */
 #ifndef HP
-#define HP(x) ((uint8_t)(x) + 0x81)
+#define HP(x) ((uint16_t)(x) + 0x81)
 #endif
 
 /* Vertical position relative to display window. */
 #ifndef VP
-#define VP(y) ((uint8_t)(y) + 0x2c)
+#define VP(y) ((uint16_t)(y) + 0x2c)
 #endif
 
 /* Last Horizontal Position in line one can reliably wait on. */

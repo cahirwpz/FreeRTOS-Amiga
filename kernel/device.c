@@ -67,6 +67,14 @@ leave:
   return error;
 }
 
+Device_t *AddDeviceAux(const char *name, DeviceOps_t *ops, void *data) {
+  Device_t *dev;
+  if (AddDevice(name, ops, &dev))
+    portPANIC();
+  dev->data = data;
+  return dev;
+}
+
 int OpenDevice(const char *name, File_t **fp) {
   Device_t *dev;
   File_t *f;
