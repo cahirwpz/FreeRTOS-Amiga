@@ -2,6 +2,7 @@
 
 #include <sys/types.h>
 
+typedef struct tskTaskControlBlock *TaskHandle_t;
 typedef struct MsgPort MsgPort_t;
 
 typedef struct Msg {

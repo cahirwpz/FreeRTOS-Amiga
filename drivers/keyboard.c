@@ -5,6 +5,7 @@
 #include <interrupt.h>
 #include <cia.h>
 #include <device.h>
+#include <event.h>
 #include <input.h>
 #include <ioreq.h>
 #include <keyboard.h>
@@ -233,21 +234,24 @@ typedef enum KeyMod {
   MOD_SHIFT = MOD_LSHIFT | MOD_RSHIFT,
 } __packed KeyMod_t;
 
-static int KeyboardRead(Device_t *, IoReq_t *);
-
-static DeviceOps_t KeyboardOps = {
-  .read = KeyboardRead,
-};
-
 typedef struct KeyboardDev {
   IntServer_t intr;
   QueueHandle_t eventQ;
   SemaphoreHandle_t lock;
-  xTaskHandle task;
+  TaskHandle_t task;
+  EventWaitList_t readEvent;
   CIATimer_t *timer;
   KeyMod_t modifier;
   KeyCode_t code;
 } KeyboardDev_t;
+
+static int KeyboardRead(Device_t *, IoReq_t *);
+static int KeyboardEvent(Device_t *, EvKind_t, uint32_t);
+
+static DeviceOps_t KeyboardOps = {
+  .read = KeyboardRead,
+  .event = KeyboardEvent,
+};
 
 static int KeyboardRead(Device_t *dev, IoReq_t *io) {
   KeyboardDev_t *kbd = dev->data;
@@ -264,6 +268,14 @@ static int KeyboardRead(Device_t *dev, IoReq_t *io) {
   xSemaphoreGive(kbd->lock);
 
   return 0;
+}
+
+static int KeyboardEvent(Device_t *dev, EvKind_t ev, uint32_t notifyBits) {
+  KeyboardDev_t *kbd = dev->data;
+
+  if (ev == EV_READ)
+    return EventMonitor(&kbd->readEvent, notifyBits);
+  return EINVAL;
 }
 
 static void ReadKeyEvent(KeyboardDev_t *kbd, uint8_t raw) {
@@ -290,7 +302,10 @@ static void ReadKeyEvent(KeyboardDev_t *kbd, uint8_t raw) {
     InputEventInjectFromISR(kbd->eventQ, &ev, 1);
     if (kbd->task) {
       xTaskNotifyFromISR(kbd->task, 0, eNoAction, &xNeedRescheduleTask);
-      DPRINTF("keyboard: send notification\n");
+      DPRINTF("keyboard: reader wakeup!\n");
+    } else {
+      EventNotifyFromISR(&kbd->readEvent);
+      DPRINTF("keyboard: notify read listeners!\n");
     }
   }
 }

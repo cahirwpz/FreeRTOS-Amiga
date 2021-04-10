@@ -5,6 +5,7 @@
 #include <custom.h>
 #include <cia.h>
 #include <device.h>
+#include <event.h>
 #include <input.h>
 #include <ioreq.h>
 #include <mouse.h>
@@ -19,15 +20,18 @@ typedef struct MouseDev {
   QueueHandle_t eventQ;
   SemaphoreHandle_t lock;
   IntServer_t intr;
-  xTaskHandle task;
+  TaskHandle_t task;
+  EventWaitList_t readEvent;
   int8_t xctr, yctr;
   uint8_t button;
 } MouseDev_t;
 
 static int MouseRead(Device_t *, IoReq_t *);
+static int MouseEvent(Device_t *, EvKind_t, uint32_t);
 
 static DeviceOps_t MouseOps = {
   .read = MouseRead,
+  .event = MouseEvent,
 };
 
 static int MouseRead(Device_t *dev, IoReq_t *io) {
@@ -45,6 +49,14 @@ static int MouseRead(Device_t *dev, IoReq_t *io) {
   xSemaphoreGive(ms->lock);
 
   return 0;
+}
+
+static int MouseEvent(Device_t *dev, EvKind_t ev, uint32_t notifyBits) {
+  MouseDev_t *ms = dev->data;
+
+  if (ev == EV_READ)
+    return EventMonitor(&ms->readEvent, notifyBits);
+  return EINVAL;
 }
 
 static uint8_t ReadButtonState(void) {
@@ -101,7 +113,10 @@ static void MouseIntHandler(void *data) {
     InputEventInjectFromISR(ms->eventQ, ev, evcnt);
     if (ms->task) {
       xTaskNotifyFromISR(ms->task, 0, eNoAction, &xNeedRescheduleTask);
-      DPRINTF("mouse: send notification\n");
+      DPRINTF("mouse: reader wakeup!\n");
+    } else {
+      EventNotifyFromISR(&ms->readEvent);
+      DPRINTF("mouse: notify read listeners!\n");
     }
   }
 }

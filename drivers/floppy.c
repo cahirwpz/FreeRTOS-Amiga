@@ -23,7 +23,7 @@
 
 typedef struct FloppyDev {
   CIATimer_t *timer;
-  xTaskHandle ioTask;
+  TaskHandle_t ioTask;
   MsgPort_t *ioPort;
   DiskTrack_t *diskTrack;
 
