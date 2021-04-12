@@ -118,10 +118,7 @@ Device_t *ConsoleInit(void) {
   /* Enable bitplane and sprite fetchers' DMA. */
   EnableDMA(DMAF_RASTER | DMAF_SPRITE);
 
-  Device_t *dev;
-  AddDevice("console", &ConsoleOps, &dev);
-  dev->data = cons;
-  return dev;
+  return AddDeviceAux("console", &ConsoleOps, cons);
 }
 
 static inline void UpdateHere(ConsoleDev_t *cons) {

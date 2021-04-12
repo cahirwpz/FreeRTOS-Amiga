@@ -1,7 +1,3 @@
-#include <FreeRTOS/FreeRTOS.h>
-#include <FreeRTOS/semphr.h>
-
-#include <FreeRTOS/semphr.h>
 #include <interrupt.h>
 #include <cia.h>
 #include <device.h>
@@ -237,7 +233,6 @@ typedef enum KeyMod {
 typedef struct KeyboardDev {
   IntServer_t intr;
   QueueHandle_t eventQ;
-  SemaphoreHandle_t lock;
   EventWaitList_t readEvent;
   CIATimer_t *timer;
   KeyMod_t modifier;
@@ -254,16 +249,7 @@ static DeviceOps_t KeyboardOps = {
 
 static int KeyboardRead(Device_t *dev, IoReq_t *io) {
   KeyboardDev_t *kbd = dev->data;
-
-  xSemaphoreTake(kbd->lock, portMAX_DELAY);
-
-  int error;
-  if ((error = InputEventRead(kbd->eventQ, io)))
-    return error;
-
-  xSemaphoreGive(kbd->lock);
-
-  return 0;
+  return InputEventRead(kbd->eventQ, io);
 }
 
 static int KeyboardEvent(Device_t *dev, EvKind_t ev) {
@@ -329,8 +315,8 @@ Device_t *KeyboardInit(void) {
   kbd->timer = AcquireTimer(TIMER_ANY);
   DASSERT(kbd->timer != NULL);
 
-  kbd->lock = xSemaphoreCreateMutex();
   kbd->eventQ = InputEventQueueCreate();
+  EventWaitListInit(&kbd->readEvent);
 
   /* Register keyboard interrupt. */
   kbd->intr = INTSERVER(-10, (ISR_t)KeyboardIntHandler, (void *)kbd);

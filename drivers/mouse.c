@@ -1,6 +1,3 @@
-#include <FreeRTOS/FreeRTOS.h>
-#include <FreeRTOS/semphr.h>
-
 #include <interrupt.h>
 #include <custom.h>
 #include <cia.h>
@@ -18,9 +15,7 @@
 
 typedef struct MouseDev {
   QueueHandle_t eventQ;
-  SemaphoreHandle_t lock;
   IntServer_t intr;
-  TaskHandle_t task;
   EventWaitList_t readEvent;
   int8_t xctr, yctr;
   uint8_t button;
@@ -36,19 +31,7 @@ static DeviceOps_t MouseOps = {
 
 static int MouseRead(Device_t *dev, IoReq_t *io) {
   MouseDev_t *ms = dev->data;
-
-  xSemaphoreTake(ms->lock, portMAX_DELAY);
-  ms->task = xTaskGetCurrentTaskHandle();
-
-  int error;
-  if ((error = InputEventRead(ms->eventQ, io)))
-    return error;
-
-  /* Finish processing the request. */
-  ms->task = NULL;
-  xSemaphoreGive(ms->lock);
-
-  return 0;
+  return InputEventRead(ms->eventQ, io);
 }
 
 static int MouseEvent(Device_t *dev, EvKind_t ev) {
@@ -122,8 +105,8 @@ Device_t *MouseInit(void) {
 
   klog("[Mouse] Initializing driver!\n");
 
-  ms->lock = xSemaphoreCreateMutex();
   ms->eventQ = InputEventQueueCreate();
+  EventWaitListInit(&ms->readEvent);
 
   /* Settings from MouseData structure. */
   ms->xctr = custom.joy0dat & 0xff;

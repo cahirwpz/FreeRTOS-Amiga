@@ -17,19 +17,27 @@ void EventNotifyFromISR(EventWaitList_t *wl) {
 
 int EventMonitor(EventWaitList_t *wl) {
   TaskHandle_t listener = xTaskGetCurrentTaskHandle();
-  EventWaitNote_t *wn = kcalloc(1, sizeof(EventWaitNote_t));
+  EventWaitNote_t *note = kcalloc(1, sizeof(EventWaitNote_t));
   int error = 0;
 
   taskENTER_CRITICAL();
-  TAILQ_FOREACH (wn, wl, link) {
-    if (wn->listener == listener) {
-      error = EEXIST;
-      break;
+  {
+    EventWaitNote_t *wn;
+    TAILQ_FOREACH (wn, wl, link) {
+      if (wn->listener == listener) {
+        error = EEXIST;
+        break;
+      }
+    }
+    if (!error) {
+      note->listener = listener;
+      TAILQ_INSERT_TAIL(wl, note, link);
     }
   }
-  if (!error)
-    TAILQ_INSERT_TAIL(wl, wn, link);
   taskEXIT_CRITICAL();
+
+  if (error)
+    kfree(note);
 
   return error;
 }

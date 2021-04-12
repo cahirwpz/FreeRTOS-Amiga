@@ -25,8 +25,8 @@ static const char *EventName[] = {
   [IE_KEYBOARD_DOWN] = "keyboard key down",
 };
 
-static void vInputTask(void *data) {
-  File_t *cons = data;
+static void vInputTask(void *data __unused) {
+  File_t *cons = kopen("console", O_RDWR);
   Device_t *ms = MouseInit();
   Device_t *kbd = KeyboardInit();
 
@@ -50,7 +50,7 @@ static void vInputTask(void *data) {
     for (;;) {
       IoReq_t io = IOREQ_READ_NB(0, &ev, sizeof(InputEvent_t));
 
-      if (!ms->ops->read(ms, &io))
+      if (ms->ops->read(ms, &io))
         break;
 
       static short x = 0, y = 0;
@@ -91,9 +91,7 @@ int main(void) {
 
   (void)ConsoleInit();
 
-  File_t *cons = kopen("console", O_RDWR);
-
-  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, cons,
+  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, NULL,
               mainINPUT_TASK_PRIORITY, &input_handle);
 
   vTaskStartScheduler();
