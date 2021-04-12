@@ -111,13 +111,8 @@ static void MouseIntHandler(void *data) {
   if (evcnt > 0) {
     DPRINTF("mouse: inject %d events\n", evcnt);
     InputEventInjectFromISR(ms->eventQ, ev, evcnt);
-    if (ms->task) {
-      xTaskNotifyFromISR(ms->task, 0, eNoAction, &xNeedRescheduleTask);
-      DPRINTF("mouse: reader wakeup!\n");
-    } else {
-      EventNotifyFromISR(&ms->readEvent);
-      DPRINTF("mouse: notify read listeners!\n");
-    }
+    EventNotifyFromISR(&ms->readEvent);
+    DPRINTF("mouse: notify read listeners!\n");
   }
 }
 

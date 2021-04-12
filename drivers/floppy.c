@@ -43,7 +43,7 @@ static FloppyDev_t FloppyDev[1];
 static void TrackTransferDone(void *ptr) {
   FloppyDev_t *fd = ptr;
   /* Send notification to waiting task. */
-  vTaskNotifyGiveFromISR(fd->ioTask, &xNeedRescheduleTask);
+  NotifySendFromISR(fd->ioTask, NB_IRQ);
 }
 
 static void FloppyReader(void *);
@@ -264,7 +264,7 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
   custom.dsklen = dsklen;
 
   /* Wake up when the transfer finishes. */
-  (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+  (void)NotifyWait(NB_IRQ, portMAX_DELAY);
 
   if (cmd == WRITE)
     WaitTimerSleep(fd->timer, WRITE_SETTLE);

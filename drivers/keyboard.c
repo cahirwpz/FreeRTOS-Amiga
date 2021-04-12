@@ -238,7 +238,6 @@ typedef struct KeyboardDev {
   IntServer_t intr;
   QueueHandle_t eventQ;
   SemaphoreHandle_t lock;
-  TaskHandle_t task;
   EventWaitList_t readEvent;
   CIATimer_t *timer;
   KeyMod_t modifier;
@@ -257,14 +256,11 @@ static int KeyboardRead(Device_t *dev, IoReq_t *io) {
   KeyboardDev_t *kbd = dev->data;
 
   xSemaphoreTake(kbd->lock, portMAX_DELAY);
-  kbd->task = xTaskGetCurrentTaskHandle();
 
   int error;
   if ((error = InputEventRead(kbd->eventQ, io)))
     return error;
 
-  /* Finish processing the request. */
-  kbd->task = NULL;
   xSemaphoreGive(kbd->lock);
 
   return 0;
@@ -300,13 +296,8 @@ static void ReadKeyEvent(KeyboardDev_t *kbd, uint8_t raw) {
   /* Report if not a dead key. */
   if (ev.value) {
     InputEventInjectFromISR(kbd->eventQ, &ev, 1);
-    if (kbd->task) {
-      xTaskNotifyFromISR(kbd->task, 0, eNoAction, &xNeedRescheduleTask);
-      DPRINTF("keyboard: reader wakeup!\n");
-    } else {
-      EventNotifyFromISR(&kbd->readEvent);
-      DPRINTF("keyboard: notify read listeners!\n");
-    }
+    EventNotifyFromISR(&kbd->readEvent);
+    DPRINTF("keyboard: notify read listeners!\n");
   }
 }
 

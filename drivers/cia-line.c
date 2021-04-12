@@ -4,6 +4,7 @@
 
 #include <cia.h>
 #include <interrupt.h>
+#include <notify.h>
 
 static List_t WaitingTasks;
 
@@ -48,7 +49,7 @@ static void LineCounterHandler(List_t *tasks) {
   while (listGET_ITEM_VALUE_OF_HEAD_ENTRY(tasks) <= curr) {
     xTaskHandle task = listGET_OWNER_OF_HEAD_ENTRY(tasks);
     uxListRemove(listGET_HEAD_ENTRY(tasks));
-    vTaskNotifyGiveFromISR(task, &xNeedRescheduleTask);
+    NotifySendFromISR(task, NB_IRQ);
   }
 
   /* Reprogram TOD alarm if there's an item on list,
@@ -89,7 +90,7 @@ void LineCounterWait(uint32_t lines) {
     /* Reprogram TOD alarm if inserted task should be woken up as first. */
     if (listGET_HEAD_ENTRY(&WaitingTasks) == &item)
       SetAlarm(alarm);
-    (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    (void)NotifyWait(NB_IRQ, portMAX_DELAY);
   }
   taskEXIT_CRITICAL();
 }
