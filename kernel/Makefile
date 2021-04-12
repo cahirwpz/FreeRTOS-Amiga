@@ -11,6 +11,7 @@ SOURCES = amigahunk.c \
 	  kernio.c \
 	  malloc.c \
 	  msgport.c \
+	  notify.c \
 	  pipe.c \
 	  port.c \
 	  portasm.S \
