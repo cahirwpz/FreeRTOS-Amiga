@@ -1,25 +1,25 @@
 #include <notify.h>
 
-uint32_t NotifyWait(uint32_t uxBitsToWaitFor, TickType_t xTicksToWait) {
+NotifyBits_t NotifyWait(NotifyBits_t bitsToWaitFor, TickType_t ticksToWait) {
   uint32_t value;
 
   taskENTER_CRITICAL();
-  (void)xTaskNotifyWait(0, uxBitsToWaitFor, &value, 0);
-  if (!(value & uxBitsToWaitFor) && xTicksToWait) {
-    TickType_t end = xTaskGetTickCount() + xTicksToWait;
+  (void)xTaskNotifyWait(0, bitsToWaitFor, &value, 0);
+  if (!(value & bitsToWaitFor) && ticksToWait) {
+    TickType_t end = xTaskGetTickCount() + ticksToWait;
 
     for (;;) {
-      if (xTaskNotifyWait(0, uxBitsToWaitFor, &value, xTicksToWait))
-        if (value & uxBitsToWaitFor)
+      if (xTaskNotifyWait(0, bitsToWaitFor, &value, ticksToWait))
+        if (value & bitsToWaitFor)
           break;
 
       TickType_t now = xTaskGetTickCount();
       if (end <= now)
         break;
-      xTicksToWait = end - now;
+      ticksToWait = end - now;
     }
   }
   taskEXIT_CRITICAL();
 
-  return value & uxBitsToWaitFor;
+  return value & bitsToWaitFor;
 }

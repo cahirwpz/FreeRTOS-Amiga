@@ -3,15 +3,16 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
 
-static inline void NotifySend(TaskHandle_t xTaskToNotify,
-                              uint32_t uxBitsToSet) {
-  (void)xTaskNotify(xTaskToNotify, uxBitsToSet, eSetBits);
+typedef enum NotifyBits {
+  NB_MSGPORT = BIT(0),
+} NotifyBits_t;
+
+static inline void NotifySend(TaskHandle_t task, NotifyBits_t bits) {
+  (void)xTaskNotify(task, (uint32_t)bits, eSetBits);
 }
 
-static inline void NotifySendFromISR(TaskHandle_t xTaskToNotify,
-                                     uint32_t uxBitsToSet) {
-  (void)xTaskNotifyFromISR(xTaskToNotify, uxBitsToSet, eSetBits,
-                           &xNeedRescheduleTask);
+static inline void NotifySendFromISR(TaskHandle_t task, NotifyBits_t bits) {
+  (void)xTaskNotifyFromISR(task, bits, eSetBits, &xNeedRescheduleTask);
 }
 
-uint32_t NotifyWait(uint32_t uxBitsToWaitFor, TickType_t xTicksToWait);
+NotifyBits_t NotifyWait(NotifyBits_t bitsToWaitFor, TickType_t ticksToWait);

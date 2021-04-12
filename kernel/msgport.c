@@ -3,10 +3,11 @@
 #include <FreeRTOS/queue.h>
 
 #include <msgport.h>
+#include <notify.h>
 #include <libkern.h>
 #include <sys/errno.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #include <debug.h>
 
 struct MsgPort {
@@ -32,9 +33,9 @@ void DoMsg(MsgPort_t *mp, void *data) {
   Msg_t msg = {.task = xTaskGetCurrentTaskHandle(), .data = data};
   Msg_t *msgp = &msg;
   xQueueSend(mp->queue, &msgp, portMAX_DELAY);
-  xTaskNotify(mp->owner, 0, eNoAction);
+  NotifySend(mp->owner, NB_MSGPORT);
   DPRINTF("DoMsg: Wakeup owner %x!\n", mp->owner);
-  xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
+  (void)NotifyWait(NB_MSGPORT, portMAX_DELAY);
 }
 
 Msg_t *GetMsg(MsgPort_t *mp) {
@@ -44,6 +45,8 @@ Msg_t *GetMsg(MsgPort_t *mp) {
 }
 
 void ReplyMsg(Msg_t *msg) {
-  xTaskNotify(msg->task, 0, eNoAction);
+  vTaskSuspendAll();
+  NotifySend(msg->task, NB_MSGPORT);
   msg->task = NULL;
+  xTaskResumeAll();
 }

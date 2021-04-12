@@ -3,6 +3,7 @@
 
 #include <event.h>
 #include <libkern.h>
+#include <notify.h>
 #include <sys/errno.h>
 
 void EventWaitListInit(EventWaitList_t *wl) {
@@ -12,8 +13,7 @@ void EventWaitListInit(EventWaitList_t *wl) {
 void EventNotifyFromISR(EventWaitList_t *wl) {
   EventWaitNote_t *wn;
   TAILQ_FOREACH (wn, wl, link) {
-    xTaskNotifyFromISR(wn->listener, wn->notifyBits ? eNoAction : eSetBits,
-                       wn->notifyBits, &xNeedRescheduleTask);
+    NotifySendFromISR(wn->listener, wn->notifyBits);
   }
 }
 
