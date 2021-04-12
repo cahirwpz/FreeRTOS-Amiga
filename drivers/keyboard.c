@@ -246,7 +246,7 @@ typedef struct KeyboardDev {
 } KeyboardDev_t;
 
 static int KeyboardRead(Device_t *, IoReq_t *);
-static int KeyboardEvent(Device_t *, EvKind_t, uint32_t);
+static int KeyboardEvent(Device_t *, EvKind_t);
 
 static DeviceOps_t KeyboardOps = {
   .read = KeyboardRead,
@@ -270,11 +270,11 @@ static int KeyboardRead(Device_t *dev, IoReq_t *io) {
   return 0;
 }
 
-static int KeyboardEvent(Device_t *dev, EvKind_t ev, uint32_t notifyBits) {
+static int KeyboardEvent(Device_t *dev, EvKind_t ev) {
   KeyboardDev_t *kbd = dev->data;
 
   if (ev == EV_READ)
-    return EventMonitor(&kbd->readEvent, notifyBits);
+    return EventMonitor(&kbd->readEvent);
   return EINVAL;
 }
 

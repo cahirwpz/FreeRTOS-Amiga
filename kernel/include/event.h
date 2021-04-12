@@ -13,11 +13,10 @@ typedef enum EvKind {
 typedef struct EventWaitNote {
   TAILQ_ENTRY(EventWaitNote) link;
   TaskHandle_t listener;
-  uint32_t notifyBits;
 } EventWaitNote_t;
 
 typedef TAILQ_HEAD(, EventWaitNote) EventWaitList_t;
 
 void EventWaitListInit(EventWaitList_t *wl);
 void EventNotifyFromISR(EventWaitList_t *wl);
-int EventMonitor(EventWaitList_t *wl, uint32_t notifyBits);
+int EventMonitor(EventWaitList_t *wl);

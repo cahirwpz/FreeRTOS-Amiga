@@ -5,6 +5,7 @@
 #include <device.h>
 #include <msgport.h>
 #include <event.h>
+#include <notify.h>
 #include <ioreq.h>
 #include <libkern.h>
 #include <string.h>
@@ -69,9 +70,6 @@ static DeviceOps_t TtyOps = {
   .read = TtyRead,
   .write = TtyWrite,
 };
-
-#define RXRDY BIT(0)
-#define TXRDY BIT(1)
 
 #define TTY_TASK_PRIO 2
 
@@ -250,10 +248,10 @@ static void ProcessInput(TtyState_t *tty) {
 static void TtyTask(void *data) {
   TtyState_t *tty = data;
 
-  (void)DeviceEvent(tty->cons, EV_READ, RXRDY);
-  (void)DeviceEvent(tty->cons, EV_WRITE, TXRDY);
+  (void)DeviceEvent(tty->cons, EV_READ);
+  (void)DeviceEvent(tty->cons, EV_WRITE);
 
-  do {
+  while (NotifyWait(NB_MSGPORT | NB_EVENT, portMAX_DELAY)) {
     if (!tty->readMsg)
       tty->readMsg = GetMsg(tty->readMp);
 
@@ -267,7 +265,7 @@ static void TtyTask(void *data) {
     if (tty->writeMsg)
       HandleWriteReq(tty);
     HandleTxReady(tty);
-  } while (xTaskNotifyWait(0, 0, NULL, portMAX_DELAY));
+  }
 }
 
 static int TtyRead(Device_t *dev, IoReq_t *req) {

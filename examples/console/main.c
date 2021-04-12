@@ -9,6 +9,7 @@
 #include <interrupt.h>
 #include <ioreq.h>
 #include <keyboard.h>
+#include <notify.h>
 #include <libkern.h>
 #include <mouse.h>
 
@@ -24,18 +25,15 @@ static const char *EventName[] = {
   [IE_KEYBOARD_DOWN] = "keyboard key down",
 };
 
-#define MOUSE BIT(0)
-#define KEYBOARD BIT(1)
-
 static void vInputTask(void *data) {
   File_t *cons = data;
   Device_t *ms = MouseInit();
   Device_t *kbd = KeyboardInit();
 
-  (void)DeviceEvent(ms, EV_READ, MOUSE);
-  (void)DeviceEvent(kbd, EV_READ, KEYBOARD);
+  (void)DeviceEvent(ms, EV_READ);
+  (void)DeviceEvent(kbd, EV_READ);
 
-  while (xTaskNotifyWait(0, MOUSE | KEYBOARD, NULL, portMAX_DELAY)) {
+  while (NotifyWait(NB_EVENT, portMAX_DELAY)) {
     InputEvent_t ev;
 
     for (;;) {

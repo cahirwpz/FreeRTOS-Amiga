@@ -10,6 +10,7 @@
 #include <libkern.h>
 #include <device.h>
 #include <msgport.h>
+#include <notify.h>
 #include <ioreq.h>
 #include <sys/errno.h>
 
@@ -293,7 +294,7 @@ static void FloppyReader(void *ptr) {
   for (;;) {
     DPRINTF("[Floppy] Waiting for a request...\n");
 
-    if (!xTaskNotifyWait(0, 0, NULL, 1000 / portTICK_PERIOD_MS)) {
+    if (NotifyWait(NB_MSGPORT, 1000 / portTICK_PERIOD_MS)) {
       FloppyMotorOff(fd);
       continue;
     }

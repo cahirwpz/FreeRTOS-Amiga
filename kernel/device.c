@@ -162,9 +162,9 @@ static int DevClose(File_t *f) {
   return 0;
 }
 
-int DeviceEvent(Device_t *dev, EvKind_t ev, uint32_t notifyValue) {
+int DeviceEvent(Device_t *dev, EvKind_t ev) {
   DeviceEvent_t event = dev->ops->event;
   if (!event)
     return ENOSYS;
-  return event(dev, ev, notifyValue);
+  return event(dev, ev);
 }

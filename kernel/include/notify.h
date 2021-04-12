@@ -5,6 +5,8 @@
 
 typedef enum NotifyBits {
   NB_MSGPORT = BIT(0),
+  NB_EVENT = BIT(1),
+  NB_IRQ = BIT(2),
 } NotifyBits_t;
 
 static inline void NotifySend(TaskHandle_t task, NotifyBits_t bits) {

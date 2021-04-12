@@ -27,7 +27,7 @@ typedef struct MouseDev {
 } MouseDev_t;
 
 static int MouseRead(Device_t *, IoReq_t *);
-static int MouseEvent(Device_t *, EvKind_t, uint32_t);
+static int MouseEvent(Device_t *, EvKind_t);
 
 static DeviceOps_t MouseOps = {
   .read = MouseRead,
@@ -51,11 +51,11 @@ static int MouseRead(Device_t *dev, IoReq_t *io) {
   return 0;
 }
 
-static int MouseEvent(Device_t *dev, EvKind_t ev, uint32_t notifyBits) {
+static int MouseEvent(Device_t *dev, EvKind_t ev) {
   MouseDev_t *ms = dev->data;
 
   if (ev == EV_READ)
-    return EventMonitor(&ms->readEvent, notifyBits);
+    return EventMonitor(&ms->readEvent);
   return EINVAL;
 }
 

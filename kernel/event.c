@@ -12,19 +12,17 @@ void EventWaitListInit(EventWaitList_t *wl) {
 
 void EventNotifyFromISR(EventWaitList_t *wl) {
   EventWaitNote_t *wn;
-  TAILQ_FOREACH (wn, wl, link) {
-    NotifySendFromISR(wn->listener, wn->notifyBits);
-  }
+  TAILQ_FOREACH (wn, wl, link) { NotifySendFromISR(wn->listener, NB_EVENT); }
 }
 
-int EventMonitor(EventWaitList_t *wl, uint32_t notifyBits) {
+int EventMonitor(EventWaitList_t *wl) {
   TaskHandle_t listener = xTaskGetCurrentTaskHandle();
   EventWaitNote_t *wn = kcalloc(1, sizeof(EventWaitNote_t));
   int error = 0;
 
   taskENTER_CRITICAL();
   TAILQ_FOREACH (wn, wl, link) {
-    if (wn->listener == listener && wn->notifyBits == notifyBits) {
+    if (wn->listener == listener) {
       error = EEXIST;
       break;
     }

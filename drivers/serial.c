@@ -7,6 +7,7 @@
 #include <serial.h>
 #include <ring.h>
 #include <event.h>
+#include <notify.h>
 #include <ioreq.h>
 #include <device.h>
 #include <sys/errno.h>
@@ -32,7 +33,7 @@ static SerialDev_t SerialDev[1];
 
 static int SerialRead(Device_t *, IoReq_t *);
 static int SerialWrite(Device_t *, IoReq_t *);
-static int SerialEvent(Device_t *, EvKind_t, uint32_t);
+static int SerialEvent(Device_t *, EvKind_t);
 
 static DeviceOps_t SerialOps = {
   .read = SerialRead,
@@ -50,7 +51,7 @@ static void SendIntHandler(void *ptr) {
   if (byte >= 0) {
     SendByte(byte);
   } else if (ser->txTask) {
-    xTaskNotifyFromISR(ser->txTask, 0, eNoAction, &xNeedRescheduleTask);
+    NotifySendFromISR(ser->txTask, NB_IRQ);
     DPRINTF("serial: writer wakeup!\n");
   } else {
     EventNotifyFromISR(&ser->writeEvent);
@@ -66,7 +67,7 @@ static void RecvIntHandler(void *ptr) {
   SerialDev_t *ser = ptr;
   RingPutByte(ser->rxBuf, code);
   if (ser->rxTask) {
-    xTaskNotifyFromISR(ser->rxTask, 0, eNoAction, &xNeedRescheduleTask);
+    NotifySendFromISR(ser->rxTask, NB_IRQ);
     DPRINTF("serial: reader wakeup!\n");
   } else {
     EventNotifyFromISR(&ser->readEvent);
@@ -121,7 +122,7 @@ static int SerialWrite(Device_t *dev, IoReq_t *req) {
 
   /* Write all data to transmit buffer. This may involve waiting for the
    * interupt handler to free enough space in the ring buffer. */
-  do {
+  while (NotifyWait(NB_IRQ, portMAX_DELAY)) {
     RingWrite(ser->txBuf, req);
     if (!req->left)
       break;
@@ -134,7 +135,7 @@ static int SerialWrite(Device_t *dev, IoReq_t *req) {
       error = EAGAIN;
       break;
     }
-  } while (xTaskNotifyWait(0, 0, NULL, portMAX_DELAY));
+  }
 
   ser->txTask = NULL;
 
@@ -168,7 +169,7 @@ static int SerialRead(Device_t *dev, IoReq_t *req) {
       error = EAGAIN;
       break;
     }
-    (void)xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
+    (void)NotifyWait(NB_IRQ, portMAX_DELAY);
   }
 
   ser->rxTask = NULL;
@@ -183,12 +184,12 @@ static int SerialRead(Device_t *dev, IoReq_t *req) {
   return error;
 }
 
-static int SerialEvent(Device_t *dev, EvKind_t ev, uint32_t notifyBits) {
+static int SerialEvent(Device_t *dev, EvKind_t ev) {
   SerialDev_t *ser = dev->data;
 
   if (ev == EV_READ)
-    return EventMonitor(&ser->readEvent, notifyBits);
+    return EventMonitor(&ser->readEvent);
   if (ev == EV_WRITE)
-    return EventMonitor(&ser->writeEvent, notifyBits);
+    return EventMonitor(&ser->writeEvent);
   return EINVAL;
 }
