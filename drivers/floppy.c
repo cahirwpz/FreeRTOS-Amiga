@@ -68,9 +68,7 @@ Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
   /* Handler that will wake up track reader task. */
   SetIntVec(DSKBLK, TrackTransferDone, fd);
 
-  fd->ioPort = MsgPortCreate();
-
-  xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, FloppyDev,
+  xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, fd,
               aFloppyIOTaskPrio, &fd->ioTask);
   DASSERT(fd->ioTask != NULL);
 
@@ -288,10 +286,13 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
 
 static void FloppyReader(void *ptr) {
   FloppyDev_t *fd = ptr;
+  fd->ioPort = MsgPortCreate();
 
   FloppyHeadToTrack0(fd);
 
   for (;;) {
+    DPRINTF("[Floppy] Waiting for a request...\n");
+
     if (!xTaskNotifyWait(0, 0, NULL, 1000 / portTICK_PERIOD_MS)) {
       FloppyMotorOff(fd);
       continue;

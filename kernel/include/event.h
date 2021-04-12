@@ -11,8 +11,9 @@ typedef enum EvKind {
 } __packed EvKind_t;
 
 typedef struct EventWaitNote {
-  TaskHandle_t *listener;
-  uint32_t notifyBit;
+  TAILQ_ENTRY(EventWaitNote) link;
+  TaskHandle_t listener;
+  uint32_t notifyBits;
 } EventWaitNote_t;
 
 typedef TAILQ_HEAD(, EventWaitNote) EventWaitList_t;
