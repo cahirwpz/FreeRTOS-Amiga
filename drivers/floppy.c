@@ -46,7 +46,7 @@ static void TrackTransferDone(void *ptr) {
   NotifySendFromISR(fd->ioTask, NB_IRQ);
 }
 
-static void FloppyReader(void *);
+static void FloppyIoTask(void *);
 static int FloppyReadWrite(Device_t *, IoReq_t *);
 
 static DeviceOps_t FloppyOps = {.read = FloppyReadWrite,
@@ -69,7 +69,7 @@ Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
   /* Handler that will wake up track reader task. */
   SetIntVec(DSKBLK, TrackTransferDone, fd);
 
-  xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, fd,
+  xTaskCreate(FloppyIoTask, "FloppyIoTask", configMINIMAL_STACK_SIZE, fd,
               aFloppyIOTaskPrio, &fd->ioTask);
   DASSERT(fd->ioTask != NULL);
 
@@ -285,7 +285,7 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
   return 0;
 }
 
-static void FloppyReader(void *ptr) {
+static void FloppyIoTask(void *ptr) {
   FloppyDev_t *fd = ptr;
   fd->ioPort = MsgPortCreate();
 
@@ -294,7 +294,7 @@ static void FloppyReader(void *ptr) {
   for (;;) {
     DPRINTF("[Floppy] Waiting for a request...\n");
 
-    if (NotifyWait(NB_MSGPORT, 1000 / portTICK_PERIOD_MS)) {
+    if (!NotifyWait(NB_MSGPORT, 1000 / portTICK_PERIOD_MS)) {
       FloppyMotorOff(fd);
       continue;
     }
