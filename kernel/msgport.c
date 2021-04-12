@@ -29,12 +29,11 @@ void MsgPortDelete(MsgPort_t *mp) {
   kfree(mp);
 }
 
-void DoMsg(MsgPort_t *mp, void *data) {
-  Msg_t msg = {.task = xTaskGetCurrentTaskHandle(), .data = data};
-  Msg_t *msgp = &msg;
-  xQueueSend(mp->queue, &msgp, portMAX_DELAY);
+void DoMsg(MsgPort_t *mp, Msg_t *msg) {
+  msg->task = xTaskGetCurrentTaskHandle();
+  xQueueSend(mp->queue, &msg, portMAX_DELAY);
   NotifySend(mp->owner, NB_MSGPORT);
-  DPRINTF("DoMsg: Wakeup owner %x!\n", mp->owner);
+  DPRINTF("DoMsg: wakeup owner %x!\n", mp->owner);
   (void)NotifyWait(NB_MSGPORT, portMAX_DELAY);
 }
 
@@ -46,6 +45,7 @@ Msg_t *GetMsg(MsgPort_t *mp) {
 
 void ReplyMsg(Msg_t *msg) {
   vTaskSuspendAll();
+  DPRINTF("ReplyMsg: wakeup sender %x!\n", msg->task);
   NotifySend(msg->task, NB_MSGPORT);
   msg->task = NULL;
   xTaskResumeAll();

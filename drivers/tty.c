@@ -272,7 +272,7 @@ static int TtyRead(Device_t *dev, IoReq_t *req) {
   TtyState_t *tty = dev->data;
   size_t n = req->left;
 
-  DoMsg(tty->readMp, req);
+  DoMsg(tty->readMp, &MSG(req));
 
   return req->left < n ? 0 : req->error;
 }
@@ -281,7 +281,7 @@ static int TtyWrite(Device_t *dev, IoReq_t *req) {
   TtyState_t *tty = dev->data;
   size_t n = req->left;
 
-  DoMsg(tty->writeMp, req);
+  DoMsg(tty->writeMp, &MSG(req));
 
   return req->left < n ? 0 : req->error;
 }

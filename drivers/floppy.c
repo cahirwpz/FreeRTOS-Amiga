@@ -369,6 +369,6 @@ static int FloppyReadWrite(Device_t *dev, IoReq_t *io) {
     io->left = FLOPPY_SIZE - io->offset;
   if (io->left == 0)
     return 0;
-  DoMsg(fd->ioPort, &io);
+  DoMsg(fd->ioPort, &MSG(io));
   return io->error;
 }
