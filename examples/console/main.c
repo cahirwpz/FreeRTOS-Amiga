@@ -25,6 +25,11 @@ static const char *EventName[] = {
   [IE_KEYBOARD_DOWN] = "keyboard key down",
 };
 
+static int ReadInputEvent(Device_t *dev, InputEvent_t *ev) {
+  IoReq_t io = IOREQ_READ_NB(0, ev, sizeof(InputEvent_t));
+  return !dev->ops->read(dev, &io);
+}
+
 static void vInputTask(void *data __unused) {
   File_t *cons = kopen("console", O_RDWR);
   Device_t *ms = MouseInit();
@@ -36,23 +41,13 @@ static void vInputTask(void *data __unused) {
   while (NotifyWait(NB_EVENT, portMAX_DELAY)) {
     InputEvent_t ev;
 
-    for (;;) {
-      IoReq_t io = IOREQ_READ_NB(0, &ev, sizeof(InputEvent_t));
-
-      if (kbd->ops->read(kbd, &io))
-        break;
-
+    while (ReadInputEvent(kbd, &ev)) {
       char c = (ev.value >= 0x20 && ev.value < 0x7f) ? ev.value : ' ';
       kfprintf(cons, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
                (uint16_t)ev.value, c);
     }
 
-    for (;;) {
-      IoReq_t io = IOREQ_READ_NB(0, &ev, sizeof(InputEvent_t));
-
-      if (ms->ops->read(ms, &io))
-        break;
-
+    while (ReadInputEvent(ms, &ev)) {
       static short x = 0, y = 0;
 
       kfprintf(cons, "%s: value = %d\n", EventName[ev.kind], ev.value);
@@ -62,11 +57,13 @@ static void vInputTask(void *data __unused) {
         x = max(0, x);
         x = min(x, 319);
       }
+
       if (ev.kind == IE_MOUSE_DELTA_Y) {
         y += ev.value;
         y = max(0, y);
         y = min(y, 255);
       }
+
       ConsoleMovePointer(x, y);
     }
   }
