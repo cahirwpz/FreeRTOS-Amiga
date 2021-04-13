@@ -2,7 +2,7 @@
 
 #include <sys/types.h>
 
-/* Tracks progress of I/O operation.
+/* Tracks progress of I/O operation on a file object.
  *
  * `rbuf/wbuf` and `left` are updated during operation processing. */
 typedef struct IoReq {

@@ -21,5 +21,7 @@ typedef void (*ESR_t)(void);
 #define EXC_LAST 255
 
 typedef ESR_t ExcVec_t[EXC_LAST + 1];
+
+/* 680x0 exception vector location */
 extern ExcVec_t *ExcVecBase;
 #define ExcVec (*ExcVecBase)

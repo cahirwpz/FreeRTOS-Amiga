@@ -106,7 +106,7 @@ Device_t *MouseInit(void) {
   klog("[Mouse] Initializing driver!\n");
 
   ms->eventQ = InputEventQueueCreate();
-  EventWaitListInit(&ms->readEvent);
+  TAILQ_INIT(&ms->readEvent);
 
   /* Settings from MouseData structure. */
   ms->xctr = custom.joy0dat & 0xff;

@@ -6,9 +6,10 @@
 #include <notify.h>
 #include <sys/errno.h>
 
-void EventWaitListInit(EventWaitList_t *wl) {
-  TAILQ_INIT(wl);
-}
+struct EventWaitNote {
+  TAILQ_ENTRY(EventWaitNote) link;
+  TaskHandle_t listener;
+};
 
 void EventNotifyFromISR(EventWaitList_t *wl) {
   EventWaitNote_t *wn;

@@ -47,9 +47,8 @@ static DeviceOps_t SerialOps = {
 static void SendIntHandler(void *ptr) {
   SerialDev_t *ser = ptr;
   /* Send one byte into the wire. */
-  int byte = RingGetByte(ser->txBuf);
-  if (byte >= 0) {
-    SendByte(byte);
+  if (!RingEmpty(ser->txBuf)) {
+    SendByte(RingGetByte(ser->txBuf));
   } else if (ser->txTask) {
     NotifySendFromISR(ser->txTask, NB_IRQ);
     DPRINTF("serial: writer wakeup!\n");
@@ -65,7 +64,8 @@ static void RecvIntHandler(void *ptr) {
   if (!(code & SERDATF_RBF))
     return;
   SerialDev_t *ser = ptr;
-  RingPutByte(ser->rxBuf, code);
+  if (!RingFull(ser->rxBuf))
+    RingPutByte(ser->rxBuf, code);
   if (ser->rxTask) {
     NotifySendFromISR(ser->rxTask, NB_IRQ);
     DPRINTF("serial: reader wakeup!\n");
@@ -87,8 +87,8 @@ Device_t *SerialInit(unsigned baud) {
   ser->rxBuf = RingAlloc(BUFLEN);
   ser->txBuf = RingAlloc(BUFLEN);
 
-  EventWaitListInit(&ser->readEvent);
-  EventWaitListInit(&ser->writeEvent);
+  TAILQ_INIT(&ser->readEvent);
+  TAILQ_INIT(&ser->writeEvent);
 
   SetIntVec(TBE, SendIntHandler, ser);
   SetIntVec(RBF, RecvIntHandler, ser);

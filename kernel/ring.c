@@ -18,15 +18,11 @@ static inline void RingConsume(Ring_t *buf, size_t len) {
 }
 
 void RingPutByte(Ring_t *buf, uint8_t byte) {
-  if (!RingFull(buf)) {
-    buf->data[buf->head] = byte;
-    RingProduce(buf, 1);
-  }
+  buf->data[buf->head] = byte;
+  RingProduce(buf, 1);
 }
 
-int RingGetByte(Ring_t *buf) {
-  if (RingEmpty(buf))
-    return -1;
+uint8_t RingGetByte(Ring_t *buf) {
   uint8_t byte = buf->data[buf->tail];
   RingConsume(buf, 1);
   return byte;

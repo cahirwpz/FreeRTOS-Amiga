@@ -32,6 +32,27 @@
     (b) = _a;                                                                  \
   })
 
+/* Use on 68000 & 68010 (which do not have full 32-bit multiplication)
+ * when 16-bit by 16-bit with 32-bit result multiplication will do. */
+static inline int32_t muls16(int16_t a, int16_t b) {
+  int32_t r;
+  asm("muls %2,%0" : "=d"(r) : "0"(a), "dmi"(b));
+  return r;
+}
+
+typedef struct div16 {
+  int16_t rem;  /* remainder */
+  int16_t quot; /* quotient */
+} div16_t;
+
+/* Use on 68000 & 68010 (which do not have full 32-bit division)
+ * when 32-bit by 16-bit with 16-bit result division will do. */
+static inline div16_t divs16(int32_t a, int16_t b) {
+  div16_t r;
+  asm("divs %2,%0" : "=d"(r) : "0"(a), "dmi"(b));
+  return r;
+}
+
 #define BIT(x) (1L << (x))
 
 #define REGB(addr) (*(volatile uint8_t *)&(addr))

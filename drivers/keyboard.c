@@ -316,7 +316,7 @@ Device_t *KeyboardInit(void) {
   DASSERT(kbd->timer != NULL);
 
   kbd->eventQ = InputEventQueueCreate();
-  EventWaitListInit(&kbd->readEvent);
+  TAILQ_INIT(&kbd->readEvent);
 
   /* Register keyboard interrupt. */
   kbd->intr = INTSERVER(-10, (ISR_t)KeyboardIntHandler, (void *)kbd);
