@@ -2,7 +2,8 @@
 #include <FreeRTOS/semphr.h>
 
 #include <tty.h>
-#include <device.h>
+#include <devfile.h>
+#include <file.h>
 #include <msgport.h>
 #include <event.h>
 #include <notify.h>
@@ -37,7 +38,7 @@
 
 typedef struct TtyState {
   TaskHandle_t task;
-  Device_t *cons;
+  File_t *cons;
   /* Used for communication with file-like objects. */
   Msg_t *readMsg;
   MsgPort_t *readMp;
@@ -63,24 +64,25 @@ typedef struct TtyState {
 } TtyState_t;
 
 static void TtyTask(void *);
-static int TtyRead(Device_t *, IoReq_t *);
-static int TtyWrite(Device_t *, IoReq_t *);
+static int TtyRead(DevFile_t *, IoReq_t *);
+static int TtyWrite(DevFile_t *, IoReq_t *);
 
-static DeviceOps_t TtyOps = {
+static DevFileOps_t TtyOps = {
   .read = TtyRead,
   .write = TtyWrite,
 };
 
 #define TTY_TASK_PRIO 2
 
-int AddTtyDevice(const char *name, Device_t *cons) {
-  Device_t *dev;
+int AddTtyDevFile(const char *name, File_t *cons) {
+  DevFile_t *dev;
   TtyState_t *tty;
   int error;
 
   if (!(tty = kmalloc(sizeof(TtyState_t))))
     return ENOMEM;
   tty->cons = cons;
+  tty->cons->nonblock = 1;
 
   tty->input.len = 0;
   tty->input.eol = 0;
@@ -90,7 +92,7 @@ int AddTtyDevice(const char *name, Device_t *cons) {
   tty->output.head = 0;
   tty->output.tail = 0;
 
-  if ((error = AddDevice(name, &TtyOps, &dev)))
+  if ((error = AddDevFile(name, &TtyOps, &dev)))
     return error;
   dev->data = (void *)tty;
 
@@ -105,7 +107,7 @@ int AddTtyDevice(const char *name, Device_t *cons) {
 }
 
 static int HandleRxReady(TtyState_t *tty) {
-  Device_t *cons = tty->cons;
+  DevFile_t *cons = tty->cons->device;
   IoReq_t *req = &tty->rxReq;
   int error;
 
@@ -158,7 +160,7 @@ static void HandleReadReq(TtyState_t *tty) {
 }
 
 static int HandleTxReady(TtyState_t *tty) {
-  Device_t *cons = tty->cons;
+  DevFile_t *cons = tty->cons->device;
   IoReq_t *req = &tty->txReq;
   int error;
 
@@ -248,8 +250,8 @@ static void ProcessInput(TtyState_t *tty) {
 static void TtyTask(void *data) {
   TtyState_t *tty = data;
 
-  (void)DeviceEvent(tty->cons, EV_READ);
-  (void)DeviceEvent(tty->cons, EV_WRITE);
+  (void)FileEvent(tty->cons, EV_READ);
+  (void)FileEvent(tty->cons, EV_WRITE);
 
   while (NotifyWait(NB_MSGPORT | NB_EVENT, portMAX_DELAY)) {
     if (!tty->readMsg)
@@ -268,7 +270,7 @@ static void TtyTask(void *data) {
   }
 }
 
-static int TtyRead(Device_t *dev, IoReq_t *req) {
+static int TtyRead(DevFile_t *dev, IoReq_t *req) {
   TtyState_t *tty = dev->data;
   size_t n = req->left;
 
@@ -277,7 +279,7 @@ static int TtyRead(Device_t *dev, IoReq_t *req) {
   return req->left < n ? 0 : req->error;
 }
 
-static int TtyWrite(Device_t *dev, IoReq_t *req) {
+static int TtyWrite(DevFile_t *dev, IoReq_t *req) {
   TtyState_t *tty = dev->data;
   size_t n = req->left;
 

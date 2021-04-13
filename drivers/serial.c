@@ -4,12 +4,12 @@
 #include <custom.h>
 #include <interrupt.h>
 #include <libkern.h>
-#include <serial.h>
+#include <driver.h>
 #include <ring.h>
 #include <event.h>
 #include <notify.h>
 #include <ioreq.h>
-#include <device.h>
+#include <devfile.h>
 #include <sys/errno.h>
 
 #define DEBUG 0
@@ -19,6 +19,7 @@
 #define BUFLEN 64
 
 typedef struct SerialDev {
+  DevFile_t *file;
   SemaphoreHandle_t rxLock;
   SemaphoreHandle_t txLock;
   Ring_t *rxBuf;
@@ -29,13 +30,11 @@ typedef struct SerialDev {
   EventWaitList_t writeEvent;
 } SerialDev_t;
 
-static SerialDev_t SerialDev[1];
+static int SerialRead(DevFile_t *, IoReq_t *);
+static int SerialWrite(DevFile_t *, IoReq_t *);
+static int SerialEvent(DevFile_t *, EvKind_t);
 
-static int SerialRead(Device_t *, IoReq_t *);
-static int SerialWrite(Device_t *, IoReq_t *);
-static int SerialEvent(Device_t *, EvKind_t);
-
-static DeviceOps_t SerialOps = {
+static DevFileOps_t SerialOps = {
   .read = SerialRead,
   .write = SerialWrite,
   .event = SerialEvent,
@@ -75,10 +74,10 @@ static void RecvIntHandler(void *ptr) {
   }
 }
 
-Device_t *SerialInit(unsigned baud) {
-  SerialDev_t *ser = SerialDev;
-
-  klog("[Serial] Initializing driver!\n");
+static int SerialAttach(Driver_t *drv) {
+  SerialDev_t *ser = drv->state;
+  unsigned baud = 9600;
+  int error;
 
   custom.serper = CLOCK / baud - 1;
 
@@ -96,21 +95,25 @@ Device_t *SerialInit(unsigned baud) {
   ClearIRQ(INTF_TBE | INTF_RBF);
   EnableINT(INTF_TBE | INTF_RBF);
 
-  return AddDeviceAux("serial", &SerialOps, SerialDev);
+  error = AddDevFile("serial", &SerialOps, &ser->file);
+  ser->file->data = (void *)ser;
+  return error;
 }
 
-void SerialKill(void) {
+int SerialDetach(Driver_t *drv) {
+  SerialDev_t *ser = drv->state;
+
   DisableINT(INTF_TBE | INTF_RBF);
   ResetIntVec(TBE);
   ResetIntVec(RBF);
 
-  vSemaphoreDelete(SerialDev->rxLock);
-  vSemaphoreDelete(SerialDev->txLock);
+  vSemaphoreDelete(ser->rxLock);
+  vSemaphoreDelete(ser->txLock);
 
-  klog("[Serial] Driver deactivated!\n");
+  return 0;
 }
 
-static int SerialWrite(Device_t *dev, IoReq_t *req) {
+static int SerialWrite(DevFile_t *dev, IoReq_t *req) {
   SerialDev_t *ser = dev->data;
   size_t n = req->left;
   int error = 0;
@@ -152,7 +155,7 @@ static int SerialWrite(Device_t *dev, IoReq_t *req) {
   return error;
 }
 
-static int SerialRead(Device_t *dev, IoReq_t *req) {
+static int SerialRead(DevFile_t *dev, IoReq_t *req) {
   SerialDev_t *ser = dev->data;
   int error = 0;
 
@@ -184,7 +187,7 @@ static int SerialRead(Device_t *dev, IoReq_t *req) {
   return error;
 }
 
-static int SerialEvent(Device_t *dev, EvKind_t ev) {
+static int SerialEvent(DevFile_t *dev, EvKind_t ev) {
   SerialDev_t *ser = dev->data;
 
   if (ev == EV_READ)
@@ -193,3 +196,10 @@ static int SerialEvent(Device_t *dev, EvKind_t ev) {
     return EventMonitor(&ser->writeEvent);
   return EINVAL;
 }
+
+Driver_t Serial = {
+  .name = "serial",
+  .attach = SerialAttach,
+  .detach = SerialDetach,
+  .size = sizeof(SerialDev_t),
+};

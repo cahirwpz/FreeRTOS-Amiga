@@ -1,10 +1,10 @@
 #include <interrupt.h>
 #include <cia.h>
-#include <device.h>
+#include <devfile.h>
 #include <event.h>
 #include <input.h>
 #include <ioreq.h>
-#include <keyboard.h>
+#include <driver.h>
 #include <keysym.h>
 #include <libkern.h>
 #include <sys/errno.h>
@@ -231,28 +231,29 @@ typedef enum KeyMod {
 } __packed KeyMod_t;
 
 typedef struct KeyboardDev {
-  IntServer_t intr;
   QueueHandle_t eventQ;
+  IntServer_t intr;
+  DevFile_t *file;
   EventWaitList_t readEvent;
   CIATimer_t *timer;
   KeyMod_t modifier;
   KeyCode_t code;
 } KeyboardDev_t;
 
-static int KeyboardRead(Device_t *, IoReq_t *);
-static int KeyboardEvent(Device_t *, EvKind_t);
+static int KeyboardRead(DevFile_t *, IoReq_t *);
+static int KeyboardEvent(DevFile_t *, EvKind_t);
 
-static DeviceOps_t KeyboardOps = {
+static DevFileOps_t KeyboardOps = {
   .read = KeyboardRead,
   .event = KeyboardEvent,
 };
 
-static int KeyboardRead(Device_t *dev, IoReq_t *io) {
+static int KeyboardRead(DevFile_t *dev, IoReq_t *io) {
   KeyboardDev_t *kbd = dev->data;
   return InputEventRead(kbd->eventQ, io);
 }
 
-static int KeyboardEvent(Device_t *dev, EvKind_t ev) {
+static int KeyboardEvent(DevFile_t *dev, EvKind_t ev) {
   KeyboardDev_t *kbd = dev->data;
 
   if (ev == EV_READ)
@@ -307,10 +308,9 @@ static void KeyboardIntHandler(void *data) {
   }
 }
 
-Device_t *KeyboardInit(void) {
-  KeyboardDev_t *kbd = kcalloc(1, sizeof(KeyboardDev_t));
-
-  klog("[Keyboard] Initializing driver!\n");
+static int KeyboardAttach(Driver_t *drv) {
+  KeyboardDev_t *kbd = drv->state;
+  int error;
 
   kbd->timer = AcquireTimer(TIMER_ANY);
   DASSERT(kbd->timer != NULL);
@@ -327,5 +327,15 @@ Device_t *KeyboardInit(void) {
    * The keyboard is attached to CIA-A serial port. */
   WriteICR(CIAA, CIAICRF_SETCLR | CIAICRF_SP);
 
-  return AddDeviceAux("keyboard", &KeyboardOps, (void *)kbd);
+  if ((error = AddDevFile("keyboard", &KeyboardOps, &kbd->file)))
+    return error;
+
+  kbd->file->data = (void *)kbd;
+  return 0;
 }
+
+Driver_t Keyboard = {
+  .name = "keyboard",
+  .attach = KeyboardAttach,
+  .size = sizeof(KeyboardDev_t),
+};

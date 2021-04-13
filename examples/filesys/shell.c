@@ -6,8 +6,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <libkern.h>
+#include <devfile.h>
+#include <driver.h>
 #include <string.h>
-#include <serial.h>
 #include <tty.h>
 
 #include "filesys.h"
@@ -227,7 +228,8 @@ static void vShellTask(__unused void *data) {
 static TaskHandle_t shellHandle;
 
 void StartShellTask(void) {
-  AddTtyDevice("tty", SerialInit(9600));
+  DeviceAttach(&Serial);
+  AddTtyDevFile("tty", kopen("serial", O_RDWR));
 
   FreeRTOS_CLIRegisterCommand(&xOpenFileCmd);
   FreeRTOS_CLIRegisterCommand(&xCloseFileCmd);
@@ -236,6 +238,6 @@ void StartShellTask(void) {
   FreeRTOS_CLIRegisterCommand(&xSeekFileCmd);
   FreeRTOS_CLIRegisterCommand(&xListDirCmd);
 
-  xTaskCreate((TaskFunction_t)vShellTask, "shell", configMINIMAL_STACK_SIZE,
-              NULL, SHELL_TASK_PRIO, &shellHandle);
+  xTaskCreate(vShellTask, "shell", configMINIMAL_STACK_SIZE, NULL,
+              SHELL_TASK_PRIO, &shellHandle);
 }

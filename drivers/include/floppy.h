@@ -1,7 +1,5 @@
 #pragma once
 
-typedef struct Device Device_t;
-
 /*
  * 3 1/2 inch dual density micro floppy disk drive specifications:
  * http://www.techtravels.org/wp-content/uploads/pefiles/SAMSUNG-SFD321B-070103.pdf
@@ -16,9 +14,6 @@ typedef struct Device Device_t;
 #define NTRACKS 160
 #define TRACK_SIZE (SECTOR_SIZE * NSECTORS)
 #define FLOPPY_SIZE (TRACK_SIZE * NTRACKS)
-
-Device_t *FloppyInit(unsigned aFloppyIOTaskPrio);
-void FloppyKill(void);
 
 #ifdef __FLOPPY_DRIVER
 
@@ -40,5 +35,7 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]);
 void DecodeSector(const DiskSector_t *disksec, RawSector_t sec);
 void EncodeSector(const RawSector_t sec, DiskSector_t *disksec);
 void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]);
+
+#define FLOPPY_TASK_PRIO 3
 
 #endif /* !_FLOPPY_DRIVER */

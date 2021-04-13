@@ -1,13 +1,13 @@
 #include <libkern.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <device.h>
+#include <devfile.h>
 #include <file.h>
 
 File_t *kopen(const char *name, int oflag) {
   File_t *f;
 
-  if (OpenDevice(name, &f))
+  if (OpenDevFile(name, &f))
     return NULL;
 
   int accmode = oflag & O_ACCMODE;
@@ -19,6 +19,9 @@ File_t *kopen(const char *name, int oflag) {
     f->readable = 1;
     f->writable = 1;
   }
+
+  if (oflag & O_NONBLOCK)
+    f->nonblock = 1;
 
   return f;
 }

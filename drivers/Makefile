@@ -10,6 +10,7 @@ SOURCES = \
 	  cia-timer.c \
 	  console.c \
 	  copper.c \
+	  driver.c \
 	  floppy.c \
 	  floppy-mfm.c \
 	  input.c \

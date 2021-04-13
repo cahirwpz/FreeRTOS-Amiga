@@ -5,6 +5,9 @@
 typedef struct IoReq IoReq_t;
 typedef struct QueueDefinition *QueueHandle_t;
 
+#define LMB BIT(0) /* left mouse button */
+#define RMB BIT(1) /* right mouse button */
+
 typedef enum IeKind {
   IE_UNKNOWN,
   IE_MOUSE_UP,

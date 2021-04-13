@@ -1,5 +1,5 @@
 #pragma once
 
-typedef struct Device Device_t;
+typedef struct File File_t;
 
-int AddTtyDevice(const char *name, Device_t *cons);
+int AddTtyDevFile(const char *name, File_t *cons);

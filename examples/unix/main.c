@@ -2,7 +2,8 @@
 #include <FreeRTOS/task.h>
 
 #include <custom.h>
-#include <serial.h>
+#include <driver.h>
+#include <devfile.h>
 #include <file.h>
 #include <filedesc.h>
 #include <proc.h>
@@ -39,7 +40,8 @@ static xTaskHandle handle;
 int main(void) {
   portNOP(); /* Breakpoint for simulator. */
 
-  AddTtyDevice("tty", SerialInit(9600));
+  DeviceAttach(&Serial);
+  AddTtyDevFile("tty", kopen("serial", O_RDWR));
 
   xTaskCreate(vMainTask, "main", KPROC_STKSZ, NULL, 0, &handle);
 

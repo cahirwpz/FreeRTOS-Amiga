@@ -5,7 +5,7 @@
 #include <file.h>
 #include <libkern.h>
 #include <string.h>
-#include <device.h>
+#include <devfile.h>
 #include <event.h>
 #include <ioreq.h>
 #include <sys/errno.h>
@@ -15,6 +15,7 @@ static int DevWrite(File_t *, const void *, size_t, long *);
 static int DevIoctl(File_t *, u_long cmd, void *);
 static int DevSeek(File_t *, long, int);
 static int DevClose(File_t *);
+static int DevEvent(File_t *, EvKind_t);
 
 static FileOps_t DevFileOps = {
   .read = DevRead,
@@ -22,38 +23,39 @@ static FileOps_t DevFileOps = {
   .ioctl = DevIoctl,
   .seek = DevSeek,
   .close = DevClose,
+  .event = DevEvent,
 };
 
-static TAILQ_HEAD(, Device) DeviceList = TAILQ_HEAD_INITIALIZER(DeviceList);
+static TAILQ_HEAD(, DevFile) DevFileList = TAILQ_HEAD_INITIALIZER(DevFileList);
 
-static Device_t *FindDevice(const char *name) {
-  Device_t *dev;
+static DevFile_t *FindDevFile(const char *name) {
+  DevFile_t *dev;
 
-  TAILQ_FOREACH (dev, &DeviceList, node) {
+  TAILQ_FOREACH (dev, &DevFileList, node) {
     if (!strcmp(dev->name, name))
-      return dev;
+      break;
   }
 
-  return NULL;
+  return dev;
 }
 
-int AddDevice(const char *name, DeviceOps_t *ops, Device_t **devp) {
-  Device_t *dev;
+int AddDevFile(const char *name, DevFileOps_t *ops, DevFile_t **devp) {
+  DevFile_t *dev;
   int error = 0;
 
   vTaskSuspendAll();
 
-  if (FindDevice(name)) {
+  if (FindDevFile(name)) {
     error = EEXIST;
     goto leave;
   }
 
-  if (!(dev = kmalloc(sizeof(Device_t)))) {
+  if (!(dev = kmalloc(sizeof(DevFile_t)))) {
     error = ENOMEM;
     goto leave;
   }
 
-  TAILQ_INSERT_TAIL(&DeviceList, dev, node);
+  TAILQ_INSERT_TAIL(&DevFileList, dev, node);
   dev->name = name;
   dev->ops = ops;
   dev->usecnt = 0;
@@ -61,29 +63,21 @@ int AddDevice(const char *name, DeviceOps_t *ops, Device_t **devp) {
   if (devp)
     *devp = dev;
 
-  klog("Registered \'%s\' device.\n", name);
+  klog("Registered \'%s\' device file.\n", name);
 
 leave:
   xTaskResumeAll();
   return error;
 }
 
-Device_t *AddDeviceAux(const char *name, DeviceOps_t *ops, void *data) {
-  Device_t *dev;
-  if (AddDevice(name, ops, &dev))
-    portPANIC();
-  dev->data = data;
-  return dev;
-}
-
-int OpenDevice(const char *name, File_t **fp) {
-  Device_t *dev;
+int OpenDevFile(const char *name, File_t **fp) {
+  DevFile_t *dev;
   File_t *f;
   int error = 0;
 
   vTaskSuspendAll();
 
-  if (!(dev = FindDevice(name))) {
+  if (!(dev = FindDevFile(name))) {
     error = ENOENT;
     goto leave;
   }
@@ -108,36 +102,36 @@ leave:
 }
 
 static int DevRead(File_t *f, void *buf, size_t len, long *donep) {
-  DeviceRead_t read = f->device->ops->read;
+  DevFileRead_t read = f->device->ops->read;
   if (!read)
     return ENOSYS;
 
-  IoReq_t req = IOREQ_READ(f->offset, buf, len);
+  IoReq_t req = IOREQ_READ(f->offset, buf, len, f->nonblock);
   int error = read(f->device, &req);
   *donep = len - req.left;
   return error;
 }
 
 static int DevWrite(File_t *f, const void *buf, size_t len, long *donep) {
-  DeviceWrite_t write = f->device->ops->write;
+  DevFileWrite_t write = f->device->ops->write;
   if (!write)
     return ENOSYS;
 
-  IoReq_t req = IOREQ_WRITE(f->offset, buf, len);
+  IoReq_t req = IOREQ_WRITE(f->offset, buf, len, f->nonblock);
   int error = write(f->device, &req);
   *donep = len - req.left;
   return error;
 }
 
 static int DevIoctl(File_t *f, u_long cmd, void *data) {
-  DeviceIoctl_t ioctl = f->device->ops->ioctl;
+  DevFileIoctl_t ioctl = f->device->ops->ioctl;
   if (!ioctl)
     return ENOSYS;
   return ioctl(f->device, cmd, data);
 }
 
 static int DevSeek(File_t *f, long offset, int whence) {
-  Device_t *dev = f->device;
+  DevFile_t *dev = f->device;
 
   if (whence == SEEK_CUR) {
     offset += f->offset;
@@ -162,9 +156,9 @@ static int DevClose(File_t *f) {
   return 0;
 }
 
-int DeviceEvent(Device_t *dev, EvKind_t ev) {
-  DeviceEvent_t event = dev->ops->event;
+static int DevEvent(File_t *f, EvKind_t ev) {
+  DevFileEvent_t event = f->device->ops->event;
   if (!event)
     return ENOSYS;
-  return event(dev, ev);
+  return event(f->device, ev);
 }

@@ -1,7 +1,7 @@
 TOPDIR = $(realpath ..)
 
 SOURCES = amigahunk.c \
-	  device.c \
+	  devfile.c \
 	  file.c \
 	  filedesc.c \
 	  hexdump.c \

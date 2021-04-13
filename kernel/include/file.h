@@ -5,7 +5,7 @@
 typedef struct File File_t;
 typedef struct Inode Inode_t;
 typedef struct Pipe Pipe_t;
-typedef struct Device Device_t;
+typedef struct DevFile DevFile_t;
 typedef enum EvKind EvKind_t;
 
 typedef int (*FileRead_t)(File_t *f, void *buf, size_t nbyte, long *donep);
@@ -38,7 +38,7 @@ typedef enum FileType {
 typedef struct File {
   FileOps_t *ops;
   union {
-    Device_t *device;
+    DevFile_t *device;
     Inode_t *inode;
     Pipe_t *pipe;
   };
@@ -48,6 +48,7 @@ typedef struct File {
   uint8_t readable : 1; /* set if call to FileOps::read is allowed */
   uint8_t writable : 1; /* set if call to FileOps::write is allowed */
   uint8_t seekable : 1; /* set if call to FileOps::seek is allowed */
+  uint8_t nonblock : 1; /* set read & write return EAGAIN instead blocking */
 } File_t;
 
 /* Increase reference counter. */
@@ -64,5 +65,5 @@ int FileSeek(File_t *f, long offset, int whence);
 int FileClose(File_t *f);
 
 /* Registers calling task to be notified with NB_EVENT
- * when can-read or can-write event happens on the device. */
+ * when can-read or can-write event happens on the file. */
 int FileEvent(File_t *f, EvKind_t ev);

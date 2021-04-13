@@ -1,6 +1,7 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/atomic.h>
 
+#include <event.h>
 #include <file.h>
 #include <sys/errno.h>
 
@@ -56,4 +57,11 @@ int FileClose(File_t *f) {
   if (Atomic_Decrement_u32(&f->usecount) > 1)
     return 0;
   return f->ops->close(f);
+}
+
+int FileEvent(File_t *f, EvKind_t ev) {
+  FileEvent_t event = f->ops->event;
+  if (!event)
+    return ENOSYS;
+  return event(f, ev);
 }

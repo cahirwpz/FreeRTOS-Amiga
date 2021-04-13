@@ -8,8 +8,8 @@
 #include <sprite.h>
 
 #include <console.h>
-#include <cpu.h>
-#include <device.h>
+#include <driver.h>
+#include <devfile.h>
 #include <ioreq.h>
 #include <libkern.h>
 #include <string.h>
@@ -33,6 +33,7 @@
 
 typedef struct ConsoleDev {
   SemaphoreHandle_t lock;
+  DevFile_t *file;
   struct {
     uint8_t *here;
     short x, y;
@@ -49,10 +50,12 @@ typedef struct ConsoleDev {
 static void ConsoleSetCursor(ConsoleDev_t *cons, short x, short y);
 static void ConsoleDrawCursor(ConsoleDev_t *cons);
 
-static int ConsoleWrite(Device_t *, IoReq_t *);
+static int ConsoleWrite(DevFile_t *, IoReq_t *);
+static int ConsoleIoctl(DevFile_t *dev, u_long cmd, void *data);
 
-static DeviceOps_t ConsoleOps = {
+static DevFileOps_t ConsoleOps = {
   .write = ConsoleWrite,
+  .ioctl = ConsoleIoctl,
 };
 
 /*
@@ -88,12 +91,9 @@ static void MakeCopList(CopList_t *cp, Bitmap_t *bm, CopIns_t **rowins,
   CopListActivate(cp);
 }
 
-static ConsoleDev_t ConsoleDev[1];
-
-Device_t *ConsoleInit(void) {
-  ConsoleDev_t *cons = ConsoleDev;
-
-  klog("[Console] Initializing driver!\n");
+int ConsoleAttach(Driver_t *drv) {
+  ConsoleDev_t *cons = drv->state;
+  int error;
 
   cons->lock = xSemaphoreCreateMutex();
 
@@ -118,7 +118,9 @@ Device_t *ConsoleInit(void) {
   /* Enable bitplane and sprite fetchers' DMA. */
   EnableDMA(DMAF_RASTER | DMAF_SPRITE);
 
-  return AddDeviceAux("console", &ConsoleOps, cons);
+  error = AddDevFile("console", &ConsoleOps, &cons->file);
+  cons->file->data = (void *)cons;
+  return error;
 }
 
 static inline void UpdateHere(ConsoleDev_t *cons) {
@@ -128,10 +130,6 @@ static inline void UpdateHere(ConsoleDev_t *cons) {
 static inline void UpdateRows(ConsoleDev_t *cons) {
   for (short i = 0; i < NROW; i++)
     CopInsSet32(cons->rowins[i], cons->rowptr[i]);
-}
-
-void ConsoleMovePointer(short x, short y) {
-  SpriteUpdatePos(&pointer_spr, HP(x), VP(y));
 }
 
 static void ConsoleSetCursor(ConsoleDev_t *cons, short x, short y) {
@@ -201,7 +199,7 @@ static void ControlCode(ConsoleDev_t *cons, short c) {
     ConsoleNextLine(cons);
 }
 
-static int ConsoleWrite(Device_t *dev, IoReq_t *req) {
+static int ConsoleWrite(DevFile_t *dev, IoReq_t *req) {
   ConsoleDev_t *cons = dev->data;
 
   xSemaphoreTake(cons->lock, portMAX_DELAY);
@@ -226,3 +224,19 @@ static int ConsoleWrite(Device_t *dev, IoReq_t *req) {
 
   return 0;
 }
+
+static int ConsoleIoctl(DevFile_t *dev __unused, u_long cmd, void *data) {
+  if (cmd == CIOCSETMS) {
+    MousePos_t *m = (MousePos_t *)data;
+    SpriteUpdatePos(&pointer_spr, HP(m->x), VP(m->y));
+    return 0;
+  }
+
+  return EINVAL;
+}
+
+Driver_t Console = {
+  .name = "console",
+  .attach = ConsoleAttach,
+  .size = sizeof(ConsoleDev_t),
+};

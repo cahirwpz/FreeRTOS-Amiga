@@ -2,10 +2,10 @@
 #include <FreeRTOS/task.h>
 #include <FreeRTOS/semphr.h>
 
+#include <driver.h>
 #include <floppy.h>
 #include <interrupt.h>
 #include <libkern.h>
-#include <serial.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -123,8 +123,8 @@ int main(void) {
 
   AddIntServer(VertBlankChain, SystemClockTick);
 
-  SerialInit(9600);
-  FloppyInit(FLOPPY_TASK_PRIO);
+  DeviceAttach(&Serial);
+  DeviceAttach(&Floppy);
 
   File_t *ser = kopen("serial", O_RDWR);
   File_t *fd = kopen("floppy", O_RDWR);

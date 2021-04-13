@@ -5,10 +5,10 @@
 #include <custom.h>
 #include <cia.h>
 
-#include <cpu.h>
+#include <driver.h>
 #include <string.h>
 #include <libkern.h>
-#include <device.h>
+#include <devfile.h>
 #include <msgport.h>
 #include <notify.h>
 #include <ioreq.h>
@@ -20,9 +20,8 @@
 #define DEBUG 0
 #include <debug.h>
 
-#define IOREQ_MAXNUM 16
-
 typedef struct FloppyDev {
+  DevFile_t *file;
   CIATimer_t *timer;
   TaskHandle_t ioTask;
   MsgPort_t *ioPort;
@@ -38,8 +37,6 @@ typedef struct FloppyDev {
   SectorState_t sectorState[NSECTORS];
 } FloppyDev_t;
 
-static FloppyDev_t FloppyDev[1];
-
 static void TrackTransferDone(void *ptr) {
   FloppyDev_t *fd = ptr;
   /* Send notification to waiting task. */
@@ -47,18 +44,17 @@ static void TrackTransferDone(void *ptr) {
 }
 
 static void FloppyIoTask(void *);
-static int FloppyReadWrite(Device_t *, IoReq_t *);
+static int FloppyReadWrite(DevFile_t *, IoReq_t *);
 
-static DeviceOps_t FloppyOps = {.read = FloppyReadWrite,
-                                .write = FloppyReadWrite};
+static DevFileOps_t FloppyOps = {.read = FloppyReadWrite,
+                                 .write = FloppyReadWrite};
 
-Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
-  FloppyDev_t *fd = FloppyDev;
+static int FloppyAttach(Driver_t *drv) {
+  FloppyDev_t *flp = drv->state;
+  int error;
 
-  klog("[Init] Floppy drive driver!\n");
-
-  fd->timer = AcquireTimer(TIMER_ANY);
-  DASSERT(fd->timer != NULL);
+  flp->timer = AcquireTimer(TIMER_ANY);
+  DASSERT(flp->timer != NULL);
 
   /* Set standard synchronization marker. */
   custom.dsksync = DSK_SYNC;
@@ -67,35 +63,40 @@ Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
   custom.adkcon = ADKF_SETCLR | ADKF_MFMPREC | ADKF_WORDSYNC | ADKF_FAST;
 
   /* Handler that will wake up track reader task. */
-  SetIntVec(DSKBLK, TrackTransferDone, fd);
+  SetIntVec(DSKBLK, TrackTransferDone, flp);
 
-  xTaskCreate(FloppyIoTask, "FloppyIoTask", configMINIMAL_STACK_SIZE, fd,
-              aFloppyIOTaskPrio, &fd->ioTask);
-  DASSERT(fd->ioTask != NULL);
+  xTaskCreate(FloppyIoTask, "FloppyIoTask", configMINIMAL_STACK_SIZE, flp,
+              FLOPPY_TASK_PRIO, &flp->ioTask);
+  DASSERT(flp->ioTask != NULL);
 
-  fd->ioPort = MsgPortCreate(fd->ioTask);
-  fd->diskTrack = pvPortMallocChip(DISK_TRACK_SIZE);
-  fd->track = -1;
-  DASSERT(fd->diskTrack != NULL);
+  flp->ioPort = MsgPortCreate(flp->ioTask);
+  flp->diskTrack = pvPortMallocChip(DISK_TRACK_SIZE);
+  flp->track = -1;
+  DASSERT(flp->diskTrack != NULL);
 
-  Device_t *dev = AddDeviceAux("floppy", &FloppyOps, fd);
-  dev->size = FLOPPY_SIZE;
-  return dev;
+  if ((error = AddDevFile("floppy", &FloppyOps, &flp->file)))
+    return error;
+
+  flp->file->data = (void *)flp;
+  flp->file->size = FLOPPY_SIZE;
+  return 0;
 }
 
 static void FloppyMotorOff(FloppyDev_t *fd);
 
-void FloppyKill(void) {
-  FloppyDev_t *fd = FloppyDev;
+static int FloppyDetach(Driver_t *drv) {
+  FloppyDev_t *flp = drv->state;
 
   DisableINT(INTF_DSKBLK);
   DisableDMA(DMAF_DISK);
   ResetIntVec(DSKBLK);
-  FloppyMotorOff(fd);
+  FloppyMotorOff(flp);
 
-  ReleaseTimer(fd->timer);
-  vTaskDelete(fd->ioTask);
-  MsgPortDelete(fd->ioPort);
+  ReleaseTimer(flp->timer);
+  vTaskDelete(flp->ioTask);
+  MsgPortDelete(flp->ioPort);
+
+  return 0;
 }
 
 /******************************************************************************/
@@ -359,7 +360,7 @@ static void FloppyIoTask(void *ptr) {
   }
 }
 
-static int FloppyReadWrite(Device_t *dev, IoReq_t *io) {
+static int FloppyReadWrite(DevFile_t *dev, IoReq_t *io) {
   FloppyDev_t *fd = dev->data;
   if (io->offset >= (off_t)FLOPPY_SIZE)
     return EINVAL;
@@ -370,3 +371,10 @@ static int FloppyReadWrite(Device_t *dev, IoReq_t *io) {
   DoMsg(fd->ioPort, &MSG(io));
   return io->error;
 }
+
+Driver_t Floppy = {
+  .name = "floppy",
+  .attach = FloppyAttach,
+  .detach = FloppyDetach,
+  .size = sizeof(FloppyDev_t),
+};

@@ -1,17 +1,16 @@
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/task.h>
 
-#include <console.h>
-#include <device.h>
+#include <driver.h>
+#include <devfile.h>
 #include <file.h>
 #include <event.h>
 #include <input.h>
+#include <console.h>
 #include <interrupt.h>
 #include <ioreq.h>
-#include <keyboard.h>
 #include <notify.h>
 #include <libkern.h>
-#include <mouse.h>
 
 #define mainINPUT_TASK_PRIORITY 3
 
@@ -25,46 +24,42 @@ static const char *EventName[] = {
   [IE_KEYBOARD_DOWN] = "keyboard key down",
 };
 
-static int ReadInputEvent(Device_t *dev, InputEvent_t *ev) {
-  IoReq_t io = IOREQ_READ_NB(0, ev, sizeof(InputEvent_t));
-  return !dev->ops->read(dev, &io);
-}
-
 static void vInputTask(void *data __unused) {
-  File_t *cons = kopen("console", O_RDWR);
-  Device_t *ms = MouseInit();
-  Device_t *kbd = KeyboardInit();
+  File_t *cons = kopen("console", O_WRONLY);
+  File_t *ms = kopen("mouse", O_RDONLY | O_NONBLOCK);
+  File_t *kbd = kopen("keyboard", O_RDONLY | O_NONBLOCK);
 
-  (void)DeviceEvent(ms, EV_READ);
-  (void)DeviceEvent(kbd, EV_READ);
+  (void)FileEvent(ms, EV_READ);
+  (void)FileEvent(kbd, EV_READ);
 
   while (NotifyWait(NB_EVENT, portMAX_DELAY)) {
     InputEvent_t ev;
+    long done;
 
-    while (ReadInputEvent(kbd, &ev)) {
+    while (!FileRead(kbd, &ev, sizeof(ev), &done)) {
       char c = (ev.value >= 0x20 && ev.value < 0x7f) ? ev.value : ' ';
       kfprintf(cons, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
                (uint16_t)ev.value, c);
     }
 
-    while (ReadInputEvent(ms, &ev)) {
-      static short x = 0, y = 0;
+    while (!FileRead(ms, &ev, sizeof(ev), &done)) {
+      static MousePos_t m = {.x = 0, .y = 0};
 
       kfprintf(cons, "%s: value = %d\n", EventName[ev.kind], ev.value);
 
       if (ev.kind == IE_MOUSE_DELTA_X) {
-        x += ev.value;
-        x = max(0, x);
-        x = min(x, 319);
+        m.x += ev.value;
+        m.x = max(0, m.x);
+        m.x = min(m.x, 319);
       }
 
       if (ev.kind == IE_MOUSE_DELTA_Y) {
-        y += ev.value;
-        y = max(0, y);
-        y = min(y, 255);
+        m.y += ev.value;
+        m.y = max(0, m.y);
+        m.y = min(m.y, 255);
       }
 
-      ConsoleMovePointer(x, y);
+      FileIoctl(cons, CIOCSETMS, &m);
     }
   }
 }
@@ -86,7 +81,9 @@ int main(void) {
   /* Configure system clock. */
   AddIntServer(VertBlankChain, SystemClockTick);
 
-  (void)ConsoleInit();
+  DeviceAttach(&Console);
+  DeviceAttach(&Mouse);
+  DeviceAttach(&Keyboard);
 
   xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, NULL,
               mainINPUT_TASK_PRIORITY, &input_handle);

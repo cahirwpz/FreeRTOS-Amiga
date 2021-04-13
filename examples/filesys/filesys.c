@@ -2,6 +2,7 @@
 #include <FreeRTOS/task.h>
 #include <FreeRTOS/queue.h>
 
+#include <driver.h>
 #include <floppy.h>
 #include <sys/errno.h>
 
@@ -113,7 +114,7 @@ static TaskHandle_t filesysHandle;
 void FsInit(void) {
   (void)FsOps;
 
-  FloppyInit(FLOPPY_TASK_PRIO);
+  DeviceAttach(&Floppy);
   xTaskCreate(vFileSysTask, "filesys", configMINIMAL_STACK_SIZE, NULL,
               FILESYS_TASK_PRIO, &filesysHandle);
 }

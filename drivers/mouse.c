@@ -1,11 +1,11 @@
 #include <interrupt.h>
 #include <custom.h>
 #include <cia.h>
-#include <device.h>
+#include <devfile.h>
 #include <event.h>
 #include <input.h>
 #include <ioreq.h>
-#include <mouse.h>
+#include <driver.h>
 #include <strings.h>
 #include <libkern.h>
 #include <sys/errno.h>
@@ -16,25 +16,26 @@
 typedef struct MouseDev {
   QueueHandle_t eventQ;
   IntServer_t intr;
+  DevFile_t *file;
   EventWaitList_t readEvent;
   int8_t xctr, yctr;
   uint8_t button;
 } MouseDev_t;
 
-static int MouseRead(Device_t *, IoReq_t *);
-static int MouseEvent(Device_t *, EvKind_t);
+static int MouseRead(DevFile_t *, IoReq_t *);
+static int MouseEvent(DevFile_t *, EvKind_t);
 
-static DeviceOps_t MouseOps = {
+static DevFileOps_t MouseOps = {
   .read = MouseRead,
   .event = MouseEvent,
 };
 
-static int MouseRead(Device_t *dev, IoReq_t *io) {
+static int MouseRead(DevFile_t *dev, IoReq_t *io) {
   MouseDev_t *ms = dev->data;
   return InputEventRead(ms->eventQ, io);
 }
 
-static int MouseEvent(Device_t *dev, EvKind_t ev) {
+static int MouseEvent(DevFile_t *dev, EvKind_t ev) {
   MouseDev_t *ms = dev->data;
 
   if (ev == EV_READ)
@@ -99,11 +100,9 @@ static void MouseIntHandler(void *data) {
   }
 }
 
-Device_t *MouseInit(void) {
-  MouseDev_t *ms = kcalloc(1, sizeof(MouseDev_t));
-  DASSERT(ms != NULL);
-
-  klog("[Mouse] Initializing driver!\n");
+static int MouseAttach(Driver_t *drv) {
+  MouseDev_t *ms = drv->state;
+  int error;
 
   ms->eventQ = InputEventQueueCreate();
   TAILQ_INIT(&ms->readEvent);
@@ -116,5 +115,13 @@ Device_t *MouseInit(void) {
   ms->intr = INTSERVER(-5, MouseIntHandler, (void *)ms);
   AddIntServer(VertBlankChain, &ms->intr);
 
-  return AddDeviceAux("mouse", &MouseOps, (void *)ms);
+  error = AddDevFile("mouse", &MouseOps, &ms->file);
+  ms->file->data = ms;
+  return error;
 }
+
+Driver_t Mouse = {
+  .name = "mouse",
+  .attach = MouseAttach,
+  .size = sizeof(MouseDev_t),
+};

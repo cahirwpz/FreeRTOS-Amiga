@@ -1,24 +1,24 @@
 #include <string.h>
-#include <device.h>
+#include <devfile.h>
 #include <ioreq.h>
 #include <memdev.h>
 
-static int MemoryRead(Device_t *, IoReq_t *);
+static int MemoryRead(DevFile_t *, IoReq_t *);
 
-static DeviceOps_t MemoryOps = {.read = MemoryRead};
+static DevFileOps_t MemoryOps = {.read = MemoryRead};
 
 int AddMemoryDev(const char *name, const void *buf, size_t size) {
-  Device_t *dev;
+  DevFile_t *dev;
   int error;
 
-  if ((error = AddDevice(name, &MemoryOps, &dev)))
+  if ((error = AddDevFile(name, &MemoryOps, &dev)))
     return error;
   dev->size = size;
   dev->data = (void *)buf;
   return 0;
 }
 
-static int MemoryRead(Device_t *dev, IoReq_t *req) {
+static int MemoryRead(DevFile_t *dev, IoReq_t *req) {
   size_t n = req->left;
   if (req->offset + (ssize_t)req->left > dev->size)
     n = dev->size - req->offset;

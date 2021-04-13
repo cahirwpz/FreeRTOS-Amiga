@@ -1,6 +1,10 @@
 #pragma once
 
-typedef struct Device Device_t;
+#include <sys/ioctl.h>
 
-Device_t *ConsoleInit(void);
-void ConsoleMovePointer(short x, short y);
+typedef struct MousePos {
+  short x;
+  short y;
+} MousePos_t;
+
+#define CIOCSETMS _IOW('c', 1, MousePos_t) /* set mouse cursor position */
