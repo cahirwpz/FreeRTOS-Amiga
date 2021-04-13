@@ -63,7 +63,7 @@ INTSERVER_DEFINE(SystemClockTick, 10, SystemClockTickHandler, NULL);
 static xTaskHandle main_handle;
 
 int main(void) {
-  portNOP(); /* Breakpoint for simulator. */
+  NOP(); /* Breakpoint for simulator. */
 
   AddIntServer(VertBlankChain, SystemClockTick);
 

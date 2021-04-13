@@ -38,7 +38,7 @@ static void vMainTask(__unused void *data) {
 static xTaskHandle handle;
 
 int main(void) {
-  portNOP(); /* Breakpoint for simulator. */
+  NOP(); /* Breakpoint for simulator. */
 
   DeviceAttach(&Serial);
   AddTtyDevFile("tty", FileOpen("serial", O_RDWR));

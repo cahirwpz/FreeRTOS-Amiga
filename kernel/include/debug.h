@@ -1,16 +1,29 @@
 #pragma once
 
 #include <uae.h>
+#include <cpu.h>
 
 #define Log(...) UaeLog(__VA_ARGS__)
+#define Panic(...)                                                             \
+  {                                                                            \
+    UaeLog(__VA_ARGS__);                                                       \
+    PANIC();                                                                   \
+  }
 
-#if DEBUG
-#include <FreeRTOSConfig.h>
-#include <portmacro.h>
-
-#define DASSERT(x) configASSERT(x)
-#define DPRINTF(...) UaeLog(__VA_ARGS__)
+#ifdef NDEBUG
+#define Assert(e) __nothing
 #else
-#define DASSERT(x) __nothing
-#define DPRINTF(...) __nothing
+#define Assert(e)                                                              \
+  {                                                                            \
+    if (!(e))                                                                  \
+      PANIC();                                                                 \
+  }
+#endif
+
+#if DEBUG && !defined(NDEBUG)
+#define DASSERT(e) Assert(e)
+#define DLOG(...) Log(__VA_ARGS__)
+#else
+#define DASSERT(e) __nothing
+#define DLOG(...) __nothing
 #endif

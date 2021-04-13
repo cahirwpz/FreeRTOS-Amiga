@@ -102,7 +102,7 @@ static xTaskHandle greenHandle;
 static xTaskHandle testHeapHandle;
 
 int main(void) {
-  portNOP(); /* Breakpoint for simulator. */
+  NOP(); /* Breakpoint for simulator. */
 
   AddIntServer(VertBlankChain, SystemClockTick);
 

@@ -78,18 +78,18 @@ void DecodeTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]) {
   do {
     SectorHeader_t hdr = DecodeHeader(sector);
 
-    DPRINTF("[MFM] Read: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
-            (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
-    DASSERT(hdr.sectorNum <= NSECTORS);
-    DASSERT(hdr.trackNum <= NTRACKS);
+    DLOG("[MFM] Read: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
+         (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
+    Assert(hdr.sectorNum <= NSECTORS);
+    Assert(hdr.trackNum <= NTRACKS);
 
     sectors[hdr.sectorNum] = sector++;
     /* Handle the gap. */
     if (hdr.gapDist == 1 && secnum > 1) {
       /* Move to the first sector after the gap. */
       sector = FindSectorHeader(sector);
-      DPRINTF("[MFM] Gap of size %d\n",
-              (intptr_t)sector - (intptr_t)(sectors[hdr.sectorNum] + 1));
+      DLOG("[MFM] Gap of size %d\n",
+           (intptr_t)sector - (intptr_t)(sectors[hdr.sectorNum] + 1));
     }
   } while (--secnum);
 }
@@ -298,8 +298,8 @@ void RealignTrack(DiskTrack_t *track, DiskSector_t *sectors[NSECTORS]) {
 
     (void)memset(sector->sectorLabel, 0xAA, sizeof(sector->sectorLabel));
 
-    DPRINTF("[MFM] Write: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
-            (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
+    DLOG("[MFM] Write: sector=%p, #sector=%d, #track=%d, #gap=%d\n", sector,
+         (int)hdr.sectorNum, (int)hdr.trackNum, (int)hdr.gapDist);
 
     /* Encode the sector header. */
     uint32_t info = ((SectorHeader_u)hdr).lw;

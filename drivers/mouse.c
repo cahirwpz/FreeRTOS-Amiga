@@ -92,10 +92,10 @@ static void MouseIntHandler(void *data) {
       .kind = (button & RMB) ? IE_MOUSE_DOWN : IE_MOUSE_UP, .value = RMB};
 
   if (evcnt > 0) {
-    DPRINTF("mouse: inject %d events\n", evcnt);
+    DLOG("mouse: inject %d events\n", evcnt);
     InputEventInjectFromISR(ms->eventQ, ev, evcnt);
     EventNotifyFromISR(&ms->readEvent);
-    DPRINTF("mouse: notify read listeners!\n");
+    DLOG("mouse: notify read listeners!\n");
   }
 }
 

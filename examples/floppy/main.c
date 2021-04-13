@@ -61,10 +61,10 @@ static void vReaderTask(File_t *fd) {
       if (cksum) {
         uint32_t cksum2 = crc32((void *)data, SECTOR_SIZE);
 
-        DPRINTF("rd(%d/%d): cksum = %08x (memory), cksum = %08x (disk)\n",
-                s / NSECTORS, s % NSECTORS, cksum, cksum2);
+        DLOG("rd(%d/%d): cksum = %08x (memory), cksum = %08x (disk)\n",
+             s / NSECTORS, s % NSECTORS, cksum, cksum2);
 
-        DASSERT(cksum == cksum2);
+        Assert(cksum == cksum2);
 
         vTaskDelay(250 / portTICK_PERIOD_MS);
       }
@@ -91,7 +91,7 @@ static void vWriterTask(File_t *fd) {
     xSemaphoreGive(SectorCksumLock);
 
     uint32_t cksum = crc32((void *)data, SECTOR_SIZE);
-    DPRINTF("wr(%d/%d): cksum = %08x\n", s / NSECTORS, s % NSECTORS, cksum);
+    DLOG("wr(%d/%d): cksum = %08x\n", s / NSECTORS, s % NSECTORS, cksum);
     SectorCksum[s] = cksum;
 
     /* Wait one second and repeat. */
@@ -120,7 +120,7 @@ static TaskHandle_t readerHandle;
 static TaskHandle_t writerHandle;
 
 int main(void) {
-  portNOP(); /* Breakpoint for simulator. */
+  NOP(); /* Breakpoint for simulator. */
 
   AddIntServer(VertBlankChain, SystemClockTick);
 

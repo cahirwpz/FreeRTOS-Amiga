@@ -261,7 +261,7 @@ static int KeyboardEvent(DevFile_t *dev, EvKind_t ev) {
 }
 
 static void ReadKeyEvent(KeyboardDev_t *kbd, uint8_t raw) {
-  DPRINTF("keyboard: reported raw code $%02x\n", raw);
+  DLOG("keyboard: reported raw code $%02x\n", raw);
 
   KeyCode_t code = raw & 0x7f;
   KeyMod_t change = code >= KEY_LSHIFT ? BIT(code - KEY_LSHIFT) : 0;
@@ -283,7 +283,7 @@ static void ReadKeyEvent(KeyboardDev_t *kbd, uint8_t raw) {
   if (ev.value) {
     InputEventInjectFromISR(kbd->eventQ, &ev, 1);
     EventNotifyFromISR(&kbd->readEvent);
-    DPRINTF("keyboard: notify read listeners!\n");
+    DLOG("keyboard: notify read listeners!\n");
   }
 }
 

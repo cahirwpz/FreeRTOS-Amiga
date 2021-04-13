@@ -49,10 +49,10 @@ static void SendIntHandler(void *ptr) {
     SendByte(RingGetByte(ser->txBuf));
   } else if (ser->txTask) {
     NotifySendFromISR(ser->txTask, NB_IRQ);
-    DPRINTF("serial: writer wakeup!\n");
+    DLOG("serial: writer wakeup!\n");
   } else {
     EventNotifyFromISR(&ser->writeEvent);
-    DPRINTF("serial: notify write listeners!\n");
+    DLOG("serial: notify write listeners!\n");
   }
 }
 
@@ -66,10 +66,10 @@ static void RecvIntHandler(void *ptr) {
     RingPutByte(ser->rxBuf, code);
   if (ser->rxTask) {
     NotifySendFromISR(ser->rxTask, NB_IRQ);
-    DPRINTF("serial: reader wakeup!\n");
+    DLOG("serial: reader wakeup!\n");
   } else {
     EventNotifyFromISR(&ser->readEvent);
-    DPRINTF("serial: notify read listeners!\n");
+    DLOG("serial: notify read listeners!\n");
   }
 }
 
@@ -133,7 +133,7 @@ static int SerialWrite(DevFile_t *dev, IoReq_t *req) {
        * short count, otherwise signify that we would have blocked and leave. */
       if (req->left < n)
         break;
-      DPRINTF("serial: tx buffer full!\n");
+      DLOG("serial: tx buffer full!\n");
       error = EAGAIN;
       break;
     }
@@ -144,10 +144,10 @@ static int SerialWrite(DevFile_t *dev, IoReq_t *req) {
   /* Trigger interrupt if transmit buffer is empty. */
   if (custom.serdatr & SERDATF_TBE) {
     CauseIRQ(INTF_TBE);
-    DPRINTF("serial: initiate tx!\n");
+    DLOG("serial: initiate tx!\n");
   }
 
-  DPRINTF("serial: tx request finished!\n");
+  DLOG("serial: tx request finished!\n");
   taskEXIT_CRITICAL();
   xSemaphoreGive(ser->txLock);
 
@@ -179,7 +179,7 @@ static int SerialRead(DevFile_t *dev, IoReq_t *req) {
   if (!error)
     RingRead(ser->rxBuf, req);
 
-  DPRINTF("serial: rx request finished!\n");
+  DLOG("serial: rx request finished!\n");
   taskEXIT_CRITICAL();
   xSemaphoreGive(ser->rxLock);
 

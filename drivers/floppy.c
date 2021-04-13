@@ -234,8 +234,8 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
   /* Make sure the DMA for the disk is turned off. */
   custom.dsklen = 0;
 
-  DPRINTF("[Floppy] %s track %d.\n", (cmd == WRITE) ? "Write" : "Read",
-          (int)track);
+  DLOG("[Floppy] %s track %d.\n", (cmd == WRITE) ? "Write" : "Read",
+       (int)track);
 
   uint16_t adkconSet = ADKF_SETCLR | ADKF_MFMPREC | ADKF_FAST;
   uint16_t adkconClr = ADKF_WORDSYNC | ADKF_MSBSYNC;
@@ -291,7 +291,7 @@ static void FloppyIoTask(void *ptr) {
   FloppyHeadToTrack0(fd);
 
   for (;;) {
-    DPRINTF("[Floppy] Waiting for a request...\n");
+    DLOG("[Floppy] Waiting for a request...\n");
 
     if (!NotifyWait(NB_MSGPORT, 1000 / portTICK_PERIOD_MS)) {
       FloppyMotorOff(fd);
@@ -299,12 +299,12 @@ static void FloppyIoTask(void *ptr) {
     }
 
     Msg_t *msg = GetMsg(fd->ioPort);
-    DASSERT(msg != NULL);
+    Assert(msg != NULL);
 
     IoReq_t *io = msg->data;
 
-    DPRINTF("[Floppy] %s(%d, %d)\n", io->write ? "Write" : "Read", io->offset,
-            io->left);
+    DLOG("[Floppy] %s(%d, %d)\n", io->write ? "Write" : "Read", io->offset,
+         io->left);
 
     bool needWrite = false;
     int16_t track = divs16(io->offset, TRACK_SIZE).quot;
