@@ -1,10 +1,8 @@
-#include <FreeRTOS/FreeRTOS.h>
-#include <FreeRTOS/semphr.h>
-
 #include <interrupt.h>
 #include <custom.h>
 #include <cia.h>
 #include <device.h>
+#include <event.h>
 #include <input.h>
 #include <ioreq.h>
 #include <mouse.h>
@@ -17,36 +15,31 @@
 
 typedef struct MouseDev {
   QueueHandle_t eventQ;
-  SemaphoreHandle_t lock;
   IntServer_t intr;
-  IoReq_t *io;
+  EventWaitList_t readEvent;
   int8_t xctr, yctr;
   uint8_t button;
 } MouseDev_t;
 
 static int MouseRead(Device_t *, IoReq_t *);
+static int MouseEvent(Device_t *, EvKind_t);
 
 static DeviceOps_t MouseOps = {
   .read = MouseRead,
+  .event = MouseEvent,
 };
 
 static int MouseRead(Device_t *dev, IoReq_t *io) {
   MouseDev_t *ms = dev->data;
+  return InputEventRead(ms->eventQ, io);
+}
 
-  if (ms->io != io) {
-    xSemaphoreTake(ms->lock, portMAX_DELAY);
-    ms->io = io;
-  }
+static int MouseEvent(Device_t *dev, EvKind_t ev) {
+  MouseDev_t *ms = dev->data;
 
-  int error;
-  if ((error = InputEventRead(ms->eventQ, io)))
-    return error;
-
-  /* Finish processing the request. */
-  ms->io = NULL;
-  xSemaphoreGive(ms->lock);
-
-  return 0;
+  if (ev == EV_READ)
+    return EventMonitor(&ms->readEvent);
+  return EINVAL;
 }
 
 static uint8_t ReadButtonState(void) {
@@ -101,10 +94,8 @@ static void MouseIntHandler(void *data) {
   if (evcnt > 0) {
     DPRINTF("mouse: inject %d events\n", evcnt);
     InputEventInjectFromISR(ms->eventQ, ev, evcnt);
-    if (ms->io) {
-      IoReqNotifyFromISR(ms->io);
-      DPRINTF("mouse: send notification\n");
-    }
+    EventNotifyFromISR(&ms->readEvent);
+    DPRINTF("mouse: notify read listeners!\n");
   }
 }
 
@@ -114,8 +105,8 @@ Device_t *MouseInit(void) {
 
   klog("[Mouse] Initializing driver!\n");
 
-  ms->lock = xSemaphoreCreateMutex();
   ms->eventQ = InputEventQueueCreate();
+  EventWaitListInit(&ms->readEvent);
 
   /* Settings from MouseData structure. */
   ms->xctr = custom.joy0dat & 0xff;

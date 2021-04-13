@@ -6,6 +6,8 @@
 #include <libkern.h>
 #include <serial.h>
 #include <ring.h>
+#include <event.h>
+#include <notify.h>
 #include <ioreq.h>
 #include <device.h>
 #include <sys/errno.h>
@@ -21,18 +23,22 @@ typedef struct SerialDev {
   SemaphoreHandle_t txLock;
   Ring_t *rxBuf;
   Ring_t *txBuf;
-  IoReq_t *rxReq;
-  IoReq_t *txReq;
+  TaskHandle_t rxTask;
+  TaskHandle_t txTask;
+  EventWaitList_t readEvent;
+  EventWaitList_t writeEvent;
 } SerialDev_t;
 
 static SerialDev_t SerialDev[1];
 
 static int SerialRead(Device_t *, IoReq_t *);
 static int SerialWrite(Device_t *, IoReq_t *);
+static int SerialEvent(Device_t *, EvKind_t);
 
 static DeviceOps_t SerialOps = {
   .read = SerialRead,
   .write = SerialWrite,
+  .event = SerialEvent,
 };
 
 #define SendByte(byte)                                                         \
@@ -44,11 +50,12 @@ static void SendIntHandler(void *ptr) {
   int byte = RingGetByte(ser->txBuf);
   if (byte >= 0) {
     SendByte(byte);
-  } else if (ser->txReq) {
-    IoReqNotifyFromISR(ser->txReq);
+  } else if (ser->txTask) {
+    NotifySendFromISR(ser->txTask, NB_IRQ);
     DPRINTF("serial: writer wakeup!\n");
   } else {
-    DPRINTF("serial: tx buffer empty!\n");
+    EventNotifyFromISR(&ser->writeEvent);
+    DPRINTF("serial: notify write listeners!\n");
   }
 }
 
@@ -59,30 +66,37 @@ static void RecvIntHandler(void *ptr) {
     return;
   SerialDev_t *ser = ptr;
   RingPutByte(ser->rxBuf, code);
-  if (ser->rxReq)
-    IoReqNotifyFromISR(ser->rxReq);
+  if (ser->rxTask) {
+    NotifySendFromISR(ser->rxTask, NB_IRQ);
+    DPRINTF("serial: reader wakeup!\n");
+  } else {
+    EventNotifyFromISR(&ser->readEvent);
+    DPRINTF("serial: notify read listeners!\n");
+  }
 }
 
 Device_t *SerialInit(unsigned baud) {
+  SerialDev_t *ser = SerialDev;
+
   klog("[Serial] Initializing driver!\n");
 
   custom.serper = CLOCK / baud - 1;
 
-  SerialDev->rxLock = xSemaphoreCreateMutex();
-  SerialDev->txLock = xSemaphoreCreateMutex();
-  SerialDev->rxBuf = RingAlloc(BUFLEN);
-  SerialDev->txBuf = RingAlloc(BUFLEN);
+  ser->rxLock = xSemaphoreCreateMutex();
+  ser->txLock = xSemaphoreCreateMutex();
+  ser->rxBuf = RingAlloc(BUFLEN);
+  ser->txBuf = RingAlloc(BUFLEN);
 
-  SetIntVec(TBE, SendIntHandler, SerialDev);
-  SetIntVec(RBF, RecvIntHandler, SerialDev);
+  EventWaitListInit(&ser->readEvent);
+  EventWaitListInit(&ser->writeEvent);
+
+  SetIntVec(TBE, SendIntHandler, ser);
+  SetIntVec(RBF, RecvIntHandler, ser);
 
   ClearIRQ(INTF_TBE | INTF_RBF);
   EnableINT(INTF_TBE | INTF_RBF);
 
-  Device_t *dev;
-  AddDevice("serial", &SerialOps, &dev);
-  dev->data = SerialDev;
-  return dev;
+  return AddDeviceAux("serial", &SerialOps, SerialDev);
 }
 
 void SerialKill(void) {
@@ -99,34 +113,31 @@ void SerialKill(void) {
 static int SerialWrite(Device_t *dev, IoReq_t *req) {
   SerialDev_t *ser = dev->data;
   size_t n = req->left;
+  int error = 0;
 
-  /* Should continue processing asynchronous request? */
-  if (ser->txReq == req) {
-    taskENTER_CRITICAL();
-  } else {
-    xSemaphoreTake(ser->txLock, portMAX_DELAY);
-    taskENTER_CRITICAL();
-    ser->txReq = req;
-  }
+  xSemaphoreTake(ser->txLock, portMAX_DELAY);
+  taskENTER_CRITICAL();
+
+  ser->txTask = xTaskGetCurrentTaskHandle();
 
   /* Write all data to transmit buffer. This may involve waiting for the
    * interupt handler to free enough space in the ring buffer. */
-  for (;;) {
+  do {
     RingWrite(ser->txBuf, req);
     if (!req->left)
       break;
-    if (req->async) {
-      /* Asynchronous mode: if the request was partially filled then return with
-       * short count, otherwise signify that we would have blocked and leave
-       * without finishing the request. */
+    if (req->nonblock) {
+      /* Nonblocking mode: if the request was partially filled then return with
+       * short count, otherwise signify that we would have blocked and leave. */
       if (req->left < n)
         break;
       DPRINTF("serial: tx buffer full!\n");
-      taskEXIT_CRITICAL();
-      return EAGAIN;
+      error = EAGAIN;
+      break;
     }
-    IoReqNotifyWait(req, NULL);
-  }
+  } while (NotifyWait(NB_IRQ, portMAX_DELAY));
+
+  ser->txTask = NULL;
 
   /* Trigger interrupt if transmit buffer is empty. */
   if (custom.serdatr & SERDATF_TBE) {
@@ -134,43 +145,51 @@ static int SerialWrite(Device_t *dev, IoReq_t *req) {
     DPRINTF("serial: initiate tx!\n");
   }
 
-  /* Finish processing the request. */
   DPRINTF("serial: tx request finished!\n");
-  ser->txReq = NULL;
   taskEXIT_CRITICAL();
   xSemaphoreGive(ser->txLock);
 
-  return 0;
+  return error;
 }
 
 static int SerialRead(Device_t *dev, IoReq_t *req) {
   SerialDev_t *ser = dev->data;
+  int error = 0;
 
-  /* Should continue processing asynchronous request? */
-  if (ser->rxReq == req) {
-    taskENTER_CRITICAL();
-  } else {
-    xSemaphoreTake(ser->rxLock, portMAX_DELAY);
-    taskENTER_CRITICAL();
-    ser->rxReq = req;
-  }
+  xSemaphoreTake(ser->rxLock, portMAX_DELAY);
+  taskENTER_CRITICAL();
+
+  ser->rxTask = xTaskGetCurrentTaskHandle();
 
   /* Wait for the interrupt handler to put data into the ring buffer. */
   while (RingEmpty(ser->rxBuf)) {
-    if (req->async) {
-      /* Asynchronous mode: if there's no data in the ring buffer signify that
-       * we would have blocked and leave without finishing the request. */
-      taskEXIT_CRITICAL();
-      return EAGAIN;
+    /* Nonblocking mode: if there's no data in the ring buffer signify that
+     * we would have blocked and leave. */
+    if (req->nonblock) {
+      error = EAGAIN;
+      break;
     }
-    IoReqNotifyWait(req, NULL);
+    (void)NotifyWait(NB_IRQ, portMAX_DELAY);
   }
 
-  /* Finish processing the request. */
-  RingRead(ser->rxBuf, req);
-  ser->rxReq = NULL;
+  ser->rxTask = NULL;
+
+  if (!error)
+    RingRead(ser->rxBuf, req);
+
+  DPRINTF("serial: rx request finished!\n");
   taskEXIT_CRITICAL();
   xSemaphoreGive(ser->rxLock);
 
-  return 0;
+  return error;
+}
+
+static int SerialEvent(Device_t *dev, EvKind_t ev) {
+  SerialDev_t *ser = dev->data;
+
+  if (ev == EV_READ)
+    return EventMonitor(&ser->readEvent);
+  if (ev == EV_WRITE)
+    return EventMonitor(&ser->writeEvent);
+  return EINVAL;
 }

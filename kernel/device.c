@@ -6,6 +6,7 @@
 #include <libkern.h>
 #include <string.h>
 #include <device.h>
+#include <event.h>
 #include <ioreq.h>
 #include <sys/errno.h>
 
@@ -159,4 +160,11 @@ static int DevSeek(File_t *f, long offset, int whence) {
 static int DevClose(File_t *f) {
   Atomic_Decrement_u32(&f->device->usecnt);
   return 0;
+}
+
+int DeviceEvent(Device_t *dev, EvKind_t ev) {
+  DeviceEvent_t event = dev->ops->event;
+  if (!event)
+    return ENOSYS;
+  return event(dev, ev);
 }

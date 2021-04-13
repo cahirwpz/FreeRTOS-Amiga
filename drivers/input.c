@@ -37,13 +37,13 @@ int InputEventRead(QueueHandle_t q, IoReq_t *io) {
     return EINVAL;
 
   do {
-    if (xQueueReceive(q, io->rbuf, io->async ? 0 : portMAX_DELAY)) {
+    if (xQueueReceive(q, io->rbuf, io->nonblock ? 0 : portMAX_DELAY)) {
       io->left -= sizeof(InputEvent_t);
       io->rbuf += sizeof(InputEvent_t);
       done++;
     } else if (done) {
       return 0;
-    } else if (io->async) {
+    } else if (io->nonblock) {
       return EAGAIN;
     }
   } while (io->left >= sizeof(InputEvent_t));

@@ -1,10 +1,7 @@
-#include <FreeRTOS/FreeRTOS.h>
-#include <FreeRTOS/semphr.h>
-
-#include <FreeRTOS/semphr.h>
 #include <interrupt.h>
 #include <cia.h>
 #include <device.h>
+#include <event.h>
 #include <input.h>
 #include <ioreq.h>
 #include <keyboard.h>
@@ -233,39 +230,34 @@ typedef enum KeyMod {
   MOD_SHIFT = MOD_LSHIFT | MOD_RSHIFT,
 } __packed KeyMod_t;
 
-static int KeyboardRead(Device_t *, IoReq_t *);
-
-static DeviceOps_t KeyboardOps = {
-  .read = KeyboardRead,
-};
-
 typedef struct KeyboardDev {
   IntServer_t intr;
   QueueHandle_t eventQ;
-  SemaphoreHandle_t lock;
-  IoReq_t *io;
+  EventWaitList_t readEvent;
   CIATimer_t *timer;
   KeyMod_t modifier;
   KeyCode_t code;
 } KeyboardDev_t;
 
+static int KeyboardRead(Device_t *, IoReq_t *);
+static int KeyboardEvent(Device_t *, EvKind_t);
+
+static DeviceOps_t KeyboardOps = {
+  .read = KeyboardRead,
+  .event = KeyboardEvent,
+};
+
 static int KeyboardRead(Device_t *dev, IoReq_t *io) {
   KeyboardDev_t *kbd = dev->data;
+  return InputEventRead(kbd->eventQ, io);
+}
 
-  if (kbd->io != io) {
-    xSemaphoreTake(kbd->lock, portMAX_DELAY);
-    kbd->io = io;
-  }
+static int KeyboardEvent(Device_t *dev, EvKind_t ev) {
+  KeyboardDev_t *kbd = dev->data;
 
-  int error;
-  if ((error = InputEventRead(kbd->eventQ, io)))
-    return error;
-
-  /* Finish processing the request. */
-  kbd->io = NULL;
-  xSemaphoreGive(kbd->lock);
-
-  return 0;
+  if (ev == EV_READ)
+    return EventMonitor(&kbd->readEvent);
+  return EINVAL;
 }
 
 static void ReadKeyEvent(KeyboardDev_t *kbd, uint8_t raw) {
@@ -290,11 +282,8 @@ static void ReadKeyEvent(KeyboardDev_t *kbd, uint8_t raw) {
   /* Report if not a dead key. */
   if (ev.value) {
     InputEventInjectFromISR(kbd->eventQ, &ev, 1);
-
-    if (kbd->io) {
-      IoReqNotifyFromISR(kbd->io);
-      DPRINTF("keyboard: send notification\n");
-    }
+    EventNotifyFromISR(&kbd->readEvent);
+    DPRINTF("keyboard: notify read listeners!\n");
   }
 }
 
@@ -326,8 +315,8 @@ Device_t *KeyboardInit(void) {
   kbd->timer = AcquireTimer(TIMER_ANY);
   DASSERT(kbd->timer != NULL);
 
-  kbd->lock = xSemaphoreCreateMutex();
   kbd->eventQ = InputEventQueueCreate();
+  EventWaitListInit(&kbd->readEvent);
 
   /* Register keyboard interrupt. */
   kbd->intr = INTSERVER(-10, (ISR_t)KeyboardIntHandler, (void *)kbd);

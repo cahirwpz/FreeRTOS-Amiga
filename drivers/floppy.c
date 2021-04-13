@@ -9,6 +9,8 @@
 #include <string.h>
 #include <libkern.h>
 #include <device.h>
+#include <msgport.h>
+#include <notify.h>
 #include <ioreq.h>
 #include <sys/errno.h>
 
@@ -22,8 +24,8 @@
 
 typedef struct FloppyDev {
   CIATimer_t *timer;
-  xTaskHandle ioTask;
-  QueueHandle_t ioQueue;
+  TaskHandle_t ioTask;
+  MsgPort_t *ioPort;
   DiskTrack_t *diskTrack;
 
   int16_t track;   /* track currently stored in `trackBuf` or -1 */
@@ -41,10 +43,10 @@ static FloppyDev_t FloppyDev[1];
 static void TrackTransferDone(void *ptr) {
   FloppyDev_t *fd = ptr;
   /* Send notification to waiting task. */
-  vTaskNotifyGiveFromISR(fd->ioTask, &xNeedRescheduleTask);
+  NotifySendFromISR(fd->ioTask, NB_IRQ);
 }
 
-static void FloppyReader(void *);
+static void FloppyIoTask(void *);
 static int FloppyReadWrite(Device_t *, IoReq_t *);
 
 static DeviceOps_t FloppyOps = {.read = FloppyReadWrite,
@@ -67,20 +69,16 @@ Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
   /* Handler that will wake up track reader task. */
   SetIntVec(DSKBLK, TrackTransferDone, fd);
 
-  fd->ioQueue = xQueueCreate(IOREQ_MAXNUM, sizeof(IoReq_t *));
-  DASSERT(fd->ioQueue != NULL);
-
-  xTaskCreate(FloppyReader, "FloppyReader", configMINIMAL_STACK_SIZE, FloppyDev,
+  xTaskCreate(FloppyIoTask, "FloppyIoTask", configMINIMAL_STACK_SIZE, fd,
               aFloppyIOTaskPrio, &fd->ioTask);
   DASSERT(fd->ioTask != NULL);
 
+  fd->ioPort = MsgPortCreate(fd->ioTask);
   fd->diskTrack = pvPortMallocChip(DISK_TRACK_SIZE);
   fd->track = -1;
   DASSERT(fd->diskTrack != NULL);
 
-  Device_t *dev;
-  AddDevice("floppy", &FloppyOps, &dev);
-  dev->data = FloppyDev;
+  Device_t *dev = AddDeviceAux("floppy", &FloppyOps, fd);
   dev->size = FLOPPY_SIZE;
   return dev;
 }
@@ -97,7 +95,7 @@ void FloppyKill(void) {
 
   ReleaseTimer(fd->timer);
   vTaskDelete(fd->ioTask);
-  vQueueDelete(fd->ioQueue);
+  MsgPortDelete(fd->ioPort);
 }
 
 /******************************************************************************/
@@ -265,7 +263,7 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
   custom.dsklen = dsklen;
 
   /* Wake up when the transfer finishes. */
-  (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+  (void)NotifyWait(NB_IRQ, portMAX_DELAY);
 
   if (cmd == WRITE)
     WaitTimerSleep(fd->timer, WRITE_SETTLE);
@@ -286,18 +284,23 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
   return 0;
 }
 
-static void FloppyReader(void *ptr) {
+static void FloppyIoTask(void *ptr) {
   FloppyDev_t *fd = ptr;
 
   FloppyHeadToTrack0(fd);
 
   for (;;) {
-    IoReq_t *io;
+    DPRINTF("[Floppy] Waiting for a request...\n");
 
-    if (!xQueueReceive(fd->ioQueue, &io, 1000 / portTICK_PERIOD_MS)) {
+    if (!NotifyWait(NB_MSGPORT, 1000 / portTICK_PERIOD_MS)) {
       FloppyMotorOff(fd);
       continue;
     }
+
+    Msg_t *msg = GetMsg(fd->ioPort);
+    DASSERT(msg != NULL);
+
+    IoReq_t *io = msg->data;
 
     DPRINTF("[Floppy] %s(%d, %d)\n", io->write ? "Write" : "Read", io->offset,
             io->left);
@@ -352,7 +355,7 @@ static void FloppyReader(void *ptr) {
       FloppyReadWriteTrack(fd, WRITE, track);
 
     io->error = 0;
-    IoReqNotify(io);
+    ReplyMsg(msg);
   }
 }
 
@@ -364,7 +367,6 @@ static int FloppyReadWrite(Device_t *dev, IoReq_t *io) {
     io->left = FLOPPY_SIZE - io->offset;
   if (io->left == 0)
     return 0;
-  xQueueSend(fd->ioQueue, &io, portMAX_DELAY);
-  IoReqNotifyWait(io, NULL);
+  DoMsg(fd->ioPort, &MSG(io));
   return io->error;
 }

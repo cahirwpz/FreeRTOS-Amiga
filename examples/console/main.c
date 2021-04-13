@@ -4,10 +4,12 @@
 #include <console.h>
 #include <device.h>
 #include <file.h>
+#include <event.h>
 #include <input.h>
 #include <interrupt.h>
 #include <ioreq.h>
 #include <keyboard.h>
+#include <notify.h>
 #include <libkern.h>
 #include <mouse.h>
 
@@ -23,53 +25,48 @@ static const char *EventName[] = {
   [IE_KEYBOARD_DOWN] = "keyboard key down",
 };
 
-#define MOUSE BIT(0)
-#define KEYBOARD BIT(1)
+static int ReadInputEvent(Device_t *dev, InputEvent_t *ev) {
+  IoReq_t io = IOREQ_READ_NB(0, ev, sizeof(InputEvent_t));
+  return !dev->ops->read(dev, &io);
+}
 
-static void vInputTask(void *data) {
-  File_t *cons = data;
+static void vInputTask(void *data __unused) {
+  File_t *cons = kopen("console", O_RDWR);
   Device_t *ms = MouseInit();
   Device_t *kbd = KeyboardInit();
 
-  IoReq_t kbdIo, msIo;
-  InputEvent_t ev;
-  uint32_t value = 0;
+  (void)DeviceEvent(ms, EV_READ);
+  (void)DeviceEvent(kbd, EV_READ);
 
-  do {
-    int kbdErr, msErr;
+  while (NotifyWait(NB_EVENT, portMAX_DELAY)) {
+    InputEvent_t ev;
 
-    do {
-      kbdIo = IOREQ_READ(0, &ev, sizeof(InputEvent_t));
-      kbdIo.async = 1;
-      kbdIo.notifyBits = KEYBOARD;
+    while (ReadInputEvent(kbd, &ev)) {
+      char c = (ev.value >= 0x20 && ev.value < 0x7f) ? ev.value : ' ';
+      kfprintf(cons, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
+               (uint16_t)ev.value, c);
+    }
 
-      if (!(kbdErr = kbd->ops->read(kbd, &kbdIo))) {
-        char c = (ev.value >= 0x20 && ev.value < 0x7f) ? ev.value : ' ';
-        kfprintf(cons, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
-                 (uint16_t)ev.value, c);
+    while (ReadInputEvent(ms, &ev)) {
+      static short x = 0, y = 0;
+
+      kfprintf(cons, "%s: value = %d\n", EventName[ev.kind], ev.value);
+
+      if (ev.kind == IE_MOUSE_DELTA_X) {
+        x += ev.value;
+        x = max(0, x);
+        x = min(x, 319);
       }
 
-      msIo = IOREQ_READ(0, &ev, sizeof(InputEvent_t));
-      msIo.async = 1;
-      msIo.notifyBits = KEYBOARD;
-
-      if (!(msErr = ms->ops->read(ms, &msIo))) {
-        static short x = 0, y = 0;
-        kfprintf(cons, "%s: value = %d\n", EventName[ev.kind], ev.value);
-        if (ev.kind == IE_MOUSE_DELTA_X) {
-          x += ev.value;
-          x = max(0, x);
-          x = min(x, 319);
-        }
-        if (ev.kind == IE_MOUSE_DELTA_Y) {
-          y += ev.value;
-          y = max(0, y);
-          y = min(y, 255);
-        }
-        ConsoleMovePointer(x, y);
+      if (ev.kind == IE_MOUSE_DELTA_Y) {
+        y += ev.value;
+        y = max(0, y);
+        y = min(y, 255);
       }
-    } while (!kbdErr || !msErr);
-  } while (xTaskNotifyWait(0, MOUSE | KEYBOARD, &value, portMAX_DELAY));
+
+      ConsoleMovePointer(x, y);
+    }
+  }
 }
 
 static void SystemClockTickHandler(__unused void *data) {
@@ -91,9 +88,7 @@ int main(void) {
 
   (void)ConsoleInit();
 
-  File_t *cons = kopen("console", O_RDWR);
-
-  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, cons,
+  xTaskCreate(vInputTask, "input", configMINIMAL_STACK_SIZE, NULL,
               mainINPUT_TASK_PRIORITY, &input_handle);
 
   vTaskStartScheduler();
