@@ -3,6 +3,7 @@
 #include <FreeRTOS/semphr.h>
 
 #include <driver.h>
+#include <memory.h>
 #include <floppy.h>
 #include <interrupt.h>
 #include <file.h>
@@ -42,7 +43,7 @@ static uint32_t FastRand(void) {
 extern uint32_t crc32(const uint8_t *frame, size_t frame_len);
 
 static void vReaderTask(File_t *fd) {
-  void *data = pvPortMalloc(SECTOR_SIZE);
+  void *data = MemAlloc(SECTOR_SIZE, 0);
 
   for (;;) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -72,7 +73,7 @@ static void vReaderTask(File_t *fd) {
 }
 
 static void vWriterTask(File_t *fd) {
-  uint32_t *data = pvPortMalloc(SECTOR_SIZE);
+  uint32_t *data = MemAlloc(SECTOR_SIZE, 0);
   DASSERT(data != NULL);
 
   for (;;) {

@@ -8,7 +8,7 @@
 #include <trap.h>
 #include <cpu.h>
 #include <boot.h>
-#include <libkern.h>
+#include <debug.h>
 
 extern void vPortStartFirstTask(void);
 extern void vPortYieldHandler(void);
@@ -156,11 +156,11 @@ void vPortSetupExceptionVector(BootData_t *aBootData) {
 }
 
 void vApplicationMallocFailedHook(void) {
-  klog("Memory exhausted!\n");
+  Log("Memory exhausted!\n");
   portPANIC();
 }
 
 void vApplicationStackOverflowHook(void) {
-  klog("Stack overflow!\n");
+  Log("Stack overflow!\n");
   portPANIC();
 }

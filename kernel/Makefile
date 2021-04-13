@@ -8,7 +8,7 @@ SOURCES = amigahunk.c \
 	  event.c \
 	  intr.S \
 	  intsrv.c \
-	  malloc.c \
+	  memory.c \
 	  msgport.c \
 	  notify.c \
 	  pipe.c \

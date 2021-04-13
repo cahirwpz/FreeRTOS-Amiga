@@ -8,7 +8,7 @@
 #include <event.h>
 #include <notify.h>
 #include <ioreq.h>
-#include <libkern.h>
+#include <memory.h>
 #include <string.h>
 #include <sys/errno.h>
 
@@ -79,7 +79,7 @@ int AddTtyDevFile(const char *name, File_t *cons) {
   TtyState_t *tty;
   int error;
 
-  if (!(tty = kmalloc(sizeof(TtyState_t))))
+  if (!(tty = MemAlloc(sizeof(TtyState_t), 0)))
     return ENOMEM;
   tty->cons = cons;
   tty->cons->nonblock = 1;

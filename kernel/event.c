@@ -2,7 +2,7 @@
 #include <FreeRTOS/task.h>
 
 #include <event.h>
-#include <libkern.h>
+#include <memory.h>
 #include <notify.h>
 #include <sys/errno.h>
 
@@ -18,7 +18,7 @@ void EventNotifyFromISR(EventWaitList_t *wl) {
 
 int EventMonitor(EventWaitList_t *wl) {
   TaskHandle_t listener = xTaskGetCurrentTaskHandle();
-  EventWaitNote_t *note = kcalloc(1, sizeof(EventWaitNote_t));
+  EventWaitNote_t *note = MemAlloc(sizeof(EventWaitNote_t), MF_ZERO);
   int error = 0;
 
   taskENTER_CRITICAL();
@@ -38,7 +38,7 @@ int EventMonitor(EventWaitList_t *wl) {
   taskEXIT_CRITICAL();
 
   if (error)
-    kfree(note);
+    MemFree(note);
 
   return error;
 }

@@ -2,7 +2,8 @@
 #include <FreeRTOS/task.h>
 
 #include <interrupt.h>
-#include <libkern.h>
+#include <debug.h>
+#include <memory.h>
 #include <stdlib.h>
 
 #define RED_TASK_PRIORITY 2
@@ -25,8 +26,8 @@ static void RandMalloc(void) {
     return;
 
   int sz = 1 + (rand() % MAXBLKSZ);
-  void *p = kmalloc(sz);
-  klog("malloc(%d) = %x\n", sz, p);
+  void *p = MemAlloc(sz, 0);
+  Log("malloc(%d) = %x\n", sz, p);
   Slot[FreeSlot++] = p;
 }
 
@@ -36,8 +37,8 @@ static void RandFree(void) {
 
   int n = rand() % FreeSlot;
   void *p = Slot[n];
-  kfree(p);
-  klog("free(%p)\n", p);
+  MemFree(p);
+  Log("free(%p)\n", p);
   Slot[n] = NULL;
 
   int last = --FreeSlot;
@@ -52,15 +53,15 @@ static void RandRealloc(void) {
   int n = rand() % FreeSlot;
   void *p = Slot[n];
   int sz = 1 + (rand() % MAXBLKSZ);
-  void *q = krealloc(p, sz);
-  klog("realloc(%p, %d) = %p\n", p, sz, q);
+  void *q = MemRealloc(p, sz);
+  Log("realloc(%p, %d) = %p\n", p, sz, q);
   Slot[n] = q;
 }
 
 static void vTestHeapTask(__unused void *data) {
   for (short i = 0; i < NSLOTS * 3 / 4; i++)
     RandMalloc();
-  kmcheck(0);
+  MemCheck(0);
 
   for (;;) {
     int c = rand() % 4;
@@ -70,7 +71,7 @@ static void vTestHeapTask(__unused void *data) {
       RandFree();
     else
       RandRealloc();
-    kmcheck(0);
+    MemCheck(0);
     vTaskDelay(1);
   }
 }

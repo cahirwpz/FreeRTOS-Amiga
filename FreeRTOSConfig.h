@@ -84,10 +84,4 @@ void vPortTrapHandler(struct TrapFrame *);
 void vPortDefineMemoryRegions(struct MemRegion *);
 void vPortSetupExceptionVector(struct BootData *);
 
-/* Allocate chip memory, should be freed with vPortFree. */
-void *pvPortMallocChip(size_t size);
-
-/* Check consistency of heap allocator structures. */
-void vPortMemCheck(int verbose);
-
 #endif /* FREERTOS_CONFIG_H */

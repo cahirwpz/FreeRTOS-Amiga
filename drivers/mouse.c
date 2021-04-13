@@ -7,7 +7,6 @@
 #include <ioreq.h>
 #include <driver.h>
 #include <strings.h>
-#include <libkern.h>
 #include <sys/errno.h>
 
 #define DEBUG 0

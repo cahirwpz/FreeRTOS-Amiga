@@ -11,7 +11,7 @@
 #include <driver.h>
 #include <devfile.h>
 #include <ioreq.h>
-#include <libkern.h>
+#include <memory.h>
 #include <string.h>
 #include <sys/errno.h>
 
@@ -102,8 +102,8 @@ int ConsoleAttach(Driver_t *drv) {
   BitmapInit(&cons->bm, WIDTH, HEIGHT + FONT_H, DEPTH, 0);
 
   cons->rowsize = muls16(FONT_H, cons->bm.bytesPerRow);
-  cons->rowptr = kmalloc(sizeof(void *) * (NROW + 1));
-  cons->rowins = kmalloc(sizeof(CopIns_t *) * NROW);
+  cons->rowptr = MemAlloc(sizeof(void *) * (NROW + 1), 0);
+  cons->rowins = MemAlloc(sizeof(CopIns_t *) * NROW, 0);
 
   for (short i = 0; i < NROW + 1; i++)
     cons->rowptr[i] = cons->bm.planes[0] + muls16(i, cons->rowsize);

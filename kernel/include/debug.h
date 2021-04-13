@@ -1,9 +1,12 @@
 #pragma once
 
+#include <uae.h>
+
+#define Log(...) UaeLog(__VA_ARGS__)
+
 #if DEBUG
 #include <FreeRTOSConfig.h>
 #include <portmacro.h>
-#include <uae.h>
 
 #define DASSERT(x) configASSERT(x)
 #define DPRINTF(...) UaeLog(__VA_ARGS__)

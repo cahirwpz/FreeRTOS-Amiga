@@ -1,4 +1,3 @@
-#include <libkern.h>
 #include <file.h>
 
 static const char hex2char[16] = "0123456789abcdef";

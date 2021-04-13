@@ -1,24 +1,25 @@
 #include <driver.h>
-#include <libkern.h>
+#include <debug.h>
+#include <memory.h>
 #include <sys/errno.h>
 
 int DeviceAttach(Driver_t *drv) {
-  drv->state = kcalloc(1, drv->size);
+  drv->state = MemAlloc(drv->size, MF_ZERO);
   if (!drv->state)
     return ENOMEM;
-  klog("Attaching '%s' driver.\n", drv->name);
+  Log("Attaching '%s' driver.\n", drv->name);
   int error = drv->attach(drv);
   if (!error)
     return 0;
-  kfree(drv->state);
+  MemFree(drv->state);
   return error;
 }
 
 int DeviceDetach(Driver_t *drv) {
-  klog("Detaching '%s' driver.\n", drv->name);
+  Log("Detaching '%s' driver.\n", drv->name);
   int error = drv->detach(drv);
   if (error)
     return error;
-  kfree(drv->state);
+  MemFree(drv->state);
   return 0;
 }

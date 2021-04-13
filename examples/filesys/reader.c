@@ -2,7 +2,7 @@
 #include <FreeRTOS/task.h>
 
 #include <stdlib.h>
-#include <libkern.h>
+#include <memory.h>
 
 #include "filesys.h"
 
@@ -30,7 +30,7 @@ static void vReaderTask(__unused void *data) {
   FsMount();
 
   unsigned seed = (intptr_t)xTaskGetCurrentTaskHandle();
-  uint8_t *buf = pvPortMalloc(BUFSIZE);
+  uint8_t *buf = MemAlloc(BUFSIZE, 0);
   int n = DirectorySize();
 
   for (;;) {

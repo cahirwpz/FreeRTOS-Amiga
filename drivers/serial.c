@@ -3,7 +3,6 @@
 
 #include <custom.h>
 #include <interrupt.h>
-#include <libkern.h>
 #include <driver.h>
 #include <ring.h>
 #include <event.h>

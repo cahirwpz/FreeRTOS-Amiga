@@ -3,7 +3,8 @@
 #include <FreeRTOS/atomic.h>
 
 #include <file.h>
-#include <libkern.h>
+#include <debug.h>
+#include <memory.h>
 #include <string.h>
 #include <devfile.h>
 #include <event.h>
@@ -50,7 +51,7 @@ int AddDevFile(const char *name, DevFileOps_t *ops, DevFile_t **devp) {
     goto leave;
   }
 
-  if (!(dev = kmalloc(sizeof(DevFile_t)))) {
+  if (!(dev = MemAlloc(sizeof(DevFile_t), 0))) {
     error = ENOMEM;
     goto leave;
   }
@@ -63,7 +64,7 @@ int AddDevFile(const char *name, DevFileOps_t *ops, DevFile_t **devp) {
   if (devp)
     *devp = dev;
 
-  klog("Registered \'%s\' device file.\n", name);
+  Log("Registered \'%s\' device file.\n", name);
 
 leave:
   xTaskResumeAll();
@@ -82,7 +83,7 @@ int OpenDevFile(const char *name, File_t **fp) {
     goto leave;
   }
 
-  if (!(f = kcalloc(1, sizeof(File_t)))) {
+  if (!(f = MemAlloc(sizeof(File_t), MF_ZERO))) {
     error = ENOMEM;
     goto leave;
   }

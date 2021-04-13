@@ -3,7 +3,7 @@
 #include <amigahunk.h>
 #include <cpu.h>
 #include <trap.h>
-#include <libkern.h>
+#include <memory.h>
 #include <string.h>
 #include <strings.h>
 #include <proc.h>
@@ -40,7 +40,7 @@ void ProcFreeImage(Proc_t *proc) {
   Hunk_t *next;
   for (Hunk_t *hunk = proc->hunk; hunk != NULL; hunk = next) {
     next = hunk->next;
-    kfree(hunk);
+    MemFree(hunk);
   }
 }
 
@@ -52,7 +52,7 @@ void ProcInit(Proc_t *proc, size_t ustksz) {
   /* Align to long word size. */
   ustksz = (ustksz + 3) & -4;
   proc->ustksz = ustksz;
-  proc->ustk = kmalloc(ustksz);
+  proc->ustk = MemAlloc(ustksz, 0);
   bzero(proc->ustk, ustksz);
 
   proc->pid = pid++;
@@ -67,7 +67,7 @@ void ProcFini(Proc_t *proc) {
       FileClose(f);
   }
 
-  kfree(proc->ustk);
+  MemFree(proc->ustk);
 }
 
 #define PUSH(sp, v)                                                            \

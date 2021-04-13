@@ -1,13 +1,12 @@
-#include <cpu.h>
 #include <copper.h>
-#include <libkern.h>
+#include <memory.h>
 
 void CopListInit(CopList_t *list, uint16_t length) {
-  list->curr = list->list = kmalloc_chip(muls16(length, sizeof(CopIns_t)));
+  list->curr = list->list = MemAlloc(muls16(length, sizeof(CopIns_t)), MF_CHIP);
 }
 
 void CopListKill(CopList_t *list) {
-  kfree(list->list);
+  MemFree(list->list);
 }
 
 void CopListActivate(CopList_t *list) {

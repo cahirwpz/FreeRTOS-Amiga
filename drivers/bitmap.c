@@ -1,8 +1,7 @@
 #include <bitmap.h>
 #include <copper.h>
-#include <cpu.h>
 #include <string.h>
-#include <libkern.h>
+#include <memory.h>
 
 void CopSetupScreen(CopList_t *list, const Bitmap_t *bm, uint16_t mode,
                     uint16_t xs, uint16_t ys) {
@@ -32,7 +31,7 @@ void BitmapInit(Bitmap_t *bm, uint16_t width, uint16_t height, uint16_t depth,
   uint16_t bytesPerRow = ((width + 15) & ~15) / 8;
   int bplSize = muls16(bytesPerRow, height);
   long size = muls16(bplSize, depth);
-  void *planes = kmalloc_chip(size);
+  void *planes = MemAlloc(size, MF_CHIP);
   memset(planes, 0, size);
 
   bm->width = width;

@@ -1,10 +1,10 @@
-#include <FreeRTOS/FreeRTOS.h>
 #include <amigahunk.h>
 #include <strings.h>
 #include <stdlib.h>
-#include <libkern.h>
+#include <memory.h>
 
 #define DEBUG 0
+#include <debug.h>
 
 #define HUNK_CODE 1001
 #define HUNK_DATA 1002
@@ -39,8 +39,8 @@ static bool AllocHunks(File_t *fh, Hunk_t **hunkArray, short hunkCount) {
     /* size specifiers including memory attribute flags */
     uint32_t n = ReadLong(fh);
 
-    Hunk_t *hunk = ((n & HUNKF_CHIP) ? pvPortMallocChip : pvPortMalloc)(
-      sizeof(Hunk_t) + n * sizeof(int));
+    Hunk_t *hunk = MemAlloc(sizeof(Hunk_t) + n * sizeof(int),
+                            (n & HUNKF_CHIP) ? MF_CHIP : 0);
     *hunkArray++ = hunk;
 
     if (!hunk)
@@ -153,7 +153,7 @@ Hunk_t *LoadHunkList(File_t *fh) {
 void FreeHunkList(Hunk_t *hunk) {
   do {
     Hunk_t *next = hunk->next;
-    vPortFree(hunk);
+    MemFree(hunk);
     hunk = next;
   } while (hunk);
 }

@@ -7,11 +7,11 @@
 
 #include <driver.h>
 #include <string.h>
-#include <libkern.h>
 #include <devfile.h>
 #include <msgport.h>
 #include <notify.h>
 #include <ioreq.h>
+#include <memory.h>
 #include <sys/errno.h>
 
 #define __FLOPPY_DRIVER
@@ -70,7 +70,7 @@ static int FloppyAttach(Driver_t *drv) {
   DASSERT(flp->ioTask != NULL);
 
   flp->ioPort = MsgPortCreate(flp->ioTask);
-  flp->diskTrack = pvPortMallocChip(DISK_TRACK_SIZE);
+  flp->diskTrack = MemAlloc(DISK_TRACK_SIZE, MF_CHIP);
   flp->track = -1;
   DASSERT(flp->diskTrack != NULL);
 

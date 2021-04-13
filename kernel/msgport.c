@@ -4,7 +4,7 @@
 
 #include <msgport.h>
 #include <notify.h>
-#include <libkern.h>
+#include <memory.h>
 #include <sys/errno.h>
 
 #define DEBUG 0
@@ -16,7 +16,7 @@ struct MsgPort {
 };
 
 MsgPort_t *MsgPortCreate(TaskHandle_t owner) {
-  MsgPort_t *mp = kcalloc(1, sizeof(MsgPort_t));
+  MsgPort_t *mp = MemAlloc(sizeof(MsgPort_t), MF_ZERO);
   if (owner == NULL)
     portPANIC();
   mp->owner = owner;
@@ -26,7 +26,7 @@ MsgPort_t *MsgPortCreate(TaskHandle_t owner) {
 
 void MsgPortDelete(MsgPort_t *mp) {
   vQueueDelete(mp->queue);
-  kfree(mp);
+  MemFree(mp);
 }
 
 void DoMsg(MsgPort_t *mp, Msg_t *msg) {

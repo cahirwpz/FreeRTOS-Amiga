@@ -7,7 +7,7 @@
 #include <file.h>
 #include <filedesc.h>
 #include <proc.h>
-#include <libkern.h>
+#include <debug.h>
 #include <tty.h>
 
 static File_t *FloppyOpen(const char *path) {
@@ -27,7 +27,7 @@ static void vMainTask(__unused void *data) {
   if (ProcLoadImage(&p, init)) {
     ProcSetArgv(&p, (char *[]){"init", NULL});
     ProcEnter(&p);
-    klog("Program returned: %d\n", p.exitcode);
+    Log("Program returned: %d\n", p.exitcode);
   }
   ProcFini(&p);
 

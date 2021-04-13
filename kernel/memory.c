@@ -4,7 +4,9 @@
 #include <sys/cdefs.h>
 #include <limits.h>
 #include <string.h>
-#include <libkern.h>
+#include <strings.h>
+#include <memory.h>
+#include <debug.h>
 #include <boot.h>
 
 #if (configSUPPORT_DYNAMIC_ALLOCATION == 0)
@@ -356,7 +358,7 @@ static void *ar_realloc(arena_t *ar, void *old_ptr, size_t size) {
 
 #define msg(...)                                                               \
   if (verbose) {                                                               \
-    klog(__VA_ARGS__);                                                         \
+    Log(__VA_ARGS__);                                                          \
   }
 
 static void ar_check(arena_t *ar, int verbose) {
@@ -456,32 +458,21 @@ void *pvPortMalloc(size_t xSize) {
   return _pvPortMallocBelow(xSize, MEM_ANY);
 }
 
-__strong_alias(kmalloc, pvPortMalloc);
-
-void *pvPortMallocChip(size_t xSize) {
-  return _pvPortMallocBelow(xSize, MEM_CHIP);
+void *MemAlloc(size_t xSize, MemFlags_t flags) {
+  void *ptr = _pvPortMallocBelow(xSize, (flags & MF_CHIP) ? MEM_CHIP : MEM_ANY);
+  if (ptr && (flags & MF_ZERO))
+    bzero(ptr, xSize);
+  return ptr;
 }
-
-__strong_alias(kmalloc_chip, pvPortMallocChip);
 
 void vPortFree(void *p) {
   if (p != NULL)
     ar_free(arena_of(p), p);
 }
 
-__strong_alias(kfree, vPortFree);
+__strong_alias(MemFree, vPortFree);
 
-void *pvPortCalloc(size_t nmemb, size_t size) {
-  size_t bytes = nmemb * size;
-  void *new_ptr = pvPortMalloc(bytes);
-  if (new_ptr)
-    memset(new_ptr, 0, bytes);
-  return new_ptr;
-}
-
-__strong_alias(kcalloc, pvPortCalloc);
-
-void *pvPortRealloc(void *old_ptr, size_t size) {
+void *MemRealloc(void *old_ptr, size_t size) {
   void *new_ptr;
 
   if (size == 0) {
@@ -507,14 +498,10 @@ void *pvPortRealloc(void *old_ptr, size_t size) {
   return NULL;
 }
 
-__strong_alias(krealloc, pvPortRealloc);
-
-void vPortMemCheck(int verbose) {
+void MemCheck(int verbose) {
   for (const MemRegion_t *mr = MemRegions; mr->mr_upper; mr++)
     ar_check(arena(mr), verbose);
 }
-
-__strong_alias(kmcheck, vPortMemCheck);
 
 size_t xPortGetFreeHeapSize(void) {
   size_t sum = 0;

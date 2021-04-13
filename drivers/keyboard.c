@@ -6,7 +6,6 @@
 #include <ioreq.h>
 #include <driver.h>
 #include <keysym.h>
-#include <libkern.h>
 #include <sys/errno.h>
 
 #define DEBUG 0
