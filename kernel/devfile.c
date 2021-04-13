@@ -10,8 +10,8 @@
 #include <ioreq.h>
 #include <sys/errno.h>
 
-static int DevRead(File_t *, void *, size_t, long *);
-static int DevWrite(File_t *, const void *, size_t, long *);
+static int DevRead(File_t *, IoReq_t *);
+static int DevWrite(File_t *, IoReq_t *);
 static int DevIoctl(File_t *, u_long cmd, void *);
 static int DevSeek(File_t *, long, int);
 static int DevClose(File_t *);
@@ -101,26 +101,18 @@ leave:
   return error;
 }
 
-static int DevRead(File_t *f, void *buf, size_t len, long *donep) {
+static int DevRead(File_t *f, IoReq_t *io) {
   DevFileRead_t read = f->device->ops->read;
   if (!read)
     return ENOSYS;
-
-  IoReq_t req = IOREQ_READ(f->offset, buf, len, f->nonblock);
-  int error = read(f->device, &req);
-  *donep = len - req.left;
-  return error;
+  return read(f->device, io);
 }
 
-static int DevWrite(File_t *f, const void *buf, size_t len, long *donep) {
+static int DevWrite(File_t *f, IoReq_t *io) {
   DevFileWrite_t write = f->device->ops->write;
   if (!write)
     return ENOSYS;
-
-  IoReq_t req = IOREQ_WRITE(f->offset, buf, len, f->nonblock);
-  int error = write(f->device, &req);
-  *donep = len - req.left;
-  return error;
+  return write(f->device, io);
 }
 
 static int DevIoctl(File_t *f, u_long cmd, void *data) {

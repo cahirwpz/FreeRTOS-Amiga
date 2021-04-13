@@ -35,9 +35,9 @@ static void vReaderTask(__unused void *data) {
 
   for (;;) {
     File_t *f = OpenNthFile(rand_r(&seed) % n);
-    size_t nbyte;
+    long nbyte;
     do {
-      nbyte = kfread(f, buf, 1 + rand_r(&seed) % BUFSIZE);
+      FileRead(f, buf, 1 + rand_r(&seed) % BUFSIZE, &nbyte);
       vTaskDelay((750 + rand_r(&seed) % 250) / portTICK_PERIOD_MS);
     } while (nbyte != 0);
     FileClose(f);

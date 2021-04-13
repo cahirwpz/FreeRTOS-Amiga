@@ -5,7 +5,7 @@
 #include <driver.h>
 #include <floppy.h>
 #include <interrupt.h>
-#include <libkern.h>
+#include <file.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -15,12 +15,12 @@
 
 static void vPlusTask(File_t *ser) {
   for (;;)
-    kfputchar(ser, '-');
+    FileWrite(ser, "-", 1, NULL);
 }
 
 static void vMinusTask(File_t *ser) {
   for (;;)
-    kfputchar(ser, '+');
+    FileWrite(ser, "+", 1, NULL);
 }
 
 #define ALLSECS (NTRACKS * NSECTORS)
@@ -52,8 +52,8 @@ static void vReaderTask(File_t *fd) {
       xSemaphoreTake(SectorCksumLock, portMAX_DELAY);
       cksum = SectorCksum[s];
       if (cksum) {
-        kfseek(fd, s * SECTOR_SIZE, SEEK_SET);
-        kfread(fd, data, SECTOR_SIZE);
+        FileSeek(fd, s * SECTOR_SIZE, SEEK_SET, NULL);
+        FileRead(fd, data, SECTOR_SIZE, NULL);
       }
       xSemaphoreGive(SectorCksumLock);
 
@@ -85,8 +85,8 @@ static void vWriterTask(File_t *fd) {
 
     xSemaphoreTake(SectorCksumLock, portMAX_DELAY);
     SectorCksum[s] = 0;
-    kfseek(fd, s * SECTOR_SIZE, SEEK_SET);
-    kfwrite(fd, data, SECTOR_SIZE);
+    FileSeek(fd, s * SECTOR_SIZE, SEEK_SET, NULL);
+    FileWrite(fd, data, SECTOR_SIZE, NULL);
     xSemaphoreGive(SectorCksumLock);
 
     uint32_t cksum = crc32((void *)data, SECTOR_SIZE);
@@ -126,8 +126,8 @@ int main(void) {
   DeviceAttach(&Serial);
   DeviceAttach(&Floppy);
 
-  File_t *ser = kopen("serial", O_RDWR);
-  File_t *fd = kopen("floppy", O_RDWR);
+  File_t *ser = FileOpen("serial", O_RDWR);
+  File_t *fd = FileOpen("floppy", O_RDWR);
 
   SectorCksumLock = xSemaphoreCreateMutex();
 

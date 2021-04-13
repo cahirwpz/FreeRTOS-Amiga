@@ -2,6 +2,8 @@
 #include <FreeRTOS/atomic.h>
 
 #include <event.h>
+#include <ioreq.h>
+#include <devfile.h>
 #include <file.h>
 #include <sys/errno.h>
 
@@ -16,22 +18,32 @@ void FileDrop(File_t *f) {
 }
 
 int FileRead(File_t *f, void *buf, size_t nbyte, long *donep) {
-  if (!f->ops->read)
+  FileRdWr_t read = f->ops->read;
+  if (!read)
     return ENOSYS;
   if (!f->readable)
     return EINVAL;
-  int error = f->ops->read(f, buf, nbyte, donep);
+  IoReq_t io = IOREQ_READ(f->offset, buf, nbyte, f->nonblock);
+  int error = read(f, &io);
+  long done = nbyte - io.left;
+  if (donep)
+    *donep = done;
   if (!error && f->seekable)
-    f->offset += *donep;
+    f->offset += done;
   return error;
 }
 
 int FileWrite(File_t *f, const void *buf, size_t nbyte, long *donep) {
-  if (!f->ops->write)
+  FileRdWr_t write = f->ops->write;
+  if (!write)
     return ENOSYS;
   if (!f->writable)
     return EINVAL;
-  int error = f->ops->write(f, buf, nbyte, donep);
+  IoReq_t io = IOREQ_WRITE(f->offset, buf, nbyte, f->nonblock);
+  int error = write(f, &io);
+  long done = nbyte - io.left;
+  if (donep)
+    *donep = done;
   if (!error && f->seekable)
     f->offset += *donep;
   return error;
@@ -43,12 +55,37 @@ int FileIoctl(File_t *f, u_long cmd, void *data) {
   return f->ops->ioctl(f, cmd, data);
 }
 
-int FileSeek(File_t *f, long offset, int whence) {
+int FileSeek(File_t *f, long offset, int whence, long *newoffp) {
   if (!f->seekable)
     return ESPIPE;
   if (!f->ops->seek)
     return ENOSYS;
-  return f->ops->seek(f, offset, whence);
+  int error = f->ops->seek(f, offset, whence);
+  if (newoffp)
+    *newoffp = f->offset;
+  return error;
+}
+
+File_t *FileOpen(const char *name, int oflag) {
+  File_t *f;
+
+  if (OpenDevFile(name, &f))
+    return NULL;
+
+  int accmode = oflag & O_ACCMODE;
+  if (accmode == O_RDONLY) {
+    f->readable = 1;
+  } else if (accmode == O_WRONLY) {
+    f->writable = 1;
+  } else if (accmode == O_RDWR) {
+    f->readable = 1;
+    f->writable = 1;
+  }
+
+  if (oflag & O_NONBLOCK)
+    f->nonblock = 1;
+
+  return f;
 }
 
 int FileClose(File_t *f) {

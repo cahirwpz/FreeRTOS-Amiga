@@ -16,7 +16,7 @@ static File_t *FloppyOpen(const char *path) {
 }
 
 static void vMainTask(__unused void *data) {
-  File_t *ser = kopen("tty", O_RDWR);
+  File_t *ser = FileOpen("tty", O_RDWR);
   File_t *init = FloppyOpen("init");
 
   Proc_t p;
@@ -41,7 +41,7 @@ int main(void) {
   portNOP(); /* Breakpoint for simulator. */
 
   DeviceAttach(&Serial);
-  AddTtyDevFile("tty", kopen("serial", O_RDWR));
+  AddTtyDevFile("tty", FileOpen("serial", O_RDWR));
 
   xTaskCreate(vMainTask, "main", KPROC_STKSZ, NULL, 0, &handle);
 

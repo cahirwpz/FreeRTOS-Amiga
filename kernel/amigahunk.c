@@ -20,12 +20,16 @@
 
 static long ReadLong(File_t *fh) {
   long v = 0;
-  kfread(fh, &v, sizeof(v));
+  FileRead(fh, &v, sizeof(v), NULL);
   return v;
 }
 
+static void ReadLongArray(File_t *fh, void *array, int n) {
+  FileRead(fh, array, n * sizeof(int), NULL);
+}
+
 static void SkipLongs(File_t *fh, int n) {
-  kfseek(fh, n * sizeof(int), SEEK_CUR);
+  FileSeek(fh, n * sizeof(int), SEEK_CUR, NULL);
 }
 
 static bool AllocHunks(File_t *fh, Hunk_t **hunkArray, short hunkCount) {
@@ -68,7 +72,7 @@ static bool LoadHunks(File_t *fh, Hunk_t **hunkArray) {
       hunkRoot = true;
       n = ReadLong(fh);
       if (hunkId != HUNK_BSS)
-        kfread(fh, hunk->data, n * sizeof(int));
+        ReadLongArray(fh, hunk->data, n);
 #if DEBUG
       {
         const char *hunkType;

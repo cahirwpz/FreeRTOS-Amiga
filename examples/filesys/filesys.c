@@ -45,11 +45,11 @@ typedef struct FsMsg {
   } response;
 } FsMsg_t;
 
-static int FsRead(FsFile_t *f, void *buf, size_t nbyte, long *donep);
+static int FsRead(FsFile_t *f, IoReq_t *io);
 static int FsSeek(FsFile_t *f, long offset, int whence);
 static int FsClose(FsFile_t *f);
 
-static FileOps_t FsOps = {.read = (FileRead_t)FsRead,
+static FileOps_t FsOps = {.read = (FileRdWr_t)FsRead,
                           .seek = (FileSeek_t)FsSeek,
                           .close = (FileClose_t)FsClose};
 
@@ -94,9 +94,9 @@ static int FsClose(FsFile_t *ff) {
   return FsSendMsg(&msg);
 }
 
-static int FsRead(FsFile_t *ff, void *buf, size_t nbyte, long *donep) {
+static int FsRead(FsFile_t *ff, IoReq_t *io) {
   FsMsg_t msg = {.cmd = FS_READ};
-  (void)ff, (void)buf, (void)nbyte, (void)donep;
+  (void)ff, (void)io;
   return FsSendMsg(&msg);
 }
 

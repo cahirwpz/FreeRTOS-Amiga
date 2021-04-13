@@ -1,5 +1,5 @@
 #include <libkern.h>
-#include <custom.h>
+#include <file.h>
 
 static const char hex2char[16] = "0123456789abcdef";
 
@@ -29,13 +29,13 @@ void kfhexdump(File_t *f, void *ptr, size_t length) {
       *s++ = ' ';
     if ((i & 15) == 15) {
       *s++ = '\n';
-      kfwrite(f, buf, s - buf);
+      FileWrite(f, buf, s - buf, NULL);
       s = buf;
     }
   }
   if (s > buf) {
     *s++ = '\n';
-    kfwrite(f, buf, s - buf);
+    FileWrite(f, buf, s - buf, NULL);
   }
 }
 

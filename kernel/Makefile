@@ -8,13 +8,13 @@ SOURCES = amigahunk.c \
 	  event.c \
 	  intr.S \
 	  intsrv.c \
-	  kernio.c \
 	  malloc.c \
 	  msgport.c \
 	  notify.c \
 	  pipe.c \
 	  port.c \
 	  portasm.S \
+	  printf.c \
 	  proc.c \
 	  ring.c \
 	  sysent.c \

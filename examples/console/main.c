@@ -10,7 +10,6 @@
 #include <interrupt.h>
 #include <ioreq.h>
 #include <notify.h>
-#include <libkern.h>
 
 #define mainINPUT_TASK_PRIORITY 3
 
@@ -25,27 +24,26 @@ static const char *EventName[] = {
 };
 
 static void vInputTask(void *data __unused) {
-  File_t *cons = kopen("console", O_WRONLY);
-  File_t *ms = kopen("mouse", O_RDONLY | O_NONBLOCK);
-  File_t *kbd = kopen("keyboard", O_RDONLY | O_NONBLOCK);
+  File_t *cons = FileOpen("console", O_WRONLY);
+  File_t *ms = FileOpen("mouse", O_RDONLY | O_NONBLOCK);
+  File_t *kbd = FileOpen("keyboard", O_RDONLY | O_NONBLOCK);
 
   (void)FileEvent(ms, EV_READ);
   (void)FileEvent(kbd, EV_READ);
 
   while (NotifyWait(NB_EVENT, portMAX_DELAY)) {
     InputEvent_t ev;
-    long done;
 
-    while (!FileRead(kbd, &ev, sizeof(ev), &done)) {
+    while (!FileRead(kbd, &ev, sizeof(ev), NULL)) {
       char c = (ev.value >= 0x20 && ev.value < 0x7f) ? ev.value : ' ';
-      kfprintf(cons, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
-               (uint16_t)ev.value, c);
+      FilePrintf(cons, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
+                 (uint16_t)ev.value, c);
     }
 
-    while (!FileRead(ms, &ev, sizeof(ev), &done)) {
+    while (!FileRead(ms, &ev, sizeof(ev), NULL)) {
       static MousePos_t m = {.x = 0, .y = 0};
 
-      kfprintf(cons, "%s: value = %d\n", EventName[ev.kind], ev.value);
+      FilePrintf(cons, "%s: value = %d\n", EventName[ev.kind], ev.value);
 
       if (ev.kind == IE_MOUSE_DELTA_X) {
         m.x += ev.value;

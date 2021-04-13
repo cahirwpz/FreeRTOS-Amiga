@@ -1,16 +1,16 @@
 #pragma once
 
 #include <sys/types.h>
+#include <sys/fcntl.h>
 
 typedef struct File File_t;
 typedef struct Inode Inode_t;
+typedef struct IoReq IoReq_t;
 typedef struct Pipe Pipe_t;
 typedef struct DevFile DevFile_t;
 typedef enum EvKind EvKind_t;
 
-typedef int (*FileRead_t)(File_t *f, void *buf, size_t nbyte, long *donep);
-typedef int (*FileWrite_t)(File_t *f, const void *buf, size_t nbyte,
-                           long *donep);
+typedef int (*FileRdWr_t)(File_t *f, IoReq_t *io);
 typedef int (*FileIoctl_t)(File_t *f, u_long cmd, void *data);
 typedef int (*FileSeek_t)(File_t *f, long offset, int whence);
 typedef int (*FileEvent_t)(File_t *f, EvKind_t ev);
@@ -19,8 +19,8 @@ typedef int (*FileClose_t)(File_t *f);
 /* Operations available for a file object.
  * Simplified version of FreeBSD's fileops. */
 typedef struct FileOps {
-  FileRead_t read;   /* read bytes from a file */
-  FileWrite_t write; /* write bytes to a file */
+  FileRdWr_t read;   /* read bytes from a file */
+  FileRdWr_t write;  /* write bytes to a file */
   FileIoctl_t ioctl; /* read or modify file properties (if applicable) */
   FileSeek_t seek;   /* move cursor position (if applicable) */
   FileClose_t close; /* free up resources */
@@ -58,11 +58,15 @@ File_t *FileHold(File_t *f);
 void FileDrop(File_t *f);
 
 /* These behave like read/write/lseek known from UNIX */
+File_t *FileOpen(const char *name, int oflag);
 int FileRead(File_t *f, void *buf, size_t nbyte, long *donep);
 int FileWrite(File_t *f, const void *buf, size_t nbyte, long *donep);
 int FileIoctl(File_t *f, u_long cmd, void *data);
-int FileSeek(File_t *f, long offset, int whence);
+int FileSeek(File_t *f, long offset, int whence, long *newoffp);
 int FileClose(File_t *f);
+
+void FilePrintf(File_t *f, const char *fmt, ...);
+void FileHexDump(File_t *f, void *ptr, size_t length);
 
 /* Registers calling task to be notified with NB_EVENT
  * when can-read or can-write event happens on the file. */
