@@ -15,7 +15,7 @@ typedef struct Msg {
     .data = (_data), .task = NULL                                              \
   }
 
-MsgPort_t *MsgPortCreate(void);
+MsgPort_t *MsgPortCreate(TaskHandle_t owner);
 void MsgPortDelete(MsgPort_t *mp);
 
 void DoMsg(MsgPort_t *mp, Msg_t *msg);

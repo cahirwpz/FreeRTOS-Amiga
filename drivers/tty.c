@@ -82,9 +82,6 @@ int AddTtyDevice(const char *name, Device_t *cons) {
     return ENOMEM;
   tty->cons = cons;
 
-  tty->readMp = MsgPortCreate();
-  tty->writeMp = MsgPortCreate();
-
   tty->input.len = 0;
   tty->input.eol = 0;
   tty->input.done = 0;
@@ -99,6 +96,9 @@ int AddTtyDevice(const char *name, Device_t *cons) {
 
   xTaskCreate((TaskFunction_t)TtyTask, name, configMINIMAL_STACK_SIZE, tty,
               TTY_TASK_PRIO, &tty->task);
+
+  tty->readMp = MsgPortCreate(tty->task);
+  tty->writeMp = MsgPortCreate(tty->task);
 
   tty->rxReq.nonblock = tty->txReq.nonblock = 1;
   return 0;

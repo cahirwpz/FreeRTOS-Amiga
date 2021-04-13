@@ -122,7 +122,7 @@ static int SerialWrite(Device_t *dev, IoReq_t *req) {
 
   /* Write all data to transmit buffer. This may involve waiting for the
    * interupt handler to free enough space in the ring buffer. */
-  while (NotifyWait(NB_IRQ, portMAX_DELAY)) {
+  do {
     RingWrite(ser->txBuf, req);
     if (!req->left)
       break;
@@ -135,7 +135,7 @@ static int SerialWrite(Device_t *dev, IoReq_t *req) {
       error = EAGAIN;
       break;
     }
-  }
+  } while (NotifyWait(NB_IRQ, portMAX_DELAY));
 
   ser->txTask = NULL;
 

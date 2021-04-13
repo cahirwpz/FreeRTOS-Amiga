@@ -15,11 +15,11 @@ struct MsgPort {
   QueueHandle_t queue;
 };
 
-MsgPort_t *MsgPortCreate(void) {
+MsgPort_t *MsgPortCreate(TaskHandle_t owner) {
   MsgPort_t *mp = kcalloc(1, sizeof(MsgPort_t));
-  mp->owner = xTaskGetCurrentTaskHandle();
-  if (mp->owner == NULL)
+  if (owner == NULL)
     portPANIC();
+  mp->owner = owner;
   mp->queue = xQueueCreate(1, sizeof(Msg_t *));
   return mp;
 }
@@ -31,6 +31,7 @@ void MsgPortDelete(MsgPort_t *mp) {
 
 void DoMsg(MsgPort_t *mp, Msg_t *msg) {
   msg->task = xTaskGetCurrentTaskHandle();
+  DPRINTF("DoMsg: send message %x!\n", msg);
   xQueueSend(mp->queue, &msg, portMAX_DELAY);
   NotifySend(mp->owner, NB_MSGPORT);
   DPRINTF("DoMsg: wakeup owner %x!\n", mp->owner);
@@ -40,6 +41,7 @@ void DoMsg(MsgPort_t *mp, Msg_t *msg) {
 Msg_t *GetMsg(MsgPort_t *mp) {
   Msg_t *msg = NULL;
   xQueueReceive(mp->queue, &msg, 0);
+  DPRINTF("GetMsg: got message %x!\n", msg);
   return msg;
 }
 

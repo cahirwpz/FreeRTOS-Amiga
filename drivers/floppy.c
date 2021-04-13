@@ -73,13 +73,12 @@ Device_t *FloppyInit(unsigned aFloppyIOTaskPrio) {
               aFloppyIOTaskPrio, &fd->ioTask);
   DASSERT(fd->ioTask != NULL);
 
+  fd->ioPort = MsgPortCreate(fd->ioTask);
   fd->diskTrack = pvPortMallocChip(DISK_TRACK_SIZE);
   fd->track = -1;
   DASSERT(fd->diskTrack != NULL);
 
-  Device_t *dev;
-  AddDevice("floppy", &FloppyOps, &dev);
-  dev->data = FloppyDev;
+  Device_t *dev = AddDeviceAux("floppy", &FloppyOps, fd);
   dev->size = FLOPPY_SIZE;
   return dev;
 }
@@ -287,7 +286,6 @@ static int FloppyReadWriteTrack(FloppyDev_t *fd, short cmd, short track) {
 
 static void FloppyIoTask(void *ptr) {
   FloppyDev_t *fd = ptr;
-  fd->ioPort = MsgPortCreate();
 
   FloppyHeadToTrack0(fd);
 
