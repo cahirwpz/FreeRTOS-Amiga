@@ -40,9 +40,7 @@ typedef struct TtyState {
   TaskHandle_t task;
   File_t *cons;
   /* Used for communication with file-like objects. */
-  Msg_t *readMsg;
   MsgPort_t *readMp;
-  Msg_t *writeMsg;
   MsgPort_t *writeMp;
   /* Used for communication with hardware terminal. */
   IoReq_t rxReq;
@@ -109,24 +107,29 @@ int AddTtyDevFile(const char *name, File_t *cons) {
 static int HandleRxReady(TtyState_t *tty) {
   DevFile_t *cons = tty->cons->device;
   IoReq_t *req = &tty->rxReq;
-  int error;
+  int error = 0;
 
   /* Append read characters at the end of line buffer. */
   while (tty->input.len < BUFSIZ) {
     req->rbuf = tty->input.buf + tty->input.len;
     req->left = BUFSIZ - tty->input.len;
-    if ((error = cons->ops->read(cons, req)))
-      return error;
+    if ((error = cons->ops->read(cons, req))) {
+      DLOG("tty: rx-ready; would block\n");
+      break;
+    }
 
     /* Update line length. */
     tty->input.len = BUFSIZ - req->left;
+    DLOG("tty: rx-ready; input len %d\n", tty->input.len);
   }
 
-  return 0;
+  return error;
 }
 
 static void HandleReadReq(TtyState_t *tty) {
-  IoReq_t *req = tty->readMsg->data;
+  IoReq_t *req = GetMsgData(tty->readMp);
+  if (req == NULL)
+    return;
 
   /* Copy up to line length or BUFSIZ if no EOL was found. */
   size_t n = (tty->input.len == BUFSIZ) ? BUFSIZ : tty->input.eol;
@@ -155,14 +158,17 @@ static void HandleReadReq(TtyState_t *tty) {
   tty->input.done -= n;
 
   /* The request was handled, so return it to the owner. */
-  ReplyMsg(tty->readMsg);
-  tty->readMsg = NULL;
+  ReplyMsg(tty->readMp);
+  DLOG("tty: replied read request\n");
 }
 
 static int HandleTxReady(TtyState_t *tty) {
   DevFile_t *cons = tty->cons->device;
   IoReq_t *req = &tty->txReq;
-  int error;
+  int error = 0;
+
+  if (tty->output.len > 0)
+    DLOG("tty: tx-ready; output len %d\n", tty->output.len);
 
   while (tty->output.len > 0) {
     /* Used space is either [tail, head) or [tail, BUFSIZ) */
@@ -173,8 +179,10 @@ static int HandleTxReady(TtyState_t *tty) {
     /* Send asynchronous write request. */
     req->wbuf = &tty->output.buf[tty->output.tail];
     req->left = size;
-    if ((error = cons->ops->write(cons, req)))
-      return error;
+    if ((error = cons->ops->write(cons, req))) {
+      DLOG("tty: tx-ready; would block\n");
+      break;
+    }
 
     /* Update tail position. */
     size_t done = size - req->left;
@@ -182,9 +190,11 @@ static int HandleTxReady(TtyState_t *tty) {
     if (tty->output.tail == BUFSIZ)
       tty->output.tail = 0;
     tty->output.len -= done;
+
+    DLOG("tty: tx-ready; output len %d\n", tty->output.len);
   }
 
-  return 0;
+  return error;
 }
 
 static void StoreChar(TtyState_t *tty, uint8_t c) {
@@ -196,7 +206,9 @@ static void StoreChar(TtyState_t *tty, uint8_t c) {
 }
 
 static int HandleWriteReq(TtyState_t *tty) {
-  IoReq_t *req = tty->writeMsg->data;
+  IoReq_t *req = GetMsgData(tty->writeMp);
+  if (req == NULL)
+    return 0;
 
   while (req->left > 0) {
     uint8_t ch = *req->wbuf;
@@ -215,8 +227,8 @@ static int HandleWriteReq(TtyState_t *tty) {
   }
 
   /* The request was handled, so return it to the owner. */
-  ReplyMsg(tty->writeMsg);
-  tty->writeMsg = NULL;
+  ReplyMsg(tty->writeMp);
+  DLOG("tty: replied write request\n");
   return 0;
 }
 
@@ -254,19 +266,13 @@ static void TtyTask(void *data) {
   (void)FileEvent(tty->cons, EV_WRITE);
 
   while (NotifyWait(NB_MSGPORT | NB_EVENT, portMAX_DELAY)) {
-    if (!tty->readMsg)
-      tty->readMsg = GetMsg(tty->readMp);
-
-    if (!tty->writeMsg)
-      tty->writeMsg = GetMsg(tty->writeMp);
-
+    DLOG("tty: wakeup\n");
     HandleRxReady(tty);
     ProcessInput(tty);
-    if (tty->readMsg)
-      HandleReadReq(tty);
-    if (tty->writeMsg)
-      HandleWriteReq(tty);
+    HandleReadReq(tty);
+    HandleWriteReq(tty);
     HandleTxReady(tty);
+    DLOG("tty: sleep\n");
   }
 }
 

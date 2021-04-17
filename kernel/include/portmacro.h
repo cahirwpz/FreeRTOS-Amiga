@@ -2,7 +2,6 @@
 
 #include <sys/cdefs.h>
 #include <cpu.h>
-#include <debug.h>
 
 #ifdef __cplusplus
 extern "C" {

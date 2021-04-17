@@ -16,8 +16,8 @@ typedef struct Msg {
   }
 
 /* A message port stores at most one `Msg` message. The port must be associated
- * with a single `owner` task. Whenever a message arrives a task is notified
- * with NB_MSGPORT. */
+ * with a single `owner` task. Whenever a message arrives the task is notified
+ * with NB_MSGPORT. A message occupies the port until it is replied. */
 MsgPort_t *MsgPortCreate(TaskHandle_t owner);
 void MsgPortDelete(MsgPort_t *mp);
 
@@ -25,10 +25,11 @@ void MsgPortDelete(MsgPort_t *mp);
  * Then it puts message and sends NB_MSGPORT `owner` task. */
 void DoMsg(MsgPort_t *mp, Msg_t *msg);
 
-/* Get messages is always non-blocking operation.
- * Only `mp` owner can fetch messages from a message port. */
-Msg_t *GetMsg(MsgPort_t *mp);
+/* Get message data is always non-blocking operation.
+ * Only `mp` owner can fetch messages from a message port.
+ * Returns data associated with message or NULL. */
+void *GetMsgData(MsgPort_t *mp);
 
-/* Sends a NB_MSGPORT notification to the task that sent `msg`.
- * Clears out `Msg::task` when the message is replied. */
-void ReplyMsg(Msg_t *msg);
+/* Empties `mp` and sends a NB_MSGPORT notification to the task that sent
+ * the message. Clears out `Msg::task` when the message is replied. */
+void ReplyMsg(MsgPort_t *mp);

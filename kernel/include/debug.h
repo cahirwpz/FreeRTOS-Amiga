@@ -18,12 +18,13 @@
     if (!(e))                                                                  \
       PANIC();                                                                 \
   }
-#endif
 
-#if DEBUG && !defined(NDEBUG)
+#if DEBUG
 #define DASSERT(e) Assert(e)
 #define DLOG(...) Log(__VA_ARGS__)
 #else
 #define DASSERT(e) __nothing
 #define DLOG(...) __nothing
+#endif
+
 #endif

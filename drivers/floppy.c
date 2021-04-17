@@ -298,10 +298,8 @@ static void FloppyIoTask(void *ptr) {
       continue;
     }
 
-    Msg_t *msg = GetMsg(fd->ioPort);
-    Assert(msg != NULL);
-
-    IoReq_t *io = msg->data;
+    IoReq_t *io = GetMsgData(fd->ioPort);
+    Assert(io != NULL);
 
     DLOG("[Floppy] %s(%d, %d)\n", io->write ? "Write" : "Read", io->offset,
          io->left);
@@ -356,7 +354,7 @@ static void FloppyIoTask(void *ptr) {
       FloppyReadWriteTrack(fd, WRITE, track);
 
     io->error = 0;
-    ReplyMsg(msg);
+    ReplyMsg(fd->ioPort);
   }
 }
 

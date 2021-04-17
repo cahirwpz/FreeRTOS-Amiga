@@ -37,16 +37,21 @@ void DoMsg(MsgPort_t *mp, Msg_t *msg) {
   (void)NotifyWait(NB_MSGPORT, portMAX_DELAY);
 }
 
-Msg_t *GetMsg(MsgPort_t *mp) {
+void *GetMsgData(MsgPort_t *mp) {
   Msg_t *msg = NULL;
-  xQueueReceive(mp->queue, &msg, 0);
-  DLOG("GetMsg: got message %x!\n", msg);
-  return msg;
+  xQueuePeek(mp->queue, &msg, 0);
+  if (msg == NULL)
+    return NULL;
+  DLOG("GetMsg: message at %x!\n", msg);
+  return msg->data;
 }
 
-void ReplyMsg(Msg_t *msg) {
+void ReplyMsg(MsgPort_t *mp) {
+  Msg_t *msg;
   vTaskSuspendAll();
   DLOG("ReplyMsg: wakeup sender %x!\n", msg->task);
+  xQueueReceive(mp->queue, &msg, 0);
+  Assert(msg != NULL);
   NotifySend(msg->task, NB_MSGPORT);
   msg->task = NULL;
   xTaskResumeAll();

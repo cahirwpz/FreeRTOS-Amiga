@@ -19,6 +19,7 @@
 
 typedef struct SerialDev {
   DevFile_t *file;
+  IntServer_t intr;
   SemaphoreHandle_t rxLock;
   SemaphoreHandle_t txLock;
   Ring_t *rxBuf;
@@ -39,38 +40,65 @@ static DevFileOps_t SerialOps = {
   .event = SerialEvent,
 };
 
-#define SendByte(byte)                                                         \
-  { custom.serdat = (uint16_t)(byte) | (uint16_t)0x100; }
+/* Handles full-duplex transmission. */
+static void SerialTransmit(SerialDev_t *ser) {
+  uint32_t ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
+
+  for (;;) {
+    /* serdatr contains both data and status bits! */
+    uint16_t serdat = custom.serdatr;
+    int16_t done = 0;
+
+    if ((serdat & SERDATF_RBF) && !RingFull(ser->rxBuf)) {
+      RingPutByte(ser->rxBuf, serdat);
+      done++;
+    }
+
+    if ((serdat & (SERDATF_TBE | SERDATF_TSRE)) && !RingEmpty(ser->txBuf)) {
+      uint8_t byte = RingGetByte(ser->txBuf);
+      /* Send one byte into the wire. */
+      custom.serdat = (uint16_t)(byte) | (uint16_t)0x100;
+      done++;
+    }
+
+    if (!done)
+      break;
+  }
+
+  portCLEAR_INTERRUPT_MASK_FROM_ISR(ulSavedInterruptMask);
+}
 
 static void SendIntHandler(void *ptr) {
   SerialDev_t *ser = ptr;
-  /* Send one byte into the wire. */
-  if (!RingEmpty(ser->txBuf)) {
-    SendByte(RingGetByte(ser->txBuf));
-  } else if (ser->txTask) {
-    NotifySendFromISR(ser->txTask, NB_IRQ);
-    DLOG("serial: writer wakeup!\n");
-  } else {
-    EventNotifyFromISR(&ser->writeEvent);
-    DLOG("serial: notify write listeners!\n");
+  SerialTransmit(ser);
+  if (RingEmpty(ser->txBuf)) {
+    if (ser->txTask) {
+      NotifySendFromISR(ser->txTask, NB_IRQ);
+      DLOG("serial: writer wakeup!\n");
+    } else {
+      EventNotifyFromISR(&ser->writeEvent);
+      DLOG("serial: notify write listeners!\n");
+    }
   }
 }
 
 static void RecvIntHandler(void *ptr) {
-  /* serdatr contains both data and status bits! */
-  uint16_t code = custom.serdatr;
-  if (!(code & SERDATF_RBF))
-    return;
   SerialDev_t *ser = ptr;
-  if (!RingFull(ser->rxBuf))
-    RingPutByte(ser->rxBuf, code);
-  if (ser->rxTask) {
-    NotifySendFromISR(ser->rxTask, NB_IRQ);
-    DLOG("serial: reader wakeup!\n");
-  } else {
-    EventNotifyFromISR(&ser->readEvent);
-    DLOG("serial: notify read listeners!\n");
+  SerialTransmit(ser);
+  if (!RingEmpty(ser->rxBuf)) {
+    if (ser->rxTask) {
+      NotifySendFromISR(ser->rxTask, NB_IRQ);
+      DLOG("serial: reader wakeup!\n");
+    } else {
+      EventNotifyFromISR(&ser->readEvent);
+      DLOG("serial: notify read listeners!\n");
+    }
   }
+}
+
+static void RecoverIntHandler(void *ptr) {
+  SerialDev_t *ser = ptr;
+  SerialTransmit(ser);
 }
 
 static int SerialAttach(Driver_t *drv) {
@@ -91,6 +119,23 @@ static int SerialAttach(Driver_t *drv) {
   SetIntVec(TBE, SendIntHandler, ser);
   SetIntVec(RBF, RecvIntHandler, ser);
 
+  /* BUG(cahir): I've run into a bug that I had burned too many hours to
+   * identify and I finally gave up. Seems like INTF_TBE bit in INTREQ is set
+   * but it does not trigger an interrupt, so emptying transmit queue hangs in
+   * the middle. I'm tempted to say it's the emulator bug, but reading through
+   * fs-uae was not very fruitful and I run out of time to investigate it.
+   *
+   * Also playing with DisableINT / EnableINT with INTF_INTEN argument yields
+   * some weird behaviour in SerialTransmit, though in this context they can
+   * be used to replaced *INTERRUPT_MASK* macros. Which makes me believe that 
+   * there's something I fundamentally do not understand.
+   *
+   * Hence I introduced a recovery mechanism. At each VBlank I check if
+   * transmission halted prematurely and I resume it. Hopefully that helps.
+   */
+  ser->intr = INTSERVER(-20, RecoverIntHandler, (void *)ser);
+  AddIntServer(VertBlankChain, &ser->intr);
+
   ClearIRQ(INTF_TBE | INTF_RBF);
   EnableINT(INTF_TBE | INTF_RBF);
 
@@ -106,6 +151,8 @@ int SerialDetach(Driver_t *drv) {
   ResetIntVec(TBE);
   ResetIntVec(RBF);
 
+  RemIntServer(&ser->intr);
+
   vSemaphoreDelete(ser->rxLock);
   vSemaphoreDelete(ser->txLock);
 
@@ -117,6 +164,8 @@ static int SerialWrite(DevFile_t *dev, IoReq_t *req) {
   size_t n = req->left;
   int error = 0;
 
+  Assert(n > 0);
+
   xSemaphoreTake(ser->txLock, portMAX_DELAY);
   taskENTER_CRITICAL();
 
@@ -126,6 +175,7 @@ static int SerialWrite(DevFile_t *dev, IoReq_t *req) {
    * interupt handler to free enough space in the ring buffer. */
   do {
     RingWrite(ser->txBuf, req);
+    SerialTransmit(ser);
     if (!req->left)
       break;
     if (req->nonblock) {
@@ -141,13 +191,7 @@ static int SerialWrite(DevFile_t *dev, IoReq_t *req) {
 
   ser->txTask = NULL;
 
-  /* Trigger interrupt if transmit buffer is empty. */
-  if (custom.serdatr & SERDATF_TBE) {
-    CauseIRQ(INTF_TBE);
-    DLOG("serial: initiate tx!\n");
-  }
-
-  DLOG("serial: tx request finished!\n");
+  DLOG("serial: write request done; wrote %d bytes!\n", n - req->left);
   taskEXIT_CRITICAL();
   xSemaphoreGive(ser->txLock);
 
@@ -157,6 +201,7 @@ static int SerialWrite(DevFile_t *dev, IoReq_t *req) {
 static int SerialRead(DevFile_t *dev, IoReq_t *req) {
   SerialDev_t *ser = dev->data;
   int error = 0;
+  __unused size_t n = req->left;
 
   xSemaphoreTake(ser->rxLock, portMAX_DELAY);
   taskENTER_CRITICAL();
@@ -179,7 +224,7 @@ static int SerialRead(DevFile_t *dev, IoReq_t *req) {
   if (!error)
     RingRead(ser->rxBuf, req);
 
-  DLOG("serial: rx request finished!\n");
+  DLOG("serial: rx request done; read %d bytes!\n", n - req->left);
   taskEXIT_CRITICAL();
   xSemaphoreGive(ser->rxLock);
 
