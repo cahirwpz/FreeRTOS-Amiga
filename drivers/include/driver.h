@@ -22,7 +22,7 @@ int DeviceAttach(Driver_t *drv);
 int DeviceDetach(Driver_t *drv);
 
 /* List all device driver here. */
-extern Driver_t Console;
+extern Driver_t Display;
 extern Driver_t Floppy;
 extern Driver_t Keyboard;
 extern Driver_t Mouse;

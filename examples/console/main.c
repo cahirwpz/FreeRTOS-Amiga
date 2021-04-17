@@ -6,7 +6,7 @@
 #include <file.h>
 #include <event.h>
 #include <input.h>
-#include <console.h>
+#include <display.h>
 #include <interrupt.h>
 #include <ioreq.h>
 #include <notify.h>
@@ -24,7 +24,7 @@ static const char *EventName[] = {
 };
 
 static void vInputTask(void *data __unused) {
-  File_t *cons = FileOpen("console", O_WRONLY);
+  File_t *disp = FileOpen("display", O_WRONLY);
   File_t *ms = FileOpen("mouse", O_RDONLY | O_NONBLOCK);
   File_t *kbd = FileOpen("keyboard", O_RDONLY | O_NONBLOCK);
 
@@ -36,14 +36,14 @@ static void vInputTask(void *data __unused) {
 
     while (!FileRead(kbd, &ev, sizeof(ev), NULL)) {
       char c = (ev.value >= 0x20 && ev.value < 0x7f) ? ev.value : ' ';
-      FilePrintf(cons, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
+      FilePrintf(disp, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
                  (uint16_t)ev.value, c);
     }
 
     while (!FileRead(ms, &ev, sizeof(ev), NULL)) {
       static MousePos_t m = {.x = 0, .y = 0};
 
-      FilePrintf(cons, "%s: value = %d\n", EventName[ev.kind], ev.value);
+      FilePrintf(disp, "%s: value = %d\n", EventName[ev.kind], ev.value);
 
       if (ev.kind == IE_MOUSE_DELTA_X) {
         m.x += ev.value;
@@ -57,7 +57,7 @@ static void vInputTask(void *data __unused) {
         m.y = min(m.y, 255);
       }
 
-      FileIoctl(cons, CIOCSETMS, &m);
+      FileIoctl(disp, DIOCSETMS, &m);
     }
   }
 }
@@ -79,7 +79,7 @@ int main(void) {
   /* Configure system clock. */
   AddIntServer(VertBlankChain, SystemClockTick);
 
-  DeviceAttach(&Console);
+  DeviceAttach(&Display);
   DeviceAttach(&Mouse);
   DeviceAttach(&Keyboard);
 

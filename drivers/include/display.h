@@ -7,4 +7,4 @@ typedef struct MousePos {
   short y;
 } MousePos_t;
 
-#define CIOCSETMS _IOW('c', 1, MousePos_t) /* set mouse cursor position */
+#define DIOCSETMS _IOW('D', 1, MousePos_t) /* set mouse cursor position */

@@ -7,7 +7,7 @@
 #include <palette.h>
 #include <sprite.h>
 
-#include <console.h>
+#include <display.h>
 #include <driver.h>
 #include <devfile.h>
 #include <ioreq.h>
@@ -26,12 +26,12 @@
 #define FGCOL 0xfff
 
 #define FONT_W 8
-#define FONT_H console_font.height
+#define FONT_H display_font.height
 
 #define NCOL (WIDTH / FONT_W)
 #define NROW (HEIGHT / FONT_H)
 
-typedef struct ConsoleDev {
+typedef struct DisplayDev {
   SemaphoreHandle_t lock;
   DevFile_t *file;
   struct {
@@ -45,17 +45,17 @@ typedef struct ConsoleDev {
   void **rowptr;     /* tells where each row is stored in `bm` bitmap */
   CopIns_t **rowins; /* update those instructions whenever `rows` changes */
   short rowsize;     /* bytes between two character rows in the bitmap */
-} ConsoleDev_t;
+} DisplayDev_t;
 
-static void ConsoleSetCursor(ConsoleDev_t *cons, short x, short y);
-static void ConsoleDrawCursor(ConsoleDev_t *cons);
+static void DisplaySetCursor(DisplayDev_t *cons, short x, short y);
+static void DisplayDrawCursor(DisplayDev_t *cons);
 
-static int ConsoleWrite(DevFile_t *, IoReq_t *);
-static int ConsoleIoctl(DevFile_t *dev, u_long cmd, void *data);
+static int DisplayWrite(DevFile_t *, IoReq_t *);
+static int DisplayIoctl(DevFile_t *dev, u_long cmd, void *data);
 
-static DevFileOps_t ConsoleOps = {
-  .write = ConsoleWrite,
-  .ioctl = ConsoleIoctl,
+static DevFileOps_t DisplayOps = {
+  .write = DisplayWrite,
+  .ioctl = DisplayIoctl,
 };
 
 /*
@@ -91,8 +91,8 @@ static void MakeCopList(CopList_t *cp, Bitmap_t *bm, CopIns_t **rowins,
   CopListActivate(cp);
 }
 
-int ConsoleAttach(Driver_t *drv) {
-  ConsoleDev_t *cons = drv->state;
+int DisplayAttach(Driver_t *drv) {
+  DisplayDev_t *cons = drv->state;
   int error;
 
   cons->lock = xSemaphoreCreateMutex();
@@ -109,8 +109,8 @@ int ConsoleAttach(Driver_t *drv) {
     cons->rowptr[i] = cons->bm.planes[0] + muls16(i, cons->rowsize);
 
   MakeCopList(&cons->cp, &cons->bm, cons->rowins, cons->rowptr);
-  ConsoleSetCursor(cons, 0, 0);
-  ConsoleDrawCursor(cons);
+  DisplaySetCursor(cons, 0, 0);
+  DisplayDrawCursor(cons);
 
   /* Set sprite position in upper-left corner of display window. */
   SpriteUpdatePos(&pointer_spr, HP(0), VP(0));
@@ -118,21 +118,21 @@ int ConsoleAttach(Driver_t *drv) {
   /* Enable bitplane and sprite fetchers' DMA. */
   EnableDMA(DMAF_RASTER | DMAF_SPRITE);
 
-  error = AddDevFile("console", &ConsoleOps, &cons->file);
+  error = AddDevFile("display", &DisplayOps, &cons->file);
   cons->file->data = (void *)cons;
   return error;
 }
 
-static inline void UpdateHere(ConsoleDev_t *cons) {
+static inline void UpdateHere(DisplayDev_t *cons) {
   cons->c.here = cons->rowptr[cons->c.y] + cons->c.x;
 }
 
-static inline void UpdateRows(ConsoleDev_t *cons) {
+static inline void UpdateRows(DisplayDev_t *cons) {
   for (short i = 0; i < NROW; i++)
     CopInsSet32(cons->rowins[i], cons->rowptr[i]);
 }
 
-static void ConsoleSetCursor(ConsoleDev_t *cons, short x, short y) {
+static void DisplaySetCursor(DisplayDev_t *cons, short x, short y) {
   if (x < 0)
     cons->c.x = 0;
   else if (x >= NCOL)
@@ -153,8 +153,8 @@ static void ConsoleSetCursor(ConsoleDev_t *cons, short x, short y) {
 #pragma GCC push_options
 #pragma GCC optimize("-O3")
 
-static void ConsoleDrawChar(ConsoleDev_t *cons, int c) {
-  uint8_t *src = console_font_glyphs + (c - 32) * FONT_H;
+static void DisplayDrawChar(DisplayDev_t *cons, int c) {
+  uint8_t *src = display_font_glyphs + (c - 32) * FONT_H;
   uint8_t *dst = cons->c.here++;
 
   for (short i = 0; i < FONT_H; i++) {
@@ -163,7 +163,7 @@ static void ConsoleDrawChar(ConsoleDev_t *cons, int c) {
   }
 }
 
-static void ConsoleDrawCursor(ConsoleDev_t *cons) {
+static void DisplayDrawCursor(DisplayDev_t *cons) {
   uint8_t *dst = cons->c.here;
 
   for (short i = 0; i < FONT_H; i++) {
@@ -174,7 +174,7 @@ static void ConsoleDrawCursor(ConsoleDev_t *cons) {
 
 #pragma GCC pop_options
 
-static void ScrollUp(ConsoleDev_t *cons) {
+static void ScrollUp(DisplayDev_t *cons) {
   void *first = cons->rowptr[0];
   memset(first, 0, cons->rowsize);
   memmove(&cons->rowptr[0], &cons->rowptr[1], NROW * sizeof(void *));
@@ -182,7 +182,7 @@ static void ScrollUp(ConsoleDev_t *cons) {
   UpdateRows(cons);
 }
 
-static void ConsoleNextLine(ConsoleDev_t *cons) {
+static void DisplayNextLine(DisplayDev_t *cons) {
   cons->c.x = 0;
   if (cons->c.y < NROW - 1) {
     cons->c.y++;
@@ -194,17 +194,17 @@ static void ConsoleNextLine(ConsoleDev_t *cons) {
 
 #define ISCONTROL(c) (((c) <= 0x1f) || (((c) >= 0x7f) && ((c) <= 0x9f)))
 
-static void ControlCode(ConsoleDev_t *cons, short c) {
+static void ControlCode(DisplayDev_t *cons, short c) {
   if (c == '\n')
-    ConsoleNextLine(cons);
+    DisplayNextLine(cons);
 }
 
-static int ConsoleWrite(DevFile_t *dev, IoReq_t *req) {
-  ConsoleDev_t *cons = dev->data;
+static int DisplayWrite(DevFile_t *dev, IoReq_t *req) {
+  DisplayDev_t *cons = dev->data;
 
   xSemaphoreTake(cons->lock, portMAX_DELAY);
 
-  ConsoleDrawCursor(cons);
+  DisplayDrawCursor(cons);
 
   for (; req->left; req->left--) {
     uint8_t c = *req->wbuf++;
@@ -212,21 +212,21 @@ static int ConsoleWrite(DevFile_t *dev, IoReq_t *req) {
     if (ISCONTROL(c)) {
       ControlCode(cons, c);
     } else {
-      ConsoleDrawChar(cons, c);
+      DisplayDrawChar(cons, c);
       if (++cons->c.x >= NCOL)
-        ConsoleNextLine(cons);
+        DisplayNextLine(cons);
     }
   }
 
-  ConsoleDrawCursor(cons);
+  DisplayDrawCursor(cons);
 
   xSemaphoreGive(cons->lock);
 
   return 0;
 }
 
-static int ConsoleIoctl(DevFile_t *dev __unused, u_long cmd, void *data) {
-  if (cmd == CIOCSETMS) {
+static int DisplayIoctl(DevFile_t *dev __unused, u_long cmd, void *data) {
+  if (cmd == DIOCSETMS) {
     MousePos_t *m = (MousePos_t *)data;
     SpriteUpdatePos(&pointer_spr, HP(m->x), VP(m->y));
     return 0;
@@ -235,8 +235,8 @@ static int ConsoleIoctl(DevFile_t *dev __unused, u_long cmd, void *data) {
   return EINVAL;
 }
 
-Driver_t Console = {
-  .name = "console",
-  .attach = ConsoleAttach,
-  .size = sizeof(ConsoleDev_t),
+Driver_t Display = {
+  .name = "display",
+  .attach = DisplayAttach,
+  .size = sizeof(DisplayDev_t),
 };

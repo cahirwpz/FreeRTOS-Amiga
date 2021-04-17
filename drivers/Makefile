@@ -8,7 +8,7 @@ SOURCES = \
 	  cia-icr.c \
 	  cia-line.c \
 	  cia-timer.c \
-	  console.c \
+	  display.c \
 	  copper.c \
 	  driver.c \
 	  floppy.c \
@@ -28,9 +28,9 @@ SOURCES_GEN = data/drdos8x8.c \
 	      data/lat2-08.c \
 	      data/pointer.c
 
-PSF2C.drdos8x8 := --name console
-PSF2C.koi8r.8x8 := --name console
-PSF2C.lat2-08 := --name console
+PSF2C.drdos8x8 := --name display
+PSF2C.koi8r.8x8 := --name display
+PSF2C.lat2-08 := --name display
 PNG2C.pointer := --sprite pointer_spr,16,1 --palette pointer_pal,4
 
 LIBNAME = drivers.lib

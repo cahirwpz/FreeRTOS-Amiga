@@ -127,7 +127,7 @@ static int SerialAttach(Driver_t *drv) {
    *
    * Also playing with DisableINT / EnableINT with INTF_INTEN argument yields
    * some weird behaviour in SerialTransmit, though in this context they can
-   * be used to replaced *INTERRUPT_MASK* macros. Which makes me believe that 
+   * be used to replaced *INTERRUPT_MASK* macros. Which makes me believe that
    * there's something I fundamentally do not understand.
    *
    * Hence I introduced a recovery mechanism. At each VBlank I check if
