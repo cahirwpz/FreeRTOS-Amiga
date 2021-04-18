@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/kernel/include",
+                "${workspaceFolder}/drivers/include",
+                "${workspaceFolder}/FreeRTOS/include",
+                "${workspaceFolder}/libc/include",
+                "${workspaceFolder}"
+            ],
+            "defines": []
+        }
+    ],
+    "version": 4
+}

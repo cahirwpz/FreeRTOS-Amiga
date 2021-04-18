@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Floppy",
+            "request": "launch",
+            "type": "cppdbg",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/examples/${input:PROGRAM_NAME}/${input:PROGRAM_NAME}.elf",
+            "stopAtEntry": true,
+            "MIMode": "gdb",
+            "preLaunchTask": "Debug Externally Floppy",
+            "miDebuggerServerAddress": "localhost:8888",
+            "miDebuggerPath": "/opt/FreeRTOS-Amiga/bin/m68k-elf-gdb",
+        },
+        {
+            "name": "Debug ROM",
+            "request": "launch",
+            "type": "cppdbg",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/examples/${input:PROGRAM_NAME}/${input:PROGRAM_NAME}.elf",
+            "stopAtEntry": true,
+            "MIMode": "gdb",
+            "preLaunchTask": "Debug Externally ROM",
+            "miDebuggerServerAddress": "localhost:8888",
+            "miDebuggerPath": "/opt/FreeRTOS-Amiga/bin/m68k-elf-gdb",
+        },
+    ],
+    "inputs": [
+        {
+            "type": "pickString",
+            "id": "PROGRAM_NAME",
+            "description": "Program to debug",
+            "options": [
+                "console",
+                "filesys",
+                "floppy",
+                "graphics",
+                "instemul",
+                "preemption",
+                "unix",
+            ]
+        },
+    ],
+}

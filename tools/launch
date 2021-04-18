@@ -97,6 +97,8 @@ if __name__ == '__main__':
                         help='Provide ELF executable file for GDB debugger.')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Run the program under GDB debugger control.')
+    parser.add_argument('-x', '--debug-ext', action='store_true',
+                        help='Run FS-UAE debugger but use a GDB tool launched externally.')
     parser.add_argument('-w', '--window', metavar='WIN', type=str,
                         help='Select tmux window name to switch to.')
     args = parser.parse_args()
@@ -113,8 +115,10 @@ if __name__ == '__main__':
     if args.debug and not os.path.isfile(args.elf):
         raise SystemExit('%s: file does not exist!' % args.elf)
 
+    uae_debug = args.debug or args.debug_ext
+
     uae = FSUAE()
-    uae.configure(floppy=args.floppy, rom=args.rom, debug=args.debug)
+    uae.configure(floppy=args.floppy, rom=args.rom, debug=uae_debug)
 
     ser_port = SOCAT('serial')
     ser_port.configure(tcp_port=8000)

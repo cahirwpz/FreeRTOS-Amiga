@@ -1,0 +1,96 @@
+{
+    "version": "2.0.0",
+    "type": "shell",
+    "command": "make",
+    "options": {
+        "cwd": "${workspaceFolder}/examples/${input:PROGRAM_NAME}"
+    },
+    "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "showReuseMessage": true,
+    },
+    "problemMatcher": [],
+    "tasks": [
+        {
+            "label": "Build",
+            "group": "build",
+        },
+        {
+            "label": "Run Floppy",
+            "args": [
+                "run-floppy"
+            ],
+        },
+        {
+            "label": "Run ROM",
+            "args": [
+                "run-rom"
+            ],
+        },
+        {
+            "label": "Debug Externally Floppy",
+            "args": [
+                "debug-ext-floppy"
+            ],
+            "isBackground": true,
+            "problemMatcher": [
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 2,
+                            "message": 3
+                        }
+                    ],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": ".",
+                        "endsPattern": ".",
+                    }
+                }
+            ]
+        },
+        {
+            "label": "Debug Externally ROM",
+            "args": [
+                "debug-ext-rom"
+            ],
+            "isBackground": true,
+            "problemMatcher": [
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 2,
+                            "message": 3
+                        }
+                    ],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": ".",
+                        "endsPattern": ".",
+                    }
+                }
+            ]
+        }
+    ],
+    "inputs": [
+        {
+            "type": "pickString",
+            "id": "PROGRAM_NAME",
+            "description": "Program to run.",
+            "options": [
+                "console",
+                "filesys",
+                "floppy",
+                "graphics",
+                "instemul",
+                "preemption",
+                "unix",
+            ]
+        },
+    ],
+}
