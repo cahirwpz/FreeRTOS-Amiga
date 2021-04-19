@@ -35,9 +35,14 @@ static int SerialWrite(DevFile_t *, IoReq_t *);
 static int SerialEvent(DevFile_t *, EvKind_t);
 
 static DevFileOps_t SerialOps = {
+  .open = NullDevOpen,
+  .close = NullDevClose,
   .read = SerialRead,
   .write = SerialWrite,
+  .strategy = NullDevStrategy,
+  .ioctl = NullDevIoctl,
   .event = SerialEvent,
+  .seekable = false,
 };
 
 /* Handles full-duplex transmission. */
@@ -178,7 +183,7 @@ static int SerialWrite(DevFile_t *dev, IoReq_t *req) {
     SerialTransmit(ser);
     if (!req->left)
       break;
-    if (req->nonblock) {
+    if (req->flags & F_NONBLOCK) {
       /* Nonblocking mode: if the request was partially filled then return with
        * short count, otherwise signify that we would have blocked and leave. */
       if (req->left < n)
@@ -212,7 +217,7 @@ static int SerialRead(DevFile_t *dev, IoReq_t *req) {
   while (RingEmpty(ser->rxBuf)) {
     /* Nonblocking mode: if there's no data in the ring buffer signify that
      * we would have blocked and leave. */
-    if (req->nonblock) {
+    if (req->flags & F_NONBLOCK) {
       error = EAGAIN;
       break;
     }

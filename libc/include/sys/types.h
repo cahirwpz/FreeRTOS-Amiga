@@ -11,7 +11,8 @@ typedef unsigned long u_long;
 
 typedef uint16_t ino_t;
 typedef uint8_t dev_t;
-typedef uint8_t mode_t;
+typedef uint16_t accmode_t; /* access permissions */
+typedef uint16_t mode_t;    /* permissions */
 typedef int32_t off_t;
 typedef int pid_t;
 typedef intptr_t ssize_t;

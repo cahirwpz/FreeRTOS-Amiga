@@ -10,11 +10,27 @@ typedef struct Pipe Pipe_t;
 typedef struct DevFile DevFile_t;
 typedef enum EvKind EvKind_t;
 
+typedef enum FileFlags {
+  F_READ = BIT(0),     /* file can be read from */
+  F_WRITE = BIT(1),    /* file can be written to */
+  F_NONBLOCK = BIT(2), /* read & write return EAGAIN instead blocking */
+} __packed FileFlags_t;
+
+#define F_IOFLAGS (F_NONBLOCK) /* Flags passed to I/O requests. */
+
 typedef int (*FileRdWr_t)(File_t *f, IoReq_t *io);
 typedef int (*FileIoctl_t)(File_t *f, u_long cmd, void *data);
 typedef int (*FileSeek_t)(File_t *f, long offset, int whence);
 typedef int (*FileEvent_t)(File_t *f, EvKind_t ev);
 typedef int (*FileClose_t)(File_t *f);
+
+/* Provide default implementation for given file operation. */
+int NullFileRead(File_t *f, IoReq_t *io);
+int NullFileWrite(File_t *f, IoReq_t *io);
+int NullFileIoctl(File_t *f, u_long cmd, void *data);
+int NullFileSeek(File_t *f, long offset, int whence);
+int NullFileEvent(File_t *f, EvKind_t ev);
+int NullFileClose(File_t *f);
 
 /* Operations available for a file object.
  * Simplified version of FreeBSD's fileops. */
@@ -45,10 +61,7 @@ typedef struct File {
   uint32_t usecount; /* number of file desciptors referring to this file */
   off_t offset;      /* cursor position for seekable files */
   FileType_t type;
-  uint8_t readable : 1; /* set if call to FileOps::read is allowed */
-  uint8_t writable : 1; /* set if call to FileOps::write is allowed */
-  uint8_t seekable : 1; /* set if call to FileOps::seek is allowed */
-  uint8_t nonblock : 1; /* set read & write return EAGAIN instead blocking */
+  FileFlags_t flags;
 } File_t;
 
 /* Increase reference counter. */
@@ -58,7 +71,7 @@ File_t *FileHold(File_t *f);
 void FileDrop(File_t *f);
 
 /* These behave like read/write/lseek known from UNIX */
-File_t *FileOpen(const char *name, int oflag);
+File_t *FileOpen(const char *name, int oflags);
 int FileRead(File_t *f, void *buf, size_t nbyte, long *donep);
 int FileWrite(File_t *f, const void *buf, size_t nbyte, long *donep);
 int FileIoctl(File_t *f, u_long cmd, void *data);

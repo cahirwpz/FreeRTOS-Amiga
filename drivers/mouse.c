@@ -25,8 +25,14 @@ static int MouseRead(DevFile_t *, IoReq_t *);
 static int MouseEvent(DevFile_t *, EvKind_t);
 
 static DevFileOps_t MouseOps = {
+  .open = NullDevOpen,
+  .close = NullDevClose,
   .read = MouseRead,
+  .write = NullDevWrite,
+  .strategy = NullDevStrategy,
+  .ioctl = NullDevIoctl,
   .event = MouseEvent,
+  .seekable = false,
 };
 
 static int MouseRead(DevFile_t *dev, IoReq_t *io) {

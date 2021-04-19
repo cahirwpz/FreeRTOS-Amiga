@@ -243,8 +243,14 @@ static int KeyboardRead(DevFile_t *, IoReq_t *);
 static int KeyboardEvent(DevFile_t *, EvKind_t);
 
 static DevFileOps_t KeyboardOps = {
+  .open = NullDevOpen,
+  .close = NullDevClose,
   .read = KeyboardRead,
+  .write = NullDevWrite,
+  .strategy = NullDevStrategy,
+  .ioctl = NullDevIoctl,
   .event = KeyboardEvent,
+  .seekable = false,
 };
 
 static int KeyboardRead(DevFile_t *dev, IoReq_t *io) {

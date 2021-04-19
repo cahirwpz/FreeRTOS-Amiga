@@ -9,6 +9,7 @@
 
 #include <display.h>
 #include <driver.h>
+#include <file.h>
 #include <devfile.h>
 #include <ioreq.h>
 #include <memory.h>
@@ -51,11 +52,18 @@ static void DisplaySetCursor(DisplayDev_t *cons, short x, short y);
 static void DisplayDrawCursor(DisplayDev_t *cons);
 
 static int DisplayWrite(DevFile_t *, IoReq_t *);
-static int DisplayIoctl(DevFile_t *dev, u_long cmd, void *data);
+static int DisplayIoctl(DevFile_t *dev, u_long cmd, void *data,
+                        FileFlags_t flags);
 
 static DevFileOps_t DisplayOps = {
+  .open = NullDevOpen,
+  .close = NullDevClose,
+  .read = NullDevRead,
   .write = DisplayWrite,
+  .strategy = NullDevStrategy,
   .ioctl = DisplayIoctl,
+  .event = NullDevEvent,
+  .seekable = false,
 };
 
 /*
@@ -225,7 +233,8 @@ static int DisplayWrite(DevFile_t *dev, IoReq_t *req) {
   return 0;
 }
 
-static int DisplayIoctl(DevFile_t *dev __unused, u_long cmd, void *data) {
+static int DisplayIoctl(DevFile_t *dev __unused, u_long cmd, void *data,
+                        FileFlags_t flags __unused) {
   if (cmd == DIOCSETMS) {
     MousePos_t *m = (MousePos_t *)data;
     SpriteUpdatePos(&pointer_spr, HP(m->x), VP(m->y));

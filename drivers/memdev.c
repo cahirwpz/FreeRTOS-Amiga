@@ -5,7 +5,16 @@
 
 static int MemoryRead(DevFile_t *, IoReq_t *);
 
-static DevFileOps_t MemoryOps = {.read = MemoryRead};
+static DevFileOps_t MemoryOps = {
+  .open = NullDevOpen,
+  .close = NullDevClose,
+  .read = MemoryRead,
+  .write = NullDevWrite,
+  .strategy = NullDevStrategy,
+  .ioctl = NullDevIoctl,
+  .event = NullDevEvent,
+  .seekable = true,
+};
 
 int AddMemoryDev(const char *name, const void *buf, size_t size) {
   DevFile_t *dev;

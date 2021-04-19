@@ -66,8 +66,14 @@ static int TtyRead(DevFile_t *, IoReq_t *);
 static int TtyWrite(DevFile_t *, IoReq_t *);
 
 static DevFileOps_t TtyOps = {
+  .open = NullDevOpen,
+  .close = NullDevClose,
   .read = TtyRead,
   .write = TtyWrite,
+  .strategy = NullDevStrategy,
+  .ioctl = NullDevIoctl,
+  .event = NullDevEvent,
+  .seekable = false,
 };
 
 #define TTY_TASK_PRIO 2
@@ -80,7 +86,7 @@ int AddTtyDevFile(const char *name, File_t *cons) {
   if (!(tty = MemAlloc(sizeof(TtyState_t), 0)))
     return ENOMEM;
   tty->cons = cons;
-  tty->cons->nonblock = 1;
+  tty->cons->flags |= F_NONBLOCK;
 
   tty->input.len = 0;
   tty->input.eol = 0;
@@ -100,7 +106,7 @@ int AddTtyDevFile(const char *name, File_t *cons) {
   tty->readMp = MsgPortCreate(tty->task);
   tty->writeMp = MsgPortCreate(tty->task);
 
-  tty->rxReq.nonblock = tty->txReq.nonblock = 1;
+  tty->rxReq.flags = tty->txReq.flags = F_NONBLOCK;
   return 0;
 }
 

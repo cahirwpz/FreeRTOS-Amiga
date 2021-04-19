@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sys/types.h>
+#include <file.h>
 
 /* Tracks progress of I/O operation on a file object.
  *
@@ -12,20 +13,19 @@ typedef struct IoReq {
     const char *wbuf; /* valid if this is a write request */
   };
   size_t left;
+  FileFlags_t flags; /* currently only F_NONBLOCK is supported */
   uint8_t write : 1; /* is it read or write request ? */
-  /* When `nonblock` is set the operation returns EAGAIN instead of blocking. */
-  uint8_t nonblock : 1;
   int error;
 } IoReq_t;
 
-#define IOREQ_READ(_off, _buf, _len, _nb)                                      \
+#define IOREQ_READ(_off, _buf, _len, _iof)                                     \
   (IoReq_t) {                                                                  \
-    .offset = (_off), .rbuf = (char *)(_buf), .left = (_len),                  \
-    .nonblock = (_nb), .write = 0, .error = 0                                  \
+    .offset = (_off), .rbuf = (char *)(_buf), .left = (_len), .flags = (_iof), \
+    .write = 0, .error = 0                                                     \
   }
 
-#define IOREQ_WRITE(_off, _buf, _len, _nb)                                     \
+#define IOREQ_WRITE(_off, _buf, _len, _iof)                                    \
   (IoReq_t) {                                                                  \
     .offset = (_off), .wbuf = (const char *)(_buf), .left = (_len),            \
-    .nonblock = (_nb), .write = 1, .error = 0                                  \
+    .flags = (_iof), .write = 1, .error = 0                                    \
   }

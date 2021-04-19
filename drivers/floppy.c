@@ -46,8 +46,16 @@ static void TrackTransferDone(void *ptr) {
 static void FloppyIoTask(void *);
 static int FloppyReadWrite(DevFile_t *, IoReq_t *);
 
-static DevFileOps_t FloppyOps = {.read = FloppyReadWrite,
-                                 .write = FloppyReadWrite};
+static DevFileOps_t FloppyOps = {
+  .open = NullDevOpen,
+  .close = NullDevClose,
+  .read = FloppyReadWrite,
+  .write = FloppyReadWrite,
+  .strategy = NullDevStrategy,
+  .ioctl = NullDevIoctl,
+  .event = NullDevEvent,
+  .seekable = true,
+};
 
 static int FloppyAttach(Driver_t *drv) {
   FloppyDev_t *flp = drv->state;
