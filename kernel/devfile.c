@@ -124,6 +124,7 @@ int OpenDevFile(const char *name, int oflags, File_t **fp) {
   f->ops = &DevFileOps;
   f->type = FT_DEVICE;
   f->device = dev;
+  f->flags = flags;
   dev->usecnt++;
 
   *fp = f;
@@ -183,8 +184,7 @@ static int DevSeek(File_t *f, long offset, int whence) {
 
 static int DevClose(File_t *f) {
   DevFile_t *dev = f->device;
-  if (Atomic_Decrement_u32(&dev->usecnt) > 1)
-    return 0;
+  Atomic_Decrement_u32(&dev->usecnt);
   return dev->ops->close(dev, f->flags);
 }
 
