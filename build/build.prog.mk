@@ -67,4 +67,12 @@ debug-rom: $(PROGRAM).rom $(PROGRAM).elf $(PROGRAM).adf
 	$(LAUNCH) $(LAUNCHOPTS) \
 	  -d -r $(PROGRAM).rom -e $(PROGRAM).elf -f $(PROGRAM).adf
 
+debug-ext-floppy: $(PROGRAM).elf $(PROGRAM).adf
+	$(LAUNCH) $(LAUNCHOPTS) \
+	  -x -f $(PROGRAM).adf -e $(PROGRAM).elf
+
+debug-ext-rom: $(PROGRAM).rom $(PROGRAM).elf $(PROGRAM).adf
+	$(LAUNCH) $(LAUNCHOPTS) \
+	  -x -r $(PROGRAM).rom -e $(PROGRAM).elf -f $(PROGRAM).adf
+
 .PHONY: debug-floppy debug-rom run-floppy run-rom
