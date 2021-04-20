@@ -48,22 +48,23 @@ typedef struct DisplayDev {
   short rowsize;     /* bytes between two character rows in the bitmap */
 } DisplayDev_t;
 
-static void DisplaySetCursor(DisplayDev_t *cons, short x, short y);
-static void DisplayDrawCursor(DisplayDev_t *cons);
+static void DisplaySetCursor(DisplayDev_t *disp, short x, short y);
+static void DisplayDrawCursor(DisplayDev_t *disp);
 
+static int DisplayOpen(DevFile_t *, FileFlags_t);
+static int DisplayClose(DevFile_t *, FileFlags_t);
 static int DisplayWrite(DevFile_t *, IoReq_t *);
-static int DisplayIoctl(DevFile_t *dev, u_long cmd, void *data,
-                        FileFlags_t flags);
+static int DisplayIoctl(DevFile_t *, u_long, void *, FileFlags_t);
 
 static DevFileOps_t DisplayOps = {
-  .open = NullDevOpen,
-  .close = NullDevClose,
+  .type = DT_OTHER,
+  .open = DisplayOpen,
+  .close = DisplayClose,
   .read = NullDevRead,
   .write = DisplayWrite,
   .strategy = NullDevStrategy,
   .ioctl = DisplayIoctl,
   .event = NullDevEvent,
-  .seekable = false,
 };
 
 /*
@@ -99,136 +100,150 @@ static void MakeCopList(CopList_t *cp, Bitmap_t *bm, CopIns_t **rowins,
   CopListActivate(cp);
 }
 
-int DisplayAttach(Driver_t *drv) {
-  DisplayDev_t *cons = drv->state;
-  int error;
+static int DisplayOpen(DevFile_t *dev, FileFlags_t flags) {
+  if (flags & F_READ)
+    return EACCES;
 
-  cons->lock = xSemaphoreCreateMutex();
+  if (!dev->usecnt) {
+    DisplayDev_t *disp = dev->data;
 
-  /* Allocate an extra row of characters, since it will be used with copper
-   * for use with smart scrolling and line insertion / deletion. */
-  BitmapInit(&cons->bm, WIDTH, HEIGHT + FONT_H, DEPTH, 0);
+    /* Allocate an extra row of characters, since it will be used with copper
+     * for use with smart scrolling and line insertion / deletion. */
+    BitmapInit(&disp->bm, WIDTH, HEIGHT + FONT_H, DEPTH, 0);
 
-  cons->rowsize = muls16(FONT_H, cons->bm.bytesPerRow);
-  cons->rowptr = MemAlloc(sizeof(void *) * (NROW + 1), 0);
-  cons->rowins = MemAlloc(sizeof(CopIns_t *) * NROW, 0);
+    disp->rowsize = muls16(FONT_H, disp->bm.bytesPerRow);
+    disp->rowptr = MemAlloc(sizeof(void *) * (NROW + 1), 0);
+    disp->rowins = MemAlloc(sizeof(CopIns_t *) * NROW, 0);
 
-  for (short i = 0; i < NROW + 1; i++)
-    cons->rowptr[i] = cons->bm.planes[0] + muls16(i, cons->rowsize);
+    for (short i = 0; i < NROW + 1; i++)
+      disp->rowptr[i] = disp->bm.planes[0] + muls16(i, disp->rowsize);
 
-  MakeCopList(&cons->cp, &cons->bm, cons->rowins, cons->rowptr);
-  DisplaySetCursor(cons, 0, 0);
-  DisplayDrawCursor(cons);
+    MakeCopList(&disp->cp, &disp->bm, disp->rowins, disp->rowptr);
+    DisplaySetCursor(disp, 0, 0);
+    DisplayDrawCursor(disp);
 
-  /* Set sprite position in upper-left corner of display window. */
-  SpriteUpdatePos(&pointer_spr, HP(0), VP(0));
+    /* Set sprite position in upper-left corner of display window. */
+    SpriteUpdatePos(&pointer_spr, HP(0), VP(0));
 
-  /* Enable bitplane and sprite fetchers' DMA. */
-  EnableDMA(DMAF_RASTER | DMAF_SPRITE);
+    /* Enable bitplane and sprite fetchers' DMA. */
+    EnableDMA(DMAF_RASTER | DMAF_SPRITE);
+  }
 
-  error = AddDevFile("display", &DisplayOps, &cons->file);
-  cons->file->data = (void *)cons;
-  return error;
+  return 0;
 }
 
-static inline void UpdateHere(DisplayDev_t *cons) {
-  cons->c.here = cons->rowptr[cons->c.y] + cons->c.x;
+static int DisplayClose(DevFile_t *dev, FileFlags_t flags __unused) {
+  if (!dev->usecnt) {
+    DisplayDev_t *disp = dev->data;
+
+    DisableDMA(DMAF_RASTER | DMAF_SPRITE);
+    CopListKill(&disp->cp);
+    MemFree(disp->rowptr);
+    MemFree(disp->rowins);
+    BitmapKill(&disp->bm);
+  }
+
+  return 0;
 }
 
-static inline void UpdateRows(DisplayDev_t *cons) {
+static inline void UpdateHere(DisplayDev_t *disp) {
+  disp->c.here = disp->rowptr[disp->c.y] + disp->c.x;
+}
+
+static inline void UpdateRows(DisplayDev_t *disp) {
   for (short i = 0; i < NROW; i++)
-    CopInsSet32(cons->rowins[i], cons->rowptr[i]);
+    CopInsSet32(disp->rowins[i], disp->rowptr[i]);
 }
 
-static void DisplaySetCursor(DisplayDev_t *cons, short x, short y) {
+static void DisplaySetCursor(DisplayDev_t *disp, short x, short y) {
   if (x < 0)
-    cons->c.x = 0;
+    disp->c.x = 0;
   else if (x >= NCOL)
-    cons->c.x = NCOL - 1;
+    disp->c.x = NCOL - 1;
   else
-    cons->c.x = x;
+    disp->c.x = x;
 
   if (y < 0)
-    cons->c.y = 0;
+    disp->c.y = 0;
   else if (y >= NROW)
-    cons->c.y = NROW - 1;
+    disp->c.y = NROW - 1;
   else
-    cons->c.y = y;
+    disp->c.y = y;
 
-  UpdateHere(cons);
+  UpdateHere(disp);
 }
 
 #pragma GCC push_options
 #pragma GCC optimize("-O3")
 
-static void DisplayDrawChar(DisplayDev_t *cons, int c) {
+static void DisplayDrawChar(DisplayDev_t *disp, int c) {
   uint8_t *src = display_font_glyphs + (c - 32) * FONT_H;
-  uint8_t *dst = cons->c.here++;
+  uint8_t *dst = disp->c.here++;
 
   for (short i = 0; i < FONT_H; i++) {
     *dst = *src++;
-    dst += cons->bm.bytesPerRow;
+    dst += disp->bm.bytesPerRow;
   }
 }
 
-static void DisplayDrawCursor(DisplayDev_t *cons) {
-  uint8_t *dst = cons->c.here;
+static void DisplayDrawCursor(DisplayDev_t *disp) {
+  uint8_t *dst = disp->c.here;
 
   for (short i = 0; i < FONT_H; i++) {
     *dst = ~*dst;
-    dst += cons->bm.bytesPerRow;
+    dst += disp->bm.bytesPerRow;
   }
 }
 
 #pragma GCC pop_options
 
-static void ScrollUp(DisplayDev_t *cons) {
-  void *first = cons->rowptr[0];
-  memset(first, 0, cons->rowsize);
-  memmove(&cons->rowptr[0], &cons->rowptr[1], NROW * sizeof(void *));
-  cons->rowptr[NROW] = first;
-  UpdateRows(cons);
+static void ScrollUp(DisplayDev_t *disp) {
+  void *first = disp->rowptr[0];
+  memset(first, 0, disp->rowsize);
+  memmove(&disp->rowptr[0], &disp->rowptr[1], NROW * sizeof(void *));
+  disp->rowptr[NROW] = first;
+  UpdateRows(disp);
 }
 
-static void DisplayNextLine(DisplayDev_t *cons) {
-  cons->c.x = 0;
-  if (cons->c.y < NROW - 1) {
-    cons->c.y++;
+static void DisplayNextLine(DisplayDev_t *disp) {
+  disp->c.x = 0;
+  if (disp->c.y < NROW - 1) {
+    disp->c.y++;
   } else {
-    ScrollUp(cons);
+    ScrollUp(disp);
   }
-  UpdateHere(cons);
+  UpdateHere(disp);
 }
 
 #define ISCONTROL(c) (((c) <= 0x1f) || (((c) >= 0x7f) && ((c) <= 0x9f)))
 
-static void ControlCode(DisplayDev_t *cons, short c) {
+static void ControlCode(DisplayDev_t *disp, short c) {
   if (c == '\n')
-    DisplayNextLine(cons);
+    DisplayNextLine(disp);
 }
 
 static int DisplayWrite(DevFile_t *dev, IoReq_t *req) {
-  DisplayDev_t *cons = dev->data;
+  DisplayDev_t *disp = dev->data;
 
-  xSemaphoreTake(cons->lock, portMAX_DELAY);
+  xSemaphoreTake(disp->lock, portMAX_DELAY);
 
-  DisplayDrawCursor(cons);
+  DisplayDrawCursor(disp);
 
   for (; req->left; req->left--) {
     uint8_t c = *req->wbuf++;
 
     if (ISCONTROL(c)) {
-      ControlCode(cons, c);
+      ControlCode(disp, c);
     } else {
-      DisplayDrawChar(cons, c);
-      if (++cons->c.x >= NCOL)
-        DisplayNextLine(cons);
+      DisplayDrawChar(disp, c);
+      if (++disp->c.x >= NCOL)
+        DisplayNextLine(disp);
     }
   }
 
-  DisplayDrawCursor(cons);
+  DisplayDrawCursor(disp);
 
-  xSemaphoreGive(cons->lock);
+  xSemaphoreGive(disp->lock);
 
   return 0;
 }
@@ -242,6 +257,19 @@ static int DisplayIoctl(DevFile_t *dev __unused, u_long cmd, void *data,
   }
 
   return EINVAL;
+}
+
+static int DisplayAttach(Driver_t *drv) {
+  DisplayDev_t *disp = drv->state;
+
+  disp->lock = xSemaphoreCreateMutex();
+
+  int error;
+  if ((error = AddDevFile("display", &DisplayOps, &disp->file)))
+    return error;
+
+  disp->file->data = (void *)disp;
+  return error;
 }
 
 Driver_t Display = {

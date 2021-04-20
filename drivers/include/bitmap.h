@@ -24,6 +24,7 @@ typedef struct Bitmap {
 
 void BitmapInit(Bitmap_t *bm, uint16_t width, uint16_t height, uint16_t depth,
                 BmFlags_t flags);
+void BitmapKill(Bitmap_t *bm);
 
 void CopSetupScreen(CopList_t *list, const Bitmap_t *bm, uint16_t mode,
                     uint16_t xs, uint16_t ys);

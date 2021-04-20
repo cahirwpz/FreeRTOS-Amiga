@@ -8,7 +8,8 @@ typedef struct Inode Inode_t;
 typedef struct IoReq IoReq_t;
 typedef struct Pipe Pipe_t;
 typedef struct DevFile DevFile_t;
-typedef enum EvKind EvKind_t;
+typedef enum EvAction EvAction_t;
+typedef enum EvFilter EvFilter_t;
 
 typedef enum FileFlags {
   F_READ = BIT(0),     /* file can be read from */
@@ -21,7 +22,7 @@ typedef enum FileFlags {
 typedef int (*FileRdWr_t)(File_t *f, IoReq_t *io);
 typedef int (*FileIoctl_t)(File_t *f, u_long cmd, void *data);
 typedef int (*FileSeek_t)(File_t *f, long offset, int whence);
-typedef int (*FileEvent_t)(File_t *f, EvKind_t ev);
+typedef int (*FileEvent_t)(File_t *f, EvAction_t act, EvFilter_t filt);
 typedef int (*FileClose_t)(File_t *f);
 
 /* Provide default implementation for given file operation. */
@@ -29,7 +30,7 @@ int NullFileRead(File_t *f, IoReq_t *io);
 int NullFileWrite(File_t *f, IoReq_t *io);
 int NullFileIoctl(File_t *f, u_long cmd, void *data);
 int NullFileSeek(File_t *f, long offset, int whence);
-int NullFileEvent(File_t *f, EvKind_t ev);
+int NullFileEvent(File_t *f, EvAction_t act, EvFilter_t filt);
 int NullFileClose(File_t *f);
 
 /* Operations available for a file object.
@@ -83,4 +84,4 @@ void FileHexDump(File_t *f, void *ptr, size_t length);
 
 /* Registers calling task to be notified with NB_EVENT
  * when can-read or can-write event happens on the file. */
-int FileEvent(File_t *f, EvKind_t ev);
+int FileEvent(File_t *f, EvAction_t act, EvFilter_t filt);

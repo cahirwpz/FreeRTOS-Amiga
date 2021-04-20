@@ -34,99 +34,100 @@
  * TODO: Only basic line buffering and character processing are implemented.
  */
 
-#define BUFSIZ 128
+#define BUFSIZ 256
+
+/* Input buffer handles line editing. */
+typedef struct InputQueue {
+  char buf[BUFSIZ]; /* line begins at first byte */
+  size_t len;       /* number of bytes in `buf` that are used */
+  size_t eol;       /* bytes up to first occurence of end of line char */
+  size_t done;      /* number of characters processed */
+} InputQueue_t;
+
+/* Output buffer state after character processing. */
+typedef struct OutputQueue {
+  char buf[BUFSIZ]; /* circular buffer data */
+  size_t len;       /* number of bytes in `buf` that are used */
+  size_t head;      /* index of first free byte in `buf` */
+  size_t tail;      /* index of first valid byte in `buf` */
+} OutputQueue_t;
 
 typedef struct TtyState {
   TaskHandle_t task;
-  File_t *cons;
+  const char *name;
+  InputQueue_t *input;
+  OutputQueue_t *output;
   /* Used for communication with file-like objects. */
+  MsgPort_t *ctrlMp;
   MsgPort_t *readMp;
   MsgPort_t *writeMp;
-  /* Used for communication with hardware terminal. */
+  /* Used for communication with terminal device. */
+  DevFile_t *cons;
   IoReq_t rxReq;
   IoReq_t txReq;
-  /* Input buffer handles line editing. */
-  struct {
-    char buf[BUFSIZ]; /* line begins at first byte */
-    size_t len;       /* number of bytes in `buf` that are used */
-    size_t eol;       /* bytes up to first occurence of end of line char */
-    size_t done;      /* number of characters processed */
-  } input;
-  /* Output buffer state after character processing. */
-  struct {
-    char buf[BUFSIZ]; /* circular buffer data */
-    size_t len;       /* number of bytes in `buf` that are used */
-    size_t head;      /* index of first free byte in `buf` */
-    size_t tail;      /* index of first valid byte in `buf` */
-  } output;
 } TtyState_t;
 
 static void TtyTask(void *);
+static int TtyOpen(DevFile_t *, FileFlags_t);
+static int TtyClose(DevFile_t *, FileFlags_t);
 static int TtyRead(DevFile_t *, IoReq_t *);
 static int TtyWrite(DevFile_t *, IoReq_t *);
 
 static DevFileOps_t TtyOps = {
-  .open = NullDevOpen,
-  .close = NullDevClose,
+  .type = DT_TTY,
+  .open = TtyOpen,
+  .close = TtyClose,
   .read = TtyRead,
   .write = TtyWrite,
   .strategy = NullDevStrategy,
   .ioctl = NullDevIoctl,
   .event = NullDevEvent,
-  .seekable = false,
 };
 
 #define TTY_TASK_PRIO 2
 
-int AddTtyDevFile(const char *name, File_t *cons) {
+int AddTtyDevFile(const char *name, DevFile_t *cons) {
   DevFile_t *dev;
   TtyState_t *tty;
-  int error;
 
-  if (!(tty = MemAlloc(sizeof(TtyState_t), 0)))
+  if (cons->ops->type != DT_CONS)
+    return ENXIO;
+
+  if (!(tty = MemAlloc(sizeof(TtyState_t), MF_ZERO)))
     return ENOMEM;
+
+  tty->name = name;
   tty->cons = cons;
-  tty->cons->flags |= F_NONBLOCK;
 
-  tty->input.len = 0;
-  tty->input.eol = 0;
-  tty->input.done = 0;
-
-  tty->output.len = 0;
-  tty->output.head = 0;
-  tty->output.tail = 0;
-
-  if ((error = AddDevFile(name, &TtyOps, &dev)))
+  int error;
+  if ((error = AddDevFile(name, &TtyOps, &dev))) {
+    MemFree(tty);
     return error;
-  dev->data = (void *)tty;
+  }
 
-  xTaskCreate((TaskFunction_t)TtyTask, name, configMINIMAL_STACK_SIZE, tty,
-              TTY_TASK_PRIO, &tty->task);
+  dev->data = tty;
 
-  tty->readMp = MsgPortCreate(tty->task);
-  tty->writeMp = MsgPortCreate(tty->task);
-
-  tty->rxReq.flags = tty->txReq.flags = F_NONBLOCK;
   return 0;
 }
 
 static int HandleRxReady(TtyState_t *tty) {
-  DevFile_t *cons = tty->cons->device;
+  DevFile_t *cons = tty->cons;
   IoReq_t *req = &tty->rxReq;
+  InputQueue_t *input = tty->input;
   int error = 0;
 
   /* Append read characters at the end of line buffer. */
-  while (tty->input.len < BUFSIZ) {
-    req->rbuf = tty->input.buf + tty->input.len;
-    req->left = BUFSIZ - tty->input.len;
-    if ((error = cons->ops->read(cons, req))) {
+  while (input->len < BUFSIZ) {
+    req->rbuf = input->buf + input->len;
+    req->left = BUFSIZ - input->len;
+    if ((error = DevFileRead(cons, req))) {
       DLOG("tty: rx-ready; would block\n");
       break;
     }
 
     /* Update line length. */
-    tty->input.len = BUFSIZ - req->left;
-    DLOG("tty: rx-ready; input len %d\n", tty->input.len);
+    input->len = BUFSIZ - req->left;
+    DLOG("tty: rx-ready; input len %d\n", input->len);
   }
 
   return error;
@@ -137,31 +138,33 @@ static void HandleReadReq(TtyState_t *tty) {
   if (req == NULL)
     return;
 
+  InputQueue_t *input = tty->input;
+
   /* Copy up to line length or BUFSIZ if no EOL was found. */
-  size_t n = (tty->input.len == BUFSIZ) ? BUFSIZ : tty->input.eol;
+  size_t n = (input->len == BUFSIZ) ? BUFSIZ : input->eol;
 
   if (n == 0)
     return;
 
   /* All characters typed in by the user must be processed before
    * they are removed from the line buffer. */
-  if (n < tty->input.done)
+  if (n < input->done)
     return;
 
   if (req->left < n)
     n = req->left;
 
   /* Copy data into I/O request buffer. */
-  memcpy(req->rbuf, tty->input.buf, n);
+  memcpy(req->rbuf, input->buf, n);
   req->rbuf += n;
   req->left -= n;
 
   /* Update state of the line. */
-  if (n < tty->input.len)
-    memmove(tty->input.buf, tty->input.buf + n, tty->input.len - n);
-  tty->input.len -= n;
-  tty->input.eol -= n;
-  tty->input.done -= n;
+  if (n < input->len)
+    memmove(input->buf, input->buf + n, input->len - n);
+  input->len -= n;
+  input->eol -= n;
+  input->done -= n;
 
   /* The request was handled, so return it to the owner. */
   ReplyMsg(tty->readMp);
@@ -169,46 +172,46 @@ static void HandleReadReq(TtyState_t *tty) {
 }
 
 static int HandleTxReady(TtyState_t *tty) {
-  DevFile_t *cons = tty->cons->device;
+  DevFile_t *cons = tty->cons;
   IoReq_t *req = &tty->txReq;
+  OutputQueue_t *output = tty->output;
   int error = 0;
 
-  if (tty->output.len > 0)
-    DLOG("tty: tx-ready; output len %d\n", tty->output.len);
+  if (output->len > 0)
+    DLOG("tty: tx-ready; output len %d\n", output->len);
 
-  while (tty->output.len > 0) {
+  while (output->len > 0) {
     /* Used space is either [tail, head) or [tail, BUFSIZ) */
-    size_t size = (tty->output.tail < tty->output.head)
-                    ? tty->output.head - tty->output.tail
-                    : BUFSIZ - tty->output.tail;
+    size_t size = (output->tail < output->head) ? output->head - output->tail
+                                                : BUFSIZ - output->tail;
 
     /* Send asynchronous write request. */
-    req->wbuf = &tty->output.buf[tty->output.tail];
+    req->wbuf = &output->buf[output->tail];
     req->left = size;
-    if ((error = cons->ops->write(cons, req))) {
+    if ((error = DevFileWrite(cons, req))) {
       DLOG("tty: tx-ready; would block\n");
       break;
     }
 
     /* Update tail position. */
     size_t done = size - req->left;
-    tty->output.tail += done;
-    if (tty->output.tail == BUFSIZ)
-      tty->output.tail = 0;
-    tty->output.len -= done;
+    output->tail += done;
+    if (output->tail == BUFSIZ)
+      output->tail = 0;
+    output->len -= done;
 
-    DLOG("tty: tx-ready; output len %d\n", tty->output.len);
+    DLOG("tty: tx-ready; output len %d\n", output->len);
   }
 
   return error;
 }
 
-static void StoreChar(TtyState_t *tty, uint8_t c) {
-  DASSERT(tty->output.len < BUFSIZ);
-  tty->output.buf[tty->output.head++] = c;
-  tty->output.len++;
-  if (tty->output.head == BUFSIZ)
-    tty->output.head = 0;
+static void StoreChar(OutputQueue_t *output, uint8_t c) {
+  DASSERT(output->len < BUFSIZ);
+  output->buf[output->head++] = c;
+  output->len++;
+  if (output->head == BUFSIZ)
+    output->head = 0;
 }
 
 static int HandleWriteReq(TtyState_t *tty) {
@@ -216,18 +219,20 @@ static int HandleWriteReq(TtyState_t *tty) {
   if (req == NULL)
     return 0;
 
+  OutputQueue_t *output = tty->output;
+
   while (req->left > 0) {
     uint8_t ch = *req->wbuf;
     if (ch == '\n') {
       /* Turn LF into CR + LF */
-      if (tty->output.len + 2 > BUFSIZ)
+      if (output->len + 2 > BUFSIZ)
         return EAGAIN;
-      StoreChar(tty, '\r');
+      StoreChar(output, '\r');
     } else {
-      if (tty->output.len + 1 > BUFSIZ)
+      if (output->len + 1 > BUFSIZ)
         return EAGAIN;
     }
-    StoreChar(tty, ch);
+    StoreChar(output, ch);
     req->wbuf++;
     req->left--;
   }
@@ -240,39 +245,48 @@ static int HandleWriteReq(TtyState_t *tty) {
 
 /* Perform character echoing. */
 static void ProcessInput(TtyState_t *tty) {
-  DASSERT(tty->input.done <= tty->input.len);
+  InputQueue_t *input = tty->input;
+  OutputQueue_t *output = tty->output;
 
-  while (tty->input.done < tty->input.len && tty->output.len < BUFSIZ) {
-    uint8_t *ch = (uint8_t *)&tty->input.buf[tty->input.done++];
+  DASSERT(input->done <= input->len);
+
+  while (input->done < input->len && output->len < BUFSIZ) {
+    uint8_t *ch = (uint8_t *)&input->buf[input->done++];
     if (*ch == '\r') {
       /* Replace '\r' by '\n', but output '\r\n'. */
       *ch = '\n';
-      StoreChar(tty, '\r');
-      StoreChar(tty, '\n');
-      tty->input.eol = tty->input.done;
+      StoreChar(output, '\r');
+      StoreChar(output, '\n');
+      input->eol = input->done;
     } else if (*ch < 32) {
       /* Translate control codes to ASCII characters prefixed with '^' */
-      StoreChar(tty, '^');
-      StoreChar(tty, *ch + 64);
+      StoreChar(output, '^');
+      StoreChar(output, *ch + 64);
     } else if (*ch == 127) {
       /* Translate DEL character to '^?'. */
-      StoreChar(tty, '^');
-      StoreChar(tty, '?');
+      StoreChar(output, '^');
+      StoreChar(output, '?');
     } else {
       /* Just echo the character. */
-      StoreChar(tty, *ch);
+      StoreChar(output, *ch);
     }
   }
 }
 
+#define QUIT ((void *)-1UL)
+
 static void TtyTask(void *data) {
   TtyState_t *tty = data;
 
-  (void)FileEvent(tty->cons, EV_READ);
-  (void)FileEvent(tty->cons, EV_WRITE);
+  DevFileEvent(tty->cons, EV_ADD, EVFILT_READ);
+  DevFileEvent(tty->cons, EV_ADD, EVFILT_WRITE);
 
   while (NotifyWait(NB_MSGPORT | NB_EVENT, portMAX_DELAY)) {
     DLOG("tty: wakeup\n");
+
+    if (GetMsgData(tty->ctrlMp) == QUIT)
+      break;
+
     HandleRxReady(tty);
     ProcessInput(tty);
     HandleReadReq(tty);
@@ -280,6 +294,62 @@ static void TtyTask(void *data) {
     HandleTxReady(tty);
     DLOG("tty: sleep\n");
   }
+
+  DevFileEvent(tty->cons, EV_DELETE, EVFILT_READ);
+  DevFileEvent(tty->cons, EV_DELETE, EVFILT_WRITE);
+
+  /* Abort pending requests. */
+  if (GetMsgData(tty->readMp))
+    ReplyMsg(tty->readMp);
+  if (GetMsgData(tty->writeMp))
+    ReplyMsg(tty->writeMp);
+
+  /* Unblock `TtyClose` and exit task. */
+  ReplyMsg(tty->ctrlMp);
+}
+
+static int TtyOpen(DevFile_t *dev, FileFlags_t flags __unused) {
+  if (!dev->usecnt) {
+    TtyState_t *tty = dev->data;
+
+    int error = DevFileOpen(tty->cons, F_READ | F_WRITE);
+    if (error)
+      return error;
+
+    tty->input = MemAlloc(sizeof(InputQueue_t), MF_ZERO);
+    tty->output = MemAlloc(sizeof(OutputQueue_t), MF_ZERO);
+
+    xTaskCreate((TaskFunction_t)TtyTask, tty->name, configMINIMAL_STACK_SIZE,
+                tty, TTY_TASK_PRIO, &tty->task);
+
+    tty->ctrlMp = MsgPortCreate(tty->task);
+    tty->readMp = MsgPortCreate(tty->task);
+    tty->writeMp = MsgPortCreate(tty->task);
+
+    tty->rxReq.flags = tty->txReq.flags = F_NONBLOCK;
+  }
+
+  return 0;
+}
+
+static int TtyClose(DevFile_t *dev, FileFlags_t flags __unused) {
+  if (!dev->usecnt) {
+    TtyState_t *tty = dev->data;
+
+    /* Send quit request and wait for the thread to finish. */
+    DoMsg(tty->ctrlMp, &MSG(QUIT));
+
+    MsgPortDelete(tty->ctrlMp);
+    MsgPortDelete(tty->readMp);
+    MsgPortDelete(tty->writeMp);
+
+    MemFree(tty->output);
+    MemFree(tty->input);
+
+    DevFileClose(tty->cons, F_READ | F_WRITE);
+  }
+
+  return ENOSYS;
 }
 
 static int TtyRead(DevFile_t *dev, IoReq_t *req) {

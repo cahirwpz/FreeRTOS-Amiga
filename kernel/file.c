@@ -4,6 +4,7 @@
 #include <event.h>
 #include <ioreq.h>
 #include <devfile.h>
+#include <memory.h>
 #include <file.h>
 #include <sys/errno.h>
 
@@ -69,12 +70,43 @@ int FileSeek(File_t *f, long offset, int whence, long *newoffp) {
   return error;
 }
 
+static int InternalFileOpen(const char *name, int oflags, File_t **fp) {
+  FileFlags_t flags;
+  int error;
+
+  accmode_t accmode = oflags & O_ACCMODE;
+  if (accmode == O_RDONLY)
+    flags = F_READ;
+  else if (accmode == O_WRONLY)
+    flags = F_WRITE;
+  else if (accmode == O_RDWR)
+    flags = F_READ | F_WRITE;
+  else
+    return EINVAL;
+
+  flags |= (oflags & O_NONBLOCK) ? F_NONBLOCK : 0;
+
+  File_t *f;
+  if (!(f = MemAlloc(sizeof(File_t), MF_ZERO)))
+    return ENOMEM;
+
+  f->flags = flags;
+
+  if ((error = OpenDevFile(name, f)))
+    goto fail;
+
+  *fp = f;
+  return 0;
+
+fail:
+  MemFree(f);
+  return error;
+}
+
 File_t *FileOpen(const char *name, int oflags) {
   File_t *f;
-
-  if (OpenDevFile(name, oflags, &f))
+  if (InternalFileOpen(name, oflags, &f))
     return NULL;
-
   return f;
 }
 
@@ -84,6 +116,6 @@ int FileClose(File_t *f) {
   return f->ops->close(f);
 }
 
-int FileEvent(File_t *f, EvKind_t ev) {
-  return f->ops->event(f, ev);
+int FileEvent(File_t *f, EvAction_t act, EvFilter_t filt) {
+  return f->ops->event(f, act, filt);
 }

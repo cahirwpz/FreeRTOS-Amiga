@@ -14,6 +14,10 @@ QueueHandle_t InputEventQueueCreate(void) {
   return xQueueCreate(EVENTQUEUE_SIZE, sizeof(InputEvent_t));
 }
 
+void InputEventQueueDelete(QueueHandle_t q) {
+  vQueueDelete(q);
+}
+
 int InputEventInjectFromISR(QueueHandle_t q, const InputEvent_t *iev,
                             size_t n) {
   size_t avail = EVENTQUEUE_SIZE - uxQueueMessagesWaitingFromISR(q);

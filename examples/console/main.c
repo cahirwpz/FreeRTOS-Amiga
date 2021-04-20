@@ -28,8 +28,8 @@ static void vInputTask(void *data __unused) {
   File_t *ms = FileOpen("mouse", O_RDONLY | O_NONBLOCK);
   File_t *kbd = FileOpen("keyboard", O_RDONLY | O_NONBLOCK);
 
-  (void)FileEvent(ms, EV_READ);
-  (void)FileEvent(kbd, EV_READ);
+  (void)FileEvent(ms, EV_ADD, EVFILT_READ);
+  (void)FileEvent(kbd, EV_ADD, EVFILT_READ);
 
   while (NotifyWait(NB_EVENT, portMAX_DELAY)) {
     InputEvent_t ev;
@@ -60,6 +60,9 @@ static void vInputTask(void *data __unused) {
       FileIoctl(disp, DIOCSETMS, &m);
     }
   }
+
+  (void)FileEvent(ms, EV_DELETE, EVFILT_READ);
+  (void)FileEvent(kbd, EV_DELETE, EVFILT_READ);
 }
 
 static void SystemClockTickHandler(__unused void *data) {

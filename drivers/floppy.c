@@ -47,6 +47,7 @@ static void FloppyIoTask(void *);
 static int FloppyReadWrite(DevFile_t *, IoReq_t *);
 
 static DevFileOps_t FloppyOps = {
+  .type = DT_DISK,
   .open = NullDevOpen,
   .close = NullDevClose,
   .read = FloppyReadWrite,
@@ -54,7 +55,6 @@ static DevFileOps_t FloppyOps = {
   .strategy = NullDevStrategy,
   .ioctl = NullDevIoctl,
   .event = NullDevEvent,
-  .seekable = true,
 };
 
 static int FloppyAttach(Driver_t *drv) {

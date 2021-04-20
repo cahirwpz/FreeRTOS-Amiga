@@ -24,6 +24,7 @@ typedef struct InputEvent {
 } InputEvent_t;
 
 QueueHandle_t InputEventQueueCreate(void);
+void InputEventQueueDelete(QueueHandle_t q);
 
 int InputEventInjectFromISR(QueueHandle_t q, const InputEvent_t *iev, size_t n);
 int InputEventRead(QueueHandle_t q, IoReq_t *io);

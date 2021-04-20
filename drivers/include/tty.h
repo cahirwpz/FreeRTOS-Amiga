@@ -1,5 +1,5 @@
 #pragma once
 
-typedef struct File File_t;
+typedef struct DevFile DevFile_t;
 
-int AddTtyDevFile(const char *name, File_t *cons);
+int AddTtyDevFile(const char *name, DevFile_t *cons);

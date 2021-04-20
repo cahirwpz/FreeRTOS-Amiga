@@ -229,7 +229,7 @@ static TaskHandle_t shellHandle;
 
 void StartShellTask(void) {
   DeviceAttach(&Serial);
-  AddTtyDevFile("tty", FileOpen("serial", O_RDWR));
+  AddTtyDevFile("tty", DevFileLookup("serial"));
 
   FreeRTOS_CLIRegisterCommand(&xOpenFileCmd);
   FreeRTOS_CLIRegisterCommand(&xCloseFileCmd);

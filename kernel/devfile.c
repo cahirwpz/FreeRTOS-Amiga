@@ -16,7 +16,7 @@ static int DevWrite(File_t *, IoReq_t *);
 static int DevIoctl(File_t *, u_long cmd, void *);
 static int DevSeek(File_t *, long, int);
 static int DevClose(File_t *);
-static int DevEvent(File_t *, EvKind_t);
+static int DevEvent(File_t *, EvAction_t, EvFilter_t);
 
 static FileOps_t DevFileOps = {
   .read = DevRead,
@@ -29,13 +29,17 @@ static FileOps_t DevFileOps = {
 
 static TAILQ_HEAD(, DevFile) DevFileList = TAILQ_HEAD_INITIALIZER(DevFileList);
 
-static DevFile_t *FindDevFile(const char *name) {
-  DevFile_t *dev;
+DevFile_t *DevFileLookup(const char *name) {
+  DevFile_t *dev = NULL;
+
+  vTaskSuspendAll();
 
   TAILQ_FOREACH (dev, &DevFileList, node) {
     if (!strcmp(dev->name, name))
       break;
   }
+
+  xTaskResumeAll();
 
   return dev;
 }
@@ -63,7 +67,7 @@ int AddDevFile(const char *name, DevFileOps_t *ops, DevFile_t **devp) {
 
   vTaskSuspendAll();
 
-  if (FindDevFile(name)) {
+  if (DevFileLookup(name)) {
     error = EEXIST;
     goto leave;
   }
@@ -88,46 +92,25 @@ leave:
   return error;
 }
 
-int OpenDevFile(const char *name, int oflags, File_t **fp) {
+/* This routine should be a part of special file system. */
+int OpenDevFile(const char *name, File_t *f) {
   DevFile_t *dev;
-  File_t *f;
   int error = 0;
-  FileFlags_t flags;
-
-  accmode_t accmode = oflags & O_ACCMODE;
-  if (accmode == O_RDONLY)
-    flags = F_READ;
-  else if (accmode == O_WRONLY)
-    flags = F_WRITE;
-  else if (accmode == O_RDWR)
-    flags = F_READ | F_WRITE;
-  else
-    return EINVAL;
-
-  flags |= (oflags & O_NONBLOCK) ? F_NONBLOCK : 0;
 
   vTaskSuspendAll();
 
-  if (!(dev = FindDevFile(name))) {
+  if (!(dev = DevFileLookup(name))) {
     error = ENOENT;
     goto leave;
   }
 
-  if ((error = dev->ops->open(dev, flags)))
+  if ((error = DevFileOpen(dev, f->flags)))
     goto leave;
-
-  if (!(f = MemAlloc(sizeof(File_t), MF_ZERO))) {
-    error = ENOMEM;
-    goto leave;
-  }
 
   f->ops = &DevFileOps;
   f->type = FT_DEVICE;
   f->device = dev;
-  f->flags = flags;
   dev->usecnt++;
-
-  *fp = f;
 
 leave:
   xTaskResumeAll();
@@ -138,8 +121,8 @@ leave:
 static int DevRead(File_t *f, IoReq_t *io) {
   DevFile_t *dev = f->device;
   long nbyte = io->left;
-  int error = dev->ops->read(dev, io);
-  if (dev->ops->seekable && !error)
+  int error = DevFileRead(dev, io);
+  if ((dev->ops->type & DT_SEEKABLE) && !error)
     f->offset += nbyte - io->left;
   return error;
 }
@@ -147,21 +130,21 @@ static int DevRead(File_t *f, IoReq_t *io) {
 static int DevWrite(File_t *f, IoReq_t *io) {
   DevFile_t *dev = f->device;
   long nbyte = io->left;
-  int error = dev->ops->write(dev, io);
-  if (dev->ops->seekable && !error)
+  int error = DevFileWrite(dev, io);
+  if ((dev->ops->type & DT_SEEKABLE) && !error)
     f->offset += nbyte - io->left;
   return error;
 }
 
 static int DevIoctl(File_t *f, u_long cmd, void *data) {
   DevFile_t *dev = f->device;
-  return dev->ops->ioctl(dev, cmd, data, f->flags);
+  return DevFileIoctl(dev, cmd, data, f->flags);
 }
 
 static int DevSeek(File_t *f, long offset, int whence) {
   DevFile_t *dev = f->device;
 
-  if (!dev->ops->seekable)
+  if (!(dev->ops->type & DT_SEEKABLE))
     return ESPIPE;
 
   if (whence == SEEK_CUR) {
@@ -185,10 +168,10 @@ static int DevSeek(File_t *f, long offset, int whence) {
 static int DevClose(File_t *f) {
   DevFile_t *dev = f->device;
   Atomic_Decrement_u32(&dev->usecnt);
-  return dev->ops->close(dev, f->flags);
+  return DevFileClose(dev, f->flags);
 }
 
-static int DevEvent(File_t *f, EvKind_t ev) {
+static int DevEvent(File_t *f, EvAction_t act, EvFilter_t filt) {
   DevFile_t *dev = f->device;
-  return dev->ops->event(dev, ev);
+  return DevFileEvent(dev, act, filt);
 }

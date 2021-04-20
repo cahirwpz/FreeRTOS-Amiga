@@ -16,28 +16,51 @@ void EventNotifyFromISR(EventWaitList_t *wl) {
   TAILQ_FOREACH (wn, wl, link) { NotifySendFromISR(wn->listener, NB_EVENT); }
 }
 
-int EventMonitor(EventWaitList_t *wl) {
+static EventWaitNote_t *LookupNote(EventWaitList_t *wl, TaskHandle_t listener) {
+  EventWaitNote_t *wn = NULL;
+  TAILQ_FOREACH (wn, wl, link) {
+    if (wn->listener == listener)
+      break;
+  }
+  return wn;
+}
+
+int EventMonitor(EventWaitList_t *wl, EvAction_t act) {
+  if (act != EV_ADD && act != EV_DELETE)
+    return EINVAL;
+
   TaskHandle_t listener = xTaskGetCurrentTaskHandle();
-  EventWaitNote_t *note = MemAlloc(sizeof(EventWaitNote_t), MF_ZERO);
+  EventWaitNote_t *note = NULL;
   int error = 0;
+
+  if (act == EV_ADD)
+    note = MemAlloc(sizeof(EventWaitNote_t), MF_ZERO);
 
   taskENTER_CRITICAL();
   {
-    EventWaitNote_t *wn;
-    TAILQ_FOREACH (wn, wl, link) {
-      if (wn->listener == listener) {
+    EventWaitNote_t *found = LookupNote(wl, listener);
+    if (act == EV_ADD) {
+      if (found == NULL) {
+        note->listener = listener;
+        TAILQ_INSERT_TAIL(wl, note, link);
+        note = NULL; /* so it doesn't get freed */
+      } else {
         error = EEXIST;
-        break;
       }
-    }
-    if (!error) {
-      note->listener = listener;
-      TAILQ_INSERT_TAIL(wl, note, link);
+    } else if (act == EV_DELETE) {
+      if (found != NULL) {
+        TAILQ_REMOVE(wl, found, link);
+        note = found; /* we want to free it */
+      } else {
+        error = ESRCH;
+      }
+    } else {
+      error = EINVAL;
     }
   }
   taskEXIT_CRITICAL();
 
-  if (error)
+  if (note)
     MemFree(note);
 
   return error;

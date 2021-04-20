@@ -7,6 +7,7 @@
 #include <ring.h>
 #include <event.h>
 #include <notify.h>
+#include <memory.h>
 #include <ioreq.h>
 #include <devfile.h>
 #include <sys/errno.h>
@@ -28,21 +29,24 @@ typedef struct SerialDev {
   TaskHandle_t txTask;
   EventWaitList_t readEvent;
   EventWaitList_t writeEvent;
+  unsigned baud;
 } SerialDev_t;
 
+static int SerialOpen(DevFile_t *, FileFlags_t);
+static int SerialClose(DevFile_t *, FileFlags_t);
 static int SerialRead(DevFile_t *, IoReq_t *);
 static int SerialWrite(DevFile_t *, IoReq_t *);
-static int SerialEvent(DevFile_t *, EvKind_t);
+static int SerialEvent(DevFile_t *, EvAction_t, EvFilter_t);
 
 static DevFileOps_t SerialOps = {
-  .open = NullDevOpen,
-  .close = NullDevClose,
+  .type = DT_CONS,
+  .open = SerialOpen,
+  .close = SerialClose,
   .read = SerialRead,
   .write = SerialWrite,
   .strategy = NullDevStrategy,
   .ioctl = NullDevIoctl,
   .event = SerialEvent,
-  .seekable = false,
 };
 
 /* Handles full-duplex transmission. */
@@ -101,65 +105,64 @@ static void RecvIntHandler(void *ptr) {
   }
 }
 
+/* BUG(cahir): I've run into a bug that I had burned too many hours to
+ * identify and I finally gave up. Seems like INTF_TBE bit in INTREQ is set
+ * but it does not trigger an interrupt, so emptying transmit queue hangs in
+ * the middle. I'm tempted to say it's the emulator bug, but reading through
+ * fs-uae was not very fruitful and I run out of time to investigate it.
+ *
+ * Also playing with DisableINT / EnableINT with INTF_INTEN argument yields
+ * some weird behaviour in SerialTransmit, though in this context they can
+ * be used to replaced *INTERRUPT_MASK* macros. Which makes me believe that
+ * there's something I fundamentally do not understand.
+ *
+ * Hence I introduced a recovery mechanism. At each VBlank I check if
+ * transmission halted prematurely and I resume it. Hopefully that helps.
+ */
 static void RecoverIntHandler(void *ptr) {
   SerialDev_t *ser = ptr;
   SerialTransmit(ser);
 }
 
-static int SerialAttach(Driver_t *drv) {
-  SerialDev_t *ser = drv->state;
-  unsigned baud = 9600;
-  int error;
+static int SerialOpen(DevFile_t *dev, FileFlags_t flags __unused) {
+  if (!dev->usecnt) {
+    SerialDev_t *ser = dev->data;
 
-  custom.serper = CLOCK / baud - 1;
+    custom.serper = CLOCK / ser->baud - 1;
 
-  ser->rxLock = xSemaphoreCreateMutex();
-  ser->txLock = xSemaphoreCreateMutex();
-  ser->rxBuf = RingAlloc(BUFLEN);
-  ser->txBuf = RingAlloc(BUFLEN);
+    ser->rxLock = xSemaphoreCreateMutex();
+    ser->txLock = xSemaphoreCreateMutex();
+    ser->rxBuf = RingAlloc(BUFLEN);
+    ser->txBuf = RingAlloc(BUFLEN);
 
-  TAILQ_INIT(&ser->readEvent);
-  TAILQ_INIT(&ser->writeEvent);
+    SetIntVec(TBE, SendIntHandler, ser);
+    SetIntVec(RBF, RecvIntHandler, ser);
 
-  SetIntVec(TBE, SendIntHandler, ser);
-  SetIntVec(RBF, RecvIntHandler, ser);
+    AddIntServer(VertBlankChain, &ser->intr);
 
-  /* BUG(cahir): I've run into a bug that I had burned too many hours to
-   * identify and I finally gave up. Seems like INTF_TBE bit in INTREQ is set
-   * but it does not trigger an interrupt, so emptying transmit queue hangs in
-   * the middle. I'm tempted to say it's the emulator bug, but reading through
-   * fs-uae was not very fruitful and I run out of time to investigate it.
-   *
-   * Also playing with DisableINT / EnableINT with INTF_INTEN argument yields
-   * some weird behaviour in SerialTransmit, though in this context they can
-   * be used to replaced *INTERRUPT_MASK* macros. Which makes me believe that
-   * there's something I fundamentally do not understand.
-   *
-   * Hence I introduced a recovery mechanism. At each VBlank I check if
-   * transmission halted prematurely and I resume it. Hopefully that helps.
-   */
-  ser->intr = INTSERVER(-20, RecoverIntHandler, (void *)ser);
-  AddIntServer(VertBlankChain, &ser->intr);
+    ClearIRQ(INTF_TBE | INTF_RBF);
+    EnableINT(INTF_TBE | INTF_RBF);
+  }
 
-  ClearIRQ(INTF_TBE | INTF_RBF);
-  EnableINT(INTF_TBE | INTF_RBF);
-
-  error = AddDevFile("serial", &SerialOps, &ser->file);
-  ser->file->data = (void *)ser;
-  return error;
+  return 0;
 }
 
-int SerialDetach(Driver_t *drv) {
-  SerialDev_t *ser = drv->state;
+static int SerialClose(DevFile_t *dev, FileFlags_t flags __unused) {
+  if (!dev->usecnt) {
+    SerialDev_t *ser = dev->data;
 
-  DisableINT(INTF_TBE | INTF_RBF);
-  ResetIntVec(TBE);
-  ResetIntVec(RBF);
+    DisableINT(INTF_TBE | INTF_RBF);
+    ResetIntVec(TBE);
+    ResetIntVec(RBF);
 
-  RemIntServer(&ser->intr);
+    RemIntServer(&ser->intr);
 
-  vSemaphoreDelete(ser->rxLock);
-  vSemaphoreDelete(ser->txLock);
+    MemFree(ser->rxBuf);
+    MemFree(ser->txBuf);
+
+    vSemaphoreDelete(ser->rxLock);
+    vSemaphoreDelete(ser->txLock);
+  }
 
   return 0;
 }
@@ -236,19 +239,36 @@ static int SerialRead(DevFile_t *dev, IoReq_t *req) {
   return error;
 }
 
-static int SerialEvent(DevFile_t *dev, EvKind_t ev) {
+static int SerialEvent(DevFile_t *dev, EvAction_t act, EvFilter_t filt) {
   SerialDev_t *ser = dev->data;
 
-  if (ev == EV_READ)
-    return EventMonitor(&ser->readEvent);
-  if (ev == EV_WRITE)
-    return EventMonitor(&ser->writeEvent);
+  if (filt == EVFILT_READ)
+    return EventMonitor(&ser->readEvent, act);
+  if (filt == EVFILT_WRITE)
+    return EventMonitor(&ser->writeEvent, act);
   return EINVAL;
+}
+
+static int SerialAttach(Driver_t *drv) {
+  SerialDev_t *ser = drv->state;
+
+  ser->baud = 9600;
+
+  TAILQ_INIT(&ser->readEvent);
+  TAILQ_INIT(&ser->writeEvent);
+
+  ser->intr = INTSERVER(-20, RecoverIntHandler, (void *)ser);
+
+  int error;
+  if ((error = AddDevFile("serial", &SerialOps, &ser->file)))
+    return error;
+
+  ser->file->data = ser;
+  return 0;
 }
 
 Driver_t Serial = {
   .name = "serial",
   .attach = SerialAttach,
-  .detach = SerialDetach,
   .size = sizeof(SerialDev_t),
 };

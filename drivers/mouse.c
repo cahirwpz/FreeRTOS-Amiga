@@ -21,32 +21,21 @@ typedef struct MouseDev {
   uint8_t button;
 } MouseDev_t;
 
+static int MouseOpen(DevFile_t *, FileFlags_t);
+static int MouseClose(DevFile_t *, FileFlags_t);
 static int MouseRead(DevFile_t *, IoReq_t *);
-static int MouseEvent(DevFile_t *, EvKind_t);
+static int MouseEvent(DevFile_t *, EvAction_t, EvFilter_t);
 
 static DevFileOps_t MouseOps = {
-  .open = NullDevOpen,
-  .close = NullDevClose,
+  .type = DT_OTHER,
+  .open = MouseOpen,
+  .close = MouseClose,
   .read = MouseRead,
   .write = NullDevWrite,
   .strategy = NullDevStrategy,
   .ioctl = NullDevIoctl,
   .event = MouseEvent,
-  .seekable = false,
 };
-
-static int MouseRead(DevFile_t *dev, IoReq_t *io) {
-  MouseDev_t *ms = dev->data;
-  return InputEventRead(ms->eventQ, io);
-}
-
-static int MouseEvent(DevFile_t *dev, EvKind_t ev) {
-  MouseDev_t *ms = dev->data;
-
-  if (ev == EV_READ)
-    return EventMonitor(&ms->readEvent);
-  return EINVAL;
-}
 
 static uint8_t ReadButtonState(void) {
   uint8_t state = 0;
@@ -57,6 +46,48 @@ static uint8_t ReadButtonState(void) {
     state |= RMB;
 
   return state;
+}
+
+static int MouseOpen(DevFile_t *dev, FileFlags_t flags) {
+  if (flags & F_WRITE)
+    return EACCES;
+
+  if (!dev->usecnt) {
+    MouseDev_t *ms = dev->data;
+
+    ms->eventQ = InputEventQueueCreate();
+    ms->xctr = custom.joy0dat & 0xff;
+    ms->yctr = custom.joy0dat >> 8;
+    ms->button = ReadButtonState();
+
+    AddIntServer(VertBlankChain, &ms->intr);
+  }
+
+  return 0;
+}
+
+static int MouseClose(DevFile_t *dev, FileFlags_t flags __unused) {
+  if (!dev->usecnt) {
+    MouseDev_t *ms = dev->data;
+
+    RemIntServer(&ms->intr);
+    InputEventQueueDelete(ms->eventQ);
+  }
+
+  return 0;
+}
+
+static int MouseRead(DevFile_t *dev, IoReq_t *io) {
+  MouseDev_t *ms = dev->data;
+  return InputEventRead(ms->eventQ, io);
+}
+
+static int MouseEvent(DevFile_t *dev, EvAction_t act, EvFilter_t filt) {
+  MouseDev_t *ms = dev->data;
+
+  if (filt == EVFILT_READ)
+    return EventMonitor(&ms->readEvent, act);
+  return EINVAL;
 }
 
 static void MouseIntHandler(void *data) {
@@ -107,20 +138,14 @@ static void MouseIntHandler(void *data) {
 
 static int MouseAttach(Driver_t *drv) {
   MouseDev_t *ms = drv->state;
-  int error;
 
-  ms->eventQ = InputEventQueueCreate();
   TAILQ_INIT(&ms->readEvent);
-
-  /* Settings from MouseData structure. */
-  ms->xctr = custom.joy0dat & 0xff;
-  ms->yctr = custom.joy0dat >> 8;
-  ms->button = ReadButtonState();
-
   ms->intr = INTSERVER(-5, MouseIntHandler, (void *)ms);
-  AddIntServer(VertBlankChain, &ms->intr);
 
-  error = AddDevFile("mouse", &MouseOps, &ms->file);
+  int error;
+  if ((error = AddDevFile("mouse", &MouseOps, &ms->file)))
+    return error;
+
   ms->file->data = ms;
   return error;
 }

@@ -239,30 +239,63 @@ typedef struct KeyboardDev {
   KeyCode_t code;
 } KeyboardDev_t;
 
+static int KeyboardOpen(DevFile_t *, FileFlags_t);
+static int KeyboardClose(DevFile_t *, FileFlags_t);
 static int KeyboardRead(DevFile_t *, IoReq_t *);
-static int KeyboardEvent(DevFile_t *, EvKind_t);
+static int KeyboardEvent(DevFile_t *, EvAction_t, EvFilter_t);
 
 static DevFileOps_t KeyboardOps = {
-  .open = NullDevOpen,
-  .close = NullDevClose,
+  .type = DT_OTHER,
+  .open = KeyboardOpen,
+  .close = KeyboardClose,
   .read = KeyboardRead,
   .write = NullDevWrite,
   .strategy = NullDevStrategy,
   .ioctl = NullDevIoctl,
   .event = KeyboardEvent,
-  .seekable = false,
 };
+
+static int KeyboardOpen(DevFile_t *dev, FileFlags_t flags) {
+  if (flags & F_WRITE)
+    return EACCES;
+
+  if (!dev->usecnt) {
+    KeyboardDev_t *kbd = dev->data;
+
+    kbd->eventQ = InputEventQueueCreate();
+    /* Register keyboard interrupt. */
+    AddIntServer(PortsChain, &kbd->intr);
+    /* Set to input mode. */
+    BCLR(ciaa.ciacra, CIACRAB_SPMODE);
+    /* Enable keyboard interrupt.
+     * The keyboard is attached to CIA-A serial port. */
+    WriteICR(CIAA, CIAICRF_SETCLR | CIAICRF_SP);
+  }
+
+  return 0;
+}
+
+static int KeyboardClose(DevFile_t *dev, FileFlags_t flags __unused) {
+  if (!dev->usecnt) {
+    KeyboardDev_t *kbd = dev->data;
+
+    RemIntServer(&kbd->intr);
+    InputEventQueueDelete(kbd->eventQ);
+  }
+
+  return 0;
+}
 
 static int KeyboardRead(DevFile_t *dev, IoReq_t *io) {
   KeyboardDev_t *kbd = dev->data;
   return InputEventRead(kbd->eventQ, io);
 }
 
-static int KeyboardEvent(DevFile_t *dev, EvKind_t ev) {
+static int KeyboardEvent(DevFile_t *dev, EvAction_t act, EvFilter_t filt) {
   KeyboardDev_t *kbd = dev->data;
 
-  if (ev == EV_READ)
-    return EventMonitor(&kbd->readEvent);
+  if (filt == EVFILT_READ)
+    return EventMonitor(&kbd->readEvent, act);
   return EINVAL;
 }
 
@@ -315,27 +348,19 @@ static void KeyboardIntHandler(void *data) {
 
 static int KeyboardAttach(Driver_t *drv) {
   KeyboardDev_t *kbd = drv->state;
-  int error;
 
   kbd->timer = AcquireTimer(TIMER_ANY);
-  DASSERT(kbd->timer != NULL);
+  if (!kbd->timer)
+    return ENXIO;
 
-  kbd->eventQ = InputEventQueueCreate();
   TAILQ_INIT(&kbd->readEvent);
-
-  /* Register keyboard interrupt. */
   kbd->intr = INTSERVER(-10, (ISR_t)KeyboardIntHandler, (void *)kbd);
-  AddIntServer(PortsChain, &kbd->intr);
-  /* Set to input mode. */
-  BCLR(ciaa.ciacra, CIACRAB_SPMODE);
-  /* Enable keyboard interrupt.
-   * The keyboard is attached to CIA-A serial port. */
-  WriteICR(CIAA, CIAICRF_SETCLR | CIAICRF_SP);
 
+  int error;
   if ((error = AddDevFile("keyboard", &KeyboardOps, &kbd->file)))
     return error;
 
-  kbd->file->data = (void *)kbd;
+  kbd->file->data = kbd;
   return 0;
 }
 

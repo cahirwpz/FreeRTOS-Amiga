@@ -41,7 +41,7 @@ int main(void) {
   NOP(); /* Breakpoint for simulator. */
 
   DeviceAttach(&Serial);
-  AddTtyDevFile("tty", FileOpen("serial", O_RDWR));
+  AddTtyDevFile("tty", DevFileLookup("serial"));
 
   xTaskCreate(vMainTask, "main", KPROC_STKSZ, NULL, 0, &handle);
 
