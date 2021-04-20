@@ -72,7 +72,7 @@ File_t *FileHold(File_t *f);
 void FileDrop(File_t *f);
 
 /* These behave like read/write/lseek known from UNIX */
-File_t *FileOpen(const char *name, int oflags);
+int FileOpen(const char *name, int oflags, File_t **fp);
 int FileRead(File_t *f, void *buf, size_t nbyte, long *donep);
 int FileWrite(File_t *f, const void *buf, size_t nbyte, long *donep);
 int FileIoctl(File_t *f, u_long cmd, void *data);

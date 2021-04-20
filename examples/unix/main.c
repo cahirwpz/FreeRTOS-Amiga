@@ -16,7 +16,8 @@ static File_t *FloppyOpen(const char *path) {
 }
 
 static void vMainTask(__unused void *data) {
-  File_t *ser = FileOpen("tty", O_RDWR);
+  File_t *ser;
+  FileOpen("tty", O_RDWR, &ser);
   File_t *init = FloppyOpen("init");
 
   Proc_t p;

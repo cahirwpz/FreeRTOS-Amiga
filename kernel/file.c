@@ -70,7 +70,7 @@ int FileSeek(File_t *f, long offset, int whence, long *newoffp) {
   return error;
 }
 
-static int InternalFileOpen(const char *name, int oflags, File_t **fp) {
+int FileOpen(const char *name, int oflags, File_t **fp) {
   FileFlags_t flags;
   int error;
 
@@ -101,13 +101,6 @@ static int InternalFileOpen(const char *name, int oflags, File_t **fp) {
 fail:
   MemFree(f);
   return error;
-}
-
-File_t *FileOpen(const char *name, int oflags) {
-  File_t *f;
-  if (InternalFileOpen(name, oflags, &f))
-    return NULL;
-  return f;
 }
 
 int FileClose(File_t *f) {

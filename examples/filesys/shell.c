@@ -199,7 +199,8 @@ static void vShellTask(__unused void *data) {
   static char pcOutputString[MAX_OUTPUT_LENGTH];
   static char pcInputString[MAX_INPUT_LENGTH];
 
-  File_t *ser = FileOpen("tty", O_RDWR);
+  File_t *ser;
+  FileOpen("tty", O_RDWR, &ser);
 
   FsMount();
 

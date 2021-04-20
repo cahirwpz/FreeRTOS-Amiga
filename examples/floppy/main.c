@@ -127,8 +127,9 @@ int main(void) {
   DeviceAttach(&Serial);
   DeviceAttach(&Floppy);
 
-  File_t *ser = FileOpen("serial", O_RDWR);
-  File_t *fd = FileOpen("floppy", O_RDWR);
+  File_t *ser, *fd;
+  FileOpen("serial", O_RDWR, &ser);
+  FileOpen("floppy", O_RDWR, &fd);
 
   SectorCksumLock = xSemaphoreCreateMutex();
 
