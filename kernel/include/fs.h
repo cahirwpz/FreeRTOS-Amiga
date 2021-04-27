@@ -23,12 +23,12 @@
 /* File system super block on the disk. */
 typedef struct FsSuperBlock {
   uint32_t magic;      /* magic number */
-  uint32_t ninodes;    /* number of all inodes */
+  uint32_t reserved;   /* reserved for future use */
   uint32_t nblocks;    /* number of all blocks */
   uint32_t nfreeblk;   /* number of free blocks */
+  uint32_t ninodes;    /* number of all inodes */
   uint32_t nfreeino;   /* number of free inodes */
   uint32_t inodestart; /* first block with i-nodes */
-  uint32_t bmapstart;  /* first block with used blocks bitmap */
   uint32_t datastart;  /* first block with user data */
 } FsSuperBlock_t;
 

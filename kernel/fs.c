@@ -1,11 +1,10 @@
 #include <devfile.h>
 #include <ioreq.h>
+#include <fs.h>
 #include <sys/errno.h>
 
 #define DEBUG 1
 #include <debug.h>
-
-#include "fs.h"
 
 /* Properties extracted from a superblock. */
 typedef struct Mount {
