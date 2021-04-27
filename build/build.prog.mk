@@ -45,18 +45,6 @@ $(PROGRAM).adf: $(TOPDIR)/bootloader.bin $(PROGRAM).exe $(ADF-EXTRA)
 	@echo "[AS] $(addprefix $(DIR),$^) -> $(DIR)$@"
 	$(VASM) -Fbin $(VASMFLAGS) -o $@ $(realpath $<)
 
-data/%.c: data/%.png
-	@echo "[PNG2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
-	$(PNG2C) $(PNG2C.$*) $(realpath $<) > $@
-
-data/%.c: data/%.psfu
-	@echo "[PSF2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
-	$(PSF2C) $(PSF2C.$*) $(realpath $<) > $@
-
-data/%.c: data/%.wav
-	@echo "[WAV2C] $(addprefix $(DIR),$^) -> $(DIR)$@"
-	$(WAV2C) $(WAV2C.$*) $(realpath $<) > $@
-
 $(TOPDIR)/%.lib: dummy
 	$(MAKE) -C $(dir $@) $(notdir $@)
 
@@ -78,5 +66,13 @@ debug-floppy: $(PROGRAM).elf $(PROGRAM).adf
 debug-rom: $(PROGRAM).rom $(PROGRAM).elf $(PROGRAM).adf
 	$(LAUNCH) $(LAUNCHOPTS) \
 	  -d -r $(PROGRAM).rom -e $(PROGRAM).elf -f $(PROGRAM).adf
+
+debug-ext-floppy: $(PROGRAM).elf $(PROGRAM).adf
+	$(LAUNCH) $(LAUNCHOPTS) \
+	  -x -f $(PROGRAM).adf -e $(PROGRAM).elf
+
+debug-ext-rom: $(PROGRAM).rom $(PROGRAM).elf $(PROGRAM).adf
+	$(LAUNCH) $(LAUNCHOPTS) \
+	  -x -r $(PROGRAM).rom -e $(PROGRAM).elf -f $(PROGRAM).adf
 
 .PHONY: debug-floppy debug-rom run-floppy run-rom

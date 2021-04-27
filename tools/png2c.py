@@ -122,7 +122,7 @@ def do_bitmap(im, desc):
         print('};')
         print('')
 
-    print('const bitmap_t %s = {' % name)
+    print('const Bitmap_t %s = {' % name)
     print('  .width = %d,' % width)
     print('  .height = %d,' % height)
     print('  .depth = %s,' % depth)
@@ -185,7 +185,7 @@ def do_sprite(im, desc):
         if width > 16:
             sprite += str(i)
 
-        print('static __datachip sprdat_t _%s_data[] = {' % sprite)
+        print('static __datachip SprDat_t _%s_data[] = {' % sprite)
         print('  { SPRPOS(0, 0), SPRCTL(0, 0, 0, %d) },' % height)
         for j in range(0, stride * depth * height, stride * depth):
             print('  { 0b%s, 0b%s },' % (bitstr(bpl[i + j], 16),
@@ -194,9 +194,9 @@ def do_sprite(im, desc):
         print('};')
         print('')
         if sequence:
-            print('static sprite_t _%s = {' % sprite)
+            print('static Sprite_t _%s = {' % sprite)
         else:
-            print('sprite_t %s = {' % sprite)
+            print('Sprite_t %s = {' % sprite)
         print('  .attached = NULL,')
         print('  .height = %d,' % height)
         print('  .data = _%s_data' % sprite)
@@ -205,7 +205,7 @@ def do_sprite(im, desc):
 
     if sequence:
         sprites = ['&_%s%d' % (name, i) for i in range(width // 16)]
-        print('sprite_t *%s[] = {' % name)
+        print('Sprite_t *%s[] = {' % name)
         print('  %s' % ', '.join(sprites))
         print('};')
         print('')
@@ -231,7 +231,7 @@ def do_palette(im, desc):
 
     cmap = [pal[i * 3:(i + 1) * 3] for i in range(colors)]
 
-    print('palette_t %s = {' % name)
+    print('Palette_t %s = {' % name)
     print('  .count = %d,' % len(cmap))
     print('  .colors = {')
     for r, g, b in cmap:

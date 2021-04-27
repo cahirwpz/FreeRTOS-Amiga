@@ -14,8 +14,8 @@
 #define SEEK_END 2 /* set file offset to EOF plus offset */
 #endif
 
-typedef void (*putchar_t)(char);
-void kvprintf(putchar_t, const char *fmt, va_list ap);
+typedef void (*putchar_t)(void *, char);
+void kvprintf(putchar_t, void *, const char *fmt, va_list ap);
 int snprintf(char *str, size_t size, const char *format, ...);
 
 #ifdef _USERSPACE

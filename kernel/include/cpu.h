@@ -11,32 +11,65 @@
 #define CB_FPU40 6
 #define CB_68060 7
 
-#define CF_68000 (0)
-#define CF_68010 BIT(CB_68010)
-#define CF_68020 BIT(CB_68020)
-#define CF_68020 BIT(CB_68020)
-#define CF_68030 BIT(CB_68030)
-#define CF_68040 BIT(CB_68040)
-#define CF_68881 BIT(CB_68881)
-#define CF_68882 BIT(CFB_68882)
-#define CF_FPU40 BIT(CFB_FPU40)
-#define CF_68060 BIT(CFB_68060)
+/* Describe available processor features.
+ * Refer to user manual for given model. */
+typedef enum CpuModel {
+  CF_68000 = 0,
+  CF_68010 = BIT(CB_68010),
+  CF_68020 = BIT(CB_68020),
+  CF_68030 = BIT(CB_68030), /* memory management unit available */
+  CF_68040 = BIT(CB_68040),
+  CF_68881 = BIT(CB_68881), /* floating point unit available */
+  CF_68882 = BIT(CB_68882),
+  CF_FPU40 = BIT(CB_FPU40),
+  CF_68060 = BIT(CB_68060),
+} __packed CpuModel_t;
 
-extern uint8_t CpuModel;
+/* Used when there are differences between processors
+ * and there's need to handle certain features separately. */
+extern CpuModel_t CpuModel;
 
-static inline int32_t muls16(int16_t a, int16_t b) {
-  int32_t r;
-  asm("muls %2,%0" : "=d"(r) : "0"(a), "dmi"(b));
-  return r;
+/* When simulator is configured to enter debugger on illegal instructions,
+ * this macro can be used to set breakpoints in your code. */
+#define BREAK()                                                                \
+  { asm volatile("\tillegal\n"); }
+
+/* Halt the processor by masking all interrupts and waiting for NMI. */
+#define HALT()                                                                 \
+  { asm volatile("\tstop\t#0x2700\n"); }
+
+/* Use whenever a program should generate a fatal error. This will break into
+ * debugger for program inspection and stop instruction execution. */
+#define PANIC()                                                                \
+  {                                                                            \
+    BREAK();                                                                   \
+    HALT();                                                                    \
+  }
+
+/* Instruction that effectively is a no-op, but its opcode is different from
+ * real nop instruction. Useful for introducing transparent breakpoints that
+ * are only understood by simulator. */
+#define NOP()                                                                  \
+  { asm volatile("\texg\t%d7,%d7\n"); }
+
+/* Make the processor wait for interrupt. */
+#define WFI()                                                                  \
+  { asm volatile("\tstop\t#0x2000\n"); }
+
+/* Issue trap 0..15 instruction that can be interpreted by a trap handler. */
+#define TRAP(n)                                                                \
+  { asm volatile("\ttrap\t#" #n "\n"); }
+
+/* Read Vector Base Register (68010 and above only) */
+static inline void *portGetVBR(void) {
+  void *vbr;
+  asm volatile("\tmovec\t%%vbr,%0\n" : "=d"(vbr));
+  return vbr;
 }
 
-typedef struct div16 {
-  int16_t rem;  /* remainder */
-  int16_t quot; /* quotient */
-} div16_t;
-
-static inline div16_t divs16(int32_t a, int16_t b) {
-  div16_t r;
-  asm("divs %2,%0" : "=d"(r) : "0"(a), "dmi"(b));
-  return r;
+/* Read whole Status Register (privileged instruction on 68010 and above) */
+static inline uint16_t portGetSR(void) {
+  uint16_t sr;
+  asm volatile("\tmove.w\t%%sr,%0\n" : "=d"(sr));
+  return sr;
 }

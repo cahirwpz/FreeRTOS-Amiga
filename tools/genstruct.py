@@ -10,7 +10,7 @@ def gen_bitmap(name, desc):
     for d in range(depth):
         print('__bsschip uint16_t %s_bpl%d[%d];' % (name, d, bplSize))
     print('')
-    print('const bitmap_t %s_bm = {' % name)
+    print('const Bitmap_t %s_bm = {' % name)
     print('  .width = %d,' % width)
     print('  .height = %d,' % height)
     print('  .depth = %s,' % depth)

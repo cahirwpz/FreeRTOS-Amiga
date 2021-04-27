@@ -1,7 +1,7 @@
 #include <ioreq.h>
 #include <ring.h>
 #include <string.h>
-#include <libkern.h>
+#include <memory.h>
 
 static inline void RingProduce(Ring_t *buf, size_t len) {
   buf->count += len;
@@ -18,15 +18,11 @@ static inline void RingConsume(Ring_t *buf, size_t len) {
 }
 
 void RingPutByte(Ring_t *buf, uint8_t byte) {
-  if (!RingFull(buf)) {
-    buf->data[buf->head] = byte;
-    RingProduce(buf, 1);
-  }
+  buf->data[buf->head] = byte;
+  RingProduce(buf, 1);
 }
 
-int RingGetByte(Ring_t *buf) {
-  if (RingEmpty(buf))
-    return -1;
+uint8_t RingGetByte(Ring_t *buf) {
   uint8_t byte = buf->data[buf->tail];
   RingConsume(buf, 1);
   return byte;
@@ -63,7 +59,7 @@ void RingWrite(Ring_t *buf, IoReq_t *req) {
 }
 
 Ring_t *RingAlloc(size_t size) {
-  Ring_t *buf = kmalloc(sizeof(Ring_t) + size);
+  Ring_t *buf = MemAlloc(sizeof(Ring_t) + size, 0);
   buf->head = 0;
   buf->tail = 0;
   buf->count = 0;

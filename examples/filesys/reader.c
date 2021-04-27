@@ -2,7 +2,7 @@
 #include <FreeRTOS/task.h>
 
 #include <stdlib.h>
-#include <libkern.h>
+#include <memory.h>
 
 #include "filesys.h"
 
@@ -30,14 +30,14 @@ static void vReaderTask(__unused void *data) {
   FsMount();
 
   unsigned seed = (intptr_t)xTaskGetCurrentTaskHandle();
-  uint8_t *buf = pvPortMalloc(BUFSIZE);
+  uint8_t *buf = MemAlloc(BUFSIZE, 0);
   int n = DirectorySize();
 
   for (;;) {
     File_t *f = OpenNthFile(rand_r(&seed) % n);
-    size_t nbyte;
+    long nbyte;
     do {
-      nbyte = kfread(f, buf, 1 + rand_r(&seed) % BUFSIZE);
+      FileRead(f, buf, 1 + rand_r(&seed) % BUFSIZE, &nbyte);
       vTaskDelay((750 + rand_r(&seed) % 250) / portTICK_PERIOD_MS);
     } while (nbyte != 0);
     FileClose(f);

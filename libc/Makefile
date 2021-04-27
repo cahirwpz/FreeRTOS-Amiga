@@ -39,6 +39,7 @@ SOURCES = \
 	sys/execv.c \
 	sys/exit.c \
 	sys/fstat.c \
+	sys/ioctl.c \
 	sys/kill.c \
 	sys/mkdir.c \
 	sys/open.c \

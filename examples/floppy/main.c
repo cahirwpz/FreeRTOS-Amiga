@@ -2,10 +2,11 @@
 #include <FreeRTOS/task.h>
 #include <FreeRTOS/semphr.h>
 
+#include <driver.h>
+#include <memory.h>
 #include <floppy.h>
 #include <interrupt.h>
-#include <libkern.h>
-#include <serial.h>
+#include <file.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -15,12 +16,12 @@
 
 static void vPlusTask(File_t *ser) {
   for (;;)
-    kfputchar(ser, '-');
+    FileWrite(ser, "-", 1, NULL);
 }
 
 static void vMinusTask(File_t *ser) {
   for (;;)
-    kfputchar(ser, '+');
+    FileWrite(ser, "+", 1, NULL);
 }
 
 #define ALLSECS (NTRACKS * NSECTORS)
@@ -42,7 +43,7 @@ static uint32_t FastRand(void) {
 extern uint32_t crc32(const uint8_t *frame, size_t frame_len);
 
 static void vReaderTask(File_t *fd) {
-  void *data = pvPortMalloc(SECTOR_SIZE);
+  void *data = MemAlloc(SECTOR_SIZE, 0);
 
   for (;;) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -52,18 +53,18 @@ static void vReaderTask(File_t *fd) {
       xSemaphoreTake(SectorCksumLock, portMAX_DELAY);
       cksum = SectorCksum[s];
       if (cksum) {
-        kfseek(fd, s * SECTOR_SIZE, SEEK_SET);
-        kfread(fd, data, SECTOR_SIZE);
+        FileSeek(fd, s * SECTOR_SIZE, SEEK_SET, NULL);
+        FileRead(fd, data, SECTOR_SIZE, NULL);
       }
       xSemaphoreGive(SectorCksumLock);
 
       if (cksum) {
         uint32_t cksum2 = crc32((void *)data, SECTOR_SIZE);
 
-        DPRINTF("rd(%d/%d): cksum = %08x (memory), cksum = %08x (disk)\n",
-                s / NSECTORS, s % NSECTORS, cksum, cksum2);
+        DLOG("rd(%d/%d): cksum = %08x (memory), cksum = %08x (disk)\n",
+             s / NSECTORS, s % NSECTORS, cksum, cksum2);
 
-        DASSERT(cksum == cksum2);
+        Assert(cksum == cksum2);
 
         vTaskDelay(250 / portTICK_PERIOD_MS);
       }
@@ -72,7 +73,7 @@ static void vReaderTask(File_t *fd) {
 }
 
 static void vWriterTask(File_t *fd) {
-  uint32_t *data = pvPortMalloc(SECTOR_SIZE);
+  uint32_t *data = MemAlloc(SECTOR_SIZE, 0);
   DASSERT(data != NULL);
 
   for (;;) {
@@ -85,12 +86,12 @@ static void vWriterTask(File_t *fd) {
 
     xSemaphoreTake(SectorCksumLock, portMAX_DELAY);
     SectorCksum[s] = 0;
-    kfseek(fd, s * SECTOR_SIZE, SEEK_SET);
-    kfwrite(fd, data, SECTOR_SIZE);
+    FileSeek(fd, s * SECTOR_SIZE, SEEK_SET, NULL);
+    FileWrite(fd, data, SECTOR_SIZE, NULL);
     xSemaphoreGive(SectorCksumLock);
 
     uint32_t cksum = crc32((void *)data, SECTOR_SIZE);
-    DPRINTF("wr(%d/%d): cksum = %08x\n", s / NSECTORS, s % NSECTORS, cksum);
+    DLOG("wr(%d/%d): cksum = %08x\n", s / NSECTORS, s % NSECTORS, cksum);
     SectorCksum[s] = cksum;
 
     /* Wait one second and repeat. */
@@ -119,15 +120,16 @@ static TaskHandle_t readerHandle;
 static TaskHandle_t writerHandle;
 
 int main(void) {
-  portNOP(); /* Breakpoint for simulator. */
+  NOP(); /* Breakpoint for simulator. */
 
   AddIntServer(VertBlankChain, SystemClockTick);
 
-  SerialInit(9600);
-  FloppyInit(FLOPPY_TASK_PRIO);
+  DeviceAttach(&Serial);
+  DeviceAttach(&Floppy);
 
-  File_t *ser = kopen("serial", O_RDWR);
-  File_t *fd = kopen("floppy", O_RDWR);
+  File_t *ser, *fd;
+  FileOpen("serial", O_RDWR, &ser);
+  FileOpen("floppy", O_RDWR, &fd);
 
   SectorCksumLock = xSemaphoreCreateMutex();
 

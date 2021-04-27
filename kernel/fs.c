@@ -1,6 +1,5 @@
-#include <device.h>
+#include <devfile.h>
 #include <ioreq.h>
-#include <libkern.h>
 #include <sys/errno.h>
 
 #define DEBUG 1
@@ -19,9 +18,9 @@ typedef struct Mount {
   uint32_t blocks_start; /* start of data blocks */
 
   /* Runtime state */
-  Device_t *dev;
-  DeviceRead_t readfs;
-  DeviceWrite_t writefs;
+  DevFile_t *dev;
+  DevFileRead_t readfs;
+  DevFileWrite_t writefs;
   IoReq_t io;
 } Mount_t;
 

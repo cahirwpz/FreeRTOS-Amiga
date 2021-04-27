@@ -64,7 +64,7 @@ void vPortTrapHandler(TrapFrame_t *frame) {
 }
 
 int main(void) {
-  portNOP(); /* Breakpoint for simulator. */
+  NOP(); /* Breakpoint for simulator. */
 
   xTaskCreate(vMainTask, "main", configMINIMAL_STACK_SIZE, NULL, 0, &handle);
 

@@ -19,7 +19,7 @@ static void SystemClockTickHandler(__unused void *data) {
 INTSERVER_DEFINE(SystemClockTick, 10, SystemClockTickHandler, NULL);
 
 int main(void) {
-  portNOP(); /* Breakpoint for simulator. */
+  NOP(); /* Breakpoint for simulator. */
 
   AddIntServer(VertBlankChain, SystemClockTick);
 

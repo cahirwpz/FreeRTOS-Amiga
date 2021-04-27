@@ -1,22 +1,24 @@
 #pragma once
 
 #include <stdint.h>
-#include <copper.h>
+
+typedef union CopIns CopIns_t;
+typedef struct CopList CopList_t;
 
 /*
  * Sprites are described here:
  * http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node00AE.html
  */
 
-typedef struct sprdat {
+typedef struct SprDat {
   uint16_t lo, hi;
-} sprdat_t;
+} SprDat_t;
 
-typedef struct sprite {
+typedef struct Sprite {
   short height;
-  sprdat_t *data;
-  sprdat_t *attached;
-} sprite_t;
+  SprDat_t *data;
+  SprDat_t *attached;
+} Sprite_t;
 
 /*
  * SPRxPOS:
@@ -39,23 +41,14 @@ typedef struct sprite {
    ((((Y) + (H) + 1) & 256) >> 7) | ((X)&1))
 
 #define SPRHDR(x, y, a, h)                                                     \
-  (sprdat_t) {                                                                 \
+  (SprDat_t) {                                                                 \
     SPRPOS((x), (y)), SPRCTL((x), (y), (a), (h))                               \
   }
 
 #define SPREND()                                                               \
-  (sprdat_t) {                                                                 \
+  (SprDat_t) {                                                                 \
     0, 0                                                                       \
   }
 
-extern sprdat_t _empty_spr[];
-
-static inline void SpriteUpdatePos(sprite_t *spr, short x, short y) {
-  spr->data[0] = SPRHDR(x, y, 0, spr->height);
-  if (spr->attached)
-    spr->attached[0] = SPRHDR(x, y, 1, spr->height);
-}
-
-static inline copins_t *CopLoadSprite(coplist_t *list, int num, sprite_t *spr) {
-  return CopMove32(list, sprpt[num], spr ? spr->data : _empty_spr);
-}
+void SpriteUpdatePos(Sprite_t *spr, short x, short y);
+CopIns_t *CopLoadSprite(CopList_t *list, int num, Sprite_t *spr);

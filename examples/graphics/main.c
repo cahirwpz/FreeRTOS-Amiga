@@ -2,9 +2,9 @@
 #include <FreeRTOS/task.h>
 
 #include <interrupt.h>
-
 #include <palette.h>
 #include <bitmap.h>
+#include <copper.h>
 #include <blitter.h>
 
 #include "data/simpsons-bg.c"
@@ -14,14 +14,14 @@
 #include "data/screen.c"
 
 static COPLIST(cp, 100);
-static copins_t *bplpt[4];
+static CopIns_t *bplpt[4];
 
 static void vMainTask(__unused void *data) {
-  bltcopy_t bc;
+  BltCopy_t bc;
 
   /* Uses double buffering! */
   for (int buffer = 1;; buffer ^= 1) {
-    const bitmap_t *screen = buffer ? &screen1_bm : &screen0_bm;
+    const Bitmap_t *screen = buffer ? &screen1_bm : &screen0_bm;
 
     BltCopySetSrc(&bc, &simpsons_bm, 0, 0, -1, -1);
     BltCopySetDst(&bc, screen, 0, 0);
@@ -63,7 +63,7 @@ INTSERVER_DEFINE(SystemClockTick, 10, SystemClockTickHandler, NULL);
 static xTaskHandle main_handle;
 
 int main(void) {
-  portNOP(); /* Breakpoint for simulator. */
+  NOP(); /* Breakpoint for simulator. */
 
   AddIntServer(VertBlankChain, SystemClockTick);
 

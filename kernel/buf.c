@@ -3,9 +3,9 @@
 #include <FreeRTOS/event_groups.h>
 
 #include <buf.h>
-#include <device.h>
+#include <devfile.h>
+#include <memory.h>
 #include <ioreq.h>
-#include <libkern.h>
 
 #define DEBUG 1
 #include <debug.h>
@@ -30,7 +30,7 @@ void InitBufs(size_t nbufs) {
     TAILQ_INIT(&Bucket[i]);
 
   /* Initialize all buffers and put them on empty list. */
-  Buf_t *bufs = kcalloc(nbufs, sizeof(Buf_t));
+  Buf_t *bufs = MemAlloc(nbufs * sizeof(Buf_t), MF_ZERO);
   for (size_t i = 0; i < nbufs; i++) {
     Buf_t *buf = &bufs[i];
     buf->waiters = xEventGroupCreate();
@@ -73,7 +73,7 @@ static int BufWait(Buf_t *buf) {
   return error;
 }
 
-int BufRead(Device_t *dev, daddr_t blkno, Buf_t **bufp) {
+int BufRead(DevFile_t *dev, daddr_t blkno, Buf_t **bufp) {
   BufList_t *bucket = NULL;
   Buf_t *buf = NULL;
   int error = 0;
@@ -113,7 +113,7 @@ int BufRead(Device_t *dev, daddr_t blkno, Buf_t **bufp) {
   }
   xSemaphoreGive(BufLock);
 
-  IoReq_t req = IOREQ_READ(blkno * BLKSIZE, buf->data, BLKSIZE);
+  IoReq_t req = IOREQ_READ(blkno * BLKSIZE, buf->data, BLKSIZE, F_READ);
   error = dev->ops->read(dev, &req);
 
   taskENTER_CRITICAL();

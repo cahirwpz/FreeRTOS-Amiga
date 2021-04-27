@@ -12,7 +12,7 @@ typedef enum BufFlags {
 
 struct EventGroupDef_t;
 typedef struct EventGroupDef_t *EventGroupHandle_t;
-typedef struct Device Device_t;
+typedef struct DevFile DevFile_t;
 
 /* Structure that is used to manage buffer of a single block.
  *
@@ -24,7 +24,7 @@ typedef struct Buf {
   TAILQ_ENTRY(Buf) hash;           /* (b) link on fast lookup list */
   TAILQ_ENTRY(Buf) link;           /* (b) link on Empty / LRU list */
   EventGroupHandle_t waiters;      /* (!) tasks waiting for I/O to complete */
-  Device_t *dev;                   /* (b) block belongs to this device */
+  DevFile_t *dev;                  /* (b) block belongs to this device */
   daddr_t blkno;                   /* (b) block address on the block device */
   short refcnt;                    /* (!) if zero then block can be reused */
   short error;                     /* (!) set with errno code if I/O failed */
@@ -35,5 +35,5 @@ typedef struct Buf {
 typedef TAILQ_HEAD(BufList, Buf) BufList_t;
 
 void InitBuf(size_t nbufs);
-int BufRead(Device_t *dev, daddr_t blkno, Buf_t **bufp);
+int BufRead(DevFile_t *dev, daddr_t blkno, Buf_t **bufp);
 void BufRelease(Buf_t *buf);

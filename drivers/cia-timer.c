@@ -3,6 +3,7 @@
 
 #include <interrupt.h>
 #include <cia.h>
+#include <notify.h>
 
 /* Bitmask marking TIMER_* timers being in use. */
 static uint8_t InUse;
@@ -23,7 +24,7 @@ static void CIATimerHandler(CIATimer_t *timer) {
 
   if (SampleICR(cia, icr)) {
     /* Wake up sleeping task and disable interrupt for the timer. */
-    vTaskNotifyGiveFromISR(timer->waiter, &xNeedRescheduleTask);
+    NotifySendFromISR(timer->waiter, NB_IRQ);
     timer->waiter = NULL;
   }
 }
@@ -109,6 +110,6 @@ void WaitTimerGeneric(CIATimer_t *timer, uint16_t delay, bool spin) {
     /* Turn on the interrupt and go to sleep. */
     timer->waiter = xTaskGetCurrentTaskHandle();
     WriteICR(cia, CIAICRF_SETCLR | icr);
-    (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    (void)NotifyWait(NB_IRQ, portMAX_DELAY);
   }
 }

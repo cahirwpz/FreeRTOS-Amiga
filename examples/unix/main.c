@@ -2,11 +2,12 @@
 #include <FreeRTOS/task.h>
 
 #include <custom.h>
-#include <serial.h>
+#include <driver.h>
+#include <devfile.h>
 #include <file.h>
 #include <filedesc.h>
 #include <proc.h>
-#include <libkern.h>
+#include <debug.h>
 #include <tty.h>
 
 static File_t *FloppyOpen(const char *path) {
@@ -15,7 +16,8 @@ static File_t *FloppyOpen(const char *path) {
 }
 
 static void vMainTask(__unused void *data) {
-  File_t *ser = kopen("tty", O_RDWR);
+  File_t *ser;
+  FileOpen("tty", O_RDWR, &ser);
   File_t *init = FloppyOpen("init");
 
   Proc_t p;
@@ -26,7 +28,7 @@ static void vMainTask(__unused void *data) {
   if (ProcLoadImage(&p, init)) {
     ProcSetArgv(&p, (char *[]){"init", NULL});
     ProcEnter(&p);
-    klog("Program returned: %d\n", p.exitcode);
+    Log("Program returned: %d\n", p.exitcode);
   }
   ProcFini(&p);
 
@@ -37,9 +39,10 @@ static void vMainTask(__unused void *data) {
 static xTaskHandle handle;
 
 int main(void) {
-  portNOP(); /* Breakpoint for simulator. */
+  NOP(); /* Breakpoint for simulator. */
 
-  AddTtyDevice("tty", SerialInit(9600));
+  DeviceAttach(&Serial);
+  AddTtyDevFile("tty", DevFileLookup("serial"));
 
   xTaskCreate(vMainTask, "main", KPROC_STKSZ, NULL, 0, &handle);
 

@@ -114,9 +114,11 @@ typedef struct IntChain {
  * IntServer definition recalculates priority number accordingly.
  */
 #define INTSERVER(PRI, CODE, DATA)                                             \
-  { .node = {.pvOwner = DATA, .xItemValue = (127 - (PRI))}, .code = CODE }
+  (IntServer_t) {                                                              \
+    .node = {.pvOwner = DATA, .xItemValue = (127 - (PRI))}, .code = CODE       \
+  }
 #define INTSERVER_DEFINE(NAME, PRI, CODE, DATA)                                \
-  static IntServer_t *NAME = &(IntServer_t)INTSERVER(PRI, CODE, DATA)
+  static IntServer_t *NAME = &INTSERVER(PRI, CODE, DATA)
 
 /* Defines Interrupt Chain of given name. */
 #define INTCHAIN(NAME)                                                         \

@@ -1,24 +1,39 @@
 #include <string.h>
-#include <device.h>
+#include <devfile.h>
 #include <ioreq.h>
 #include <memdev.h>
+#include <sys/errno.h>
 
-static int MemoryRead(Device_t *, IoReq_t *);
+static int MemoryOpen(DevFile_t *, FileFlags_t);
+static int MemoryRead(DevFile_t *, IoReq_t *);
 
-static DeviceOps_t MemoryOps = {.read = MemoryRead};
+static DevFileOps_t MemoryOps = {
+  .type = DT_MEM,
+  .open = MemoryOpen,
+  .close = NullDevClose,
+  .read = MemoryRead,
+  .write = NullDevWrite,
+  .strategy = NullDevStrategy,
+  .ioctl = NullDevIoctl,
+  .event = NullDevEvent,
+};
 
 int AddMemoryDev(const char *name, const void *buf, size_t size) {
-  Device_t *dev;
+  DevFile_t *dev;
   int error;
 
-  if ((error = AddDevice(name, &MemoryOps, &dev)))
+  if ((error = AddDevFile(name, &MemoryOps, &dev)))
     return error;
   dev->size = size;
   dev->data = (void *)buf;
   return 0;
 }
 
-static int MemoryRead(Device_t *dev, IoReq_t *req) {
+static int MemoryOpen(DevFile_t *dev __unused, FileFlags_t flags) {
+  return (flags & F_WRITE) ? EACCES : 0;
+}
+
+static int MemoryRead(DevFile_t *dev, IoReq_t *req) {
   size_t n = req->left;
   if (req->offset + (ssize_t)req->left > dev->size)
     n = dev->size - req->offset;

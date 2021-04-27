@@ -13,7 +13,8 @@ typedef uint32_t daddr_t;  /* disk address */
 typedef uint32_t ino_t;    /* i-node number */
 typedef uint32_t blkcnt_t; /* fs block count */
 typedef uint8_t dev_t;
-typedef uint8_t mode_t;
+typedef uint16_t accmode_t; /* access permissions */
+typedef uint16_t mode_t;    /* permissions */
 typedef int32_t off_t;
 typedef int pid_t;
 typedef intptr_t ssize_t;

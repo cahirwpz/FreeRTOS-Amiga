@@ -5,9 +5,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <libkern.h>
+#include <devfile.h>
+#include <driver.h>
 #include <string.h>
-#include <serial.h>
 #include <tty.h>
 
 #include "filesys.h"
@@ -113,7 +113,7 @@ static BaseType_t cmdReadFile(char *out, size_t len, const char *cmdline) {
   static uint8_t *buf = NULL;
   static size_t bufLeft = 0;
   static size_t left = 0;
-  static intptr_t pos = 0;
+  static off_t pos = 0;
 
   if (Active < 0)
     return pdFALSE;
@@ -125,9 +125,10 @@ static BaseType_t cmdReadFile(char *out, size_t len, const char *cmdline) {
 
   if (left > 0 && bufLeft == 0) {
     static uint8_t data[BUFSIZE];
+    long bufLeft;
     buf = data;
-    pos = kfseek(f, 0, SEEK_CUR);
-    bufLeft = kfread(f, buf, min(BUFSIZE, left));
+    FileSeek(f, 0, SEEK_CUR, &pos);
+    FileRead(f, buf, min(BUFSIZE, left), &bufLeft);
     if (bufLeft == 0)
       left = 0;
   }
@@ -198,19 +199,20 @@ static void vShellTask(__unused void *data) {
   static char pcOutputString[MAX_OUTPUT_LENGTH];
   static char pcInputString[MAX_INPUT_LENGTH];
 
-  File_t *ser = kopen("tty", O_RDWR);
+  File_t *ser;
+  FileOpen("tty", O_RDWR, &ser);
 
   FsMount();
 
   for (;;) {
-    size_t nbytes;
+    long nbytes;
     BaseType_t xMoreData;
 
     if (Active < 0)
-      kfprintf(ser, "? > ");
+      FilePrintf(ser, "? > ");
     else
-      kfprintf(ser, "%d > ", Active);
-    nbytes = kfread(ser, pcInputString, MAX_INPUT_LENGTH);
+      FilePrintf(ser, "%d > ", Active);
+    FileRead(ser, pcInputString, MAX_INPUT_LENGTH, &nbytes);
     if (pcInputString[nbytes - 1] == '\n')
       nbytes--;
     pcInputString[nbytes] = '\0';
@@ -219,7 +221,7 @@ static void vShellTask(__unused void *data) {
     do {
       xMoreData = FreeRTOS_CLIProcessCommand(pcInputString, pcOutputString,
                                              MAX_OUTPUT_LENGTH);
-      kfwrite(ser, pcOutputString, strlen(pcOutputString));
+      FileWrite(ser, pcOutputString, strlen(pcOutputString), NULL);
     } while (xMoreData);
   }
 }
@@ -227,7 +229,8 @@ static void vShellTask(__unused void *data) {
 static TaskHandle_t shellHandle;
 
 void StartShellTask(void) {
-  AddTtyDevice("tty", SerialInit(9600));
+  DeviceAttach(&Serial);
+  AddTtyDevFile("tty", DevFileLookup("serial"));
 
   FreeRTOS_CLIRegisterCommand(&xOpenFileCmd);
   FreeRTOS_CLIRegisterCommand(&xCloseFileCmd);
@@ -236,6 +239,6 @@ void StartShellTask(void) {
   FreeRTOS_CLIRegisterCommand(&xSeekFileCmd);
   FreeRTOS_CLIRegisterCommand(&xListDirCmd);
 
-  xTaskCreate((TaskFunction_t)vShellTask, "shell", configMINIMAL_STACK_SIZE,
-              NULL, SHELL_TASK_PRIO, &shellHandle);
+  xTaskCreate(vShellTask, "shell", configMINIMAL_STACK_SIZE, NULL,
+              SHELL_TASK_PRIO, &shellHandle);
 }

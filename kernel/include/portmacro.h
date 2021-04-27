@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sys/cdefs.h>
+#include <cpu.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,54 +64,8 @@ uint32_t ulPortSetIPL(uint32_t);
 #define portCLEAR_INTERRUPT_MASK_FROM_ISR(uxSavedStatusRegister)               \
   ulPortSetIPL(uxSavedStatusRegister)
 
-/* When simulator is configured to enter debugger on illegal instructions,
- * this macro can be used to set breakpoints in your code. */
-#define portBREAK()                                                            \
-  { asm volatile("\tillegal\n"); }
-
-/* Make the processor wait for interrupt. */
-#define portWFI()                                                              \
-  { asm volatile("\tstop\t#0x2000\n"); }
-
-/* Halt the processor by masking all interrupts and waiting for NMI. */
-#define portHALT()                                                             \
-  { asm volatile("\tstop\t#0x2700\n"); }
-
-/* Issue trap 0..15 instruction that can be interpreted by a trap handler. */
-#define portTRAP(n)                                                            \
-  { asm volatile("\ttrap\t#" #n "\n"); }
-
-/* Use whenever a program should generate a fatal error. This will break into
- * debugger for program inspection and stop instruction execution. */
-#define portPANIC()                                                            \
-  {                                                                            \
-    portBREAK();                                                               \
-    portHALT();                                                                \
-  }
-
-/* Instruction that effectively is a no-op, but its opcode is different from
- * real nop instruction. Useful for introducing transparent breakpoints that
- * are only understood by simulator. */
-#define portNOP()                                                              \
-  { asm volatile("exg %%d7,%%d7" :::); }
-
-/* Read Vector Base Register (68010 and above only) */
-static inline void *portGetVBR(void) {
-  void *vbr;
-  asm volatile("\tmovec\t%%vbr,%0\n" : "=d"(vbr));
-  return vbr;
-}
-
-/* Read whole Status Register (privileged instruction on 68010 and above) */
-static inline uint16_t portGetSR(void) {
-  uint16_t sr;
-  asm volatile("\tmove.w\t%%sr,%0\n" : "=d"(sr));
-  return sr;
-}
-
 /* To yield we use system call that is invoked by TRAP instruction. */
-#define vPortYield()                                                           \
-  { asm volatile("\ttrap\t#0\n"); }
+#define vPortYield() TRAP(0)
 
 #define portYIELD() vPortYield()
 

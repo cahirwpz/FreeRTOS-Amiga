@@ -1,10 +1,10 @@
-#include <FreeRTOS/FreeRTOS.h>
 #include <amigahunk.h>
 #include <strings.h>
 #include <stdlib.h>
-#include <libkern.h>
+#include <memory.h>
 
 #define DEBUG 0
+#include <debug.h>
 
 #define HUNK_CODE 1001
 #define HUNK_DATA 1002
@@ -20,12 +20,16 @@
 
 static long ReadLong(File_t *fh) {
   long v = 0;
-  kfread(fh, &v, sizeof(v));
+  FileRead(fh, &v, sizeof(v), NULL);
   return v;
 }
 
+static void ReadLongArray(File_t *fh, void *array, int n) {
+  FileRead(fh, array, n * sizeof(int), NULL);
+}
+
 static void SkipLongs(File_t *fh, int n) {
-  kfseek(fh, n * sizeof(int), SEEK_CUR);
+  FileSeek(fh, n * sizeof(int), SEEK_CUR, NULL);
 }
 
 static bool AllocHunks(File_t *fh, Hunk_t **hunkArray, short hunkCount) {
@@ -35,8 +39,8 @@ static bool AllocHunks(File_t *fh, Hunk_t **hunkArray, short hunkCount) {
     /* size specifiers including memory attribute flags */
     uint32_t n = ReadLong(fh);
 
-    Hunk_t *hunk = ((n & HUNKF_CHIP) ? pvPortMallocChip : pvPortMalloc)(
-      sizeof(Hunk_t) + n * sizeof(int));
+    Hunk_t *hunk = MemAlloc(sizeof(Hunk_t) + n * sizeof(int),
+                            (n & HUNKF_CHIP) ? MF_CHIP : 0);
     *hunkArray++ = hunk;
 
     if (!hunk)
@@ -68,7 +72,7 @@ static bool LoadHunks(File_t *fh, Hunk_t **hunkArray) {
       hunkRoot = true;
       n = ReadLong(fh);
       if (hunkId != HUNK_BSS)
-        kfread(fh, hunk->data, n * sizeof(int));
+        ReadLongArray(fh, hunk->data, n);
 #if DEBUG
       {
         const char *hunkType;
@@ -149,7 +153,7 @@ Hunk_t *LoadHunkList(File_t *fh) {
 void FreeHunkList(Hunk_t *hunk) {
   do {
     Hunk_t *next = hunk->next;
-    vPortFree(hunk);
+    MemFree(hunk);
     hunk = next;
   } while (hunk);
 }

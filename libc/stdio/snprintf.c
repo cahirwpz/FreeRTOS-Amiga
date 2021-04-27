@@ -1,19 +1,22 @@
 #include <stdio.h>
 
+typedef struct out {
+  char *s, *e;
+} out_t;
+
+static void sputchar(out_t *out, char c) {
+  if (out->s < out->e)
+    *out->s++ = c;
+}
+
 int snprintf(char *buf, size_t size, const char *fmt, ...) {
-  char *sbuf = buf;
-  char *ebuf = buf + size - 1;
+  out_t out = {buf, buf + size - 1};
   va_list ap;
 
-  void sputchar(char c) {
-    if (sbuf < ebuf)
-      *sbuf++ = c;
-  }
-
   va_start(ap, fmt);
-  kvprintf(sputchar, fmt, ap);
+  kvprintf((putchar_t)sputchar, &out, fmt, ap);
   va_end(ap);
   if (buf != NULL)
-    *sbuf = '\0';
-  return sbuf - buf;
+    *out.s = '\0';
+  return out.s - buf;
 }

@@ -1,157 +1,64 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <bitmap.h>
-#include <copper.h>
-#include <font.h>
-#include <palette.h>
-#include <sprite.h>
-#include <string.h>
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/task.h>
 
-#include "console.h"
-#include "event.h"
+#include <driver.h>
+#include <devfile.h>
+#include <file.h>
+#include <event.h>
+#include <input.h>
+#include <display.h>
+#include <ioreq.h>
+#include <notify.h>
 
-#include "data/lat2-08.c"
-#include "data/pointer.c"
-#include "data/screen.c"
+#define INPUT_TASK_PRIO 2
 
-#define cons_width (screen_bm.width / 8)
-#define cons_height (screen_bm.height / console_font.height)
-#define cons_rowsize ((short)(screen_bm.bytesPerRow * console_font.height))
+static const char *EventName[] = {
+  [IE_UNKNOWN] = "unknown",
+  [IE_MOUSE_UP] = "mouse button up",
+  [IE_MOUSE_DOWN] = "mouse button down",
+  [IE_MOUSE_DELTA_X] = "mouse delta X",
+  [IE_MOUSE_DELTA_Y] = "mouse delta Y",
+  [IE_KEYBOARD_UP] = "keyboard key up",
+  [IE_KEYBOARD_DOWN] = "keyboard key down",
+};
 
-static struct {
-  unsigned char *here;
-  short x;
-  short y;
-} cursor;
+void vConsoleTask(void *data __unused) {
+  File_t *disp, *ms, *kbd;
 
-/*
- * Copper configures hardware each frame (50Hz in PAL) to:
- *  - set video mode to HIRES (640x256),
- *  - display one bitplane,
- *  - set background color to black, and foreground to white,
- *  - set up mouse pointer palette,
- *  - set sprite 0 to mouse pointer graphics,
- *  - set other sprites to empty graphics,
- */
-static void BuildCopperList(coplist_t *cp) {
-  CopSetupScreen(cp, &screen_bm, MODE_HIRES, HP(0), VP(0));
-  CopSetupBitplanes(cp, &screen_bm, NULL);
-  CopLoadColor(cp, 0, 0x000);
-  CopLoadColor(cp, 1, 0xfff);
-  CopLoadPal(cp, &pointer_pal, 16);
-  CopLoadSprite(cp, 0, &pointer_spr);
-  for (int i = 1; i < 8; i++)
-    CopLoadSprite(cp, i, NULL);
-  CopEnd(cp);
-}
+  FileOpen("display", O_WRONLY, &disp);
+  FileOpen("mouse", O_RDONLY | O_NONBLOCK, &ms);
+  FileOpen("keyboard", O_RDONLY | O_NONBLOCK, &kbd);
 
-void ConsoleInit(void) {
-  static COPLIST(cp, 40);
+  (void)FileEvent(ms, EV_ADD, EVFILT_READ);
+  (void)FileEvent(kbd, EV_ADD, EVFILT_READ);
 
-  EventQueueInit();
-  MouseInit(PushMouseEventFromISR, 0, 0, 319, 255);
-  KeyboardInit(PushKeyEventFromISR);
+  while (NotifyWait(NB_EVENT, portMAX_DELAY)) {
+    InputEvent_t ev;
 
-  /* Set cursor to (0, 0) */
-  cursor.here = screen_bm.planes[0];
-  cursor.x = 0;
-  cursor.y = 0;
+    while (!FileRead(kbd, &ev, sizeof(ev), NULL)) {
+      char c = (ev.value >= 0x20 && ev.value < 0x7f) ? ev.value : ' ';
+      FilePrintf(disp, "%s: value = %x, char = '%c'\n", EventName[ev.kind],
+                 (uint16_t)ev.value, c);
+    }
 
-  /* Tell copper where the copper list begins and enable copper DMA. */
-  BuildCopperList(cp);
-  CopListActivate(cp);
+    while (!FileRead(ms, &ev, sizeof(ev), NULL)) {
+      static MousePos_t m = {.x = 0, .y = 0};
 
-  /* Set sprite position in upper-left corner of display window. */
-  SpriteUpdatePos(&pointer_spr, HP(0), VP(0));
+      FilePrintf(disp, "%s: value = %d\n", EventName[ev.kind], ev.value);
 
-  /* Enable bitplane and sprite fetchers' DMA. */
-  EnableDMA(DMAF_RASTER | DMAF_SPRITE);
-}
+      if (ev.kind == IE_MOUSE_DELTA_X) {
+        m.x += ev.value;
+        m.x = max(0, m.x);
+        m.x = min(m.x, 319);
+      }
 
-static inline void UpdateHere(void) {
-  cursor.here = screen_bm.planes[0] + cons_rowsize * cursor.y + cursor.x;
-}
+      if (ev.kind == IE_MOUSE_DELTA_Y) {
+        m.y += ev.value;
+        m.y = max(0, m.y);
+        m.y = min(m.y, 255);
+      }
 
-void ConsoleMovePointer(short x, short y) {
-  SpriteUpdatePos(&pointer_spr, HP(x), VP(y));
-}
-
-void ConsoleSetCursor(short x, short y) {
-  if (x < 0)
-    cursor.x = 0;
-  else if (x >= cons_width)
-    cursor.x = cons_width - 1;
-  else
-    cursor.x = x;
-
-  if (y < 0)
-    cursor.y = 0;
-  else if (y >= cons_height)
-    cursor.y = cons_height - 1;
-  else
-    cursor.y = y;
-
-  UpdateHere();
-}
-
-void ConsoleGetCursor(short *xp, short *yp) {
-  *xp = cursor.x;
-  *yp = cursor.y;
-}
-
-#pragma GCC push_options
-#pragma GCC optimize("-O3")
-
-static void ConsoleDrawChar(int c) {
-  unsigned char *src = console_font_glyphs + (c - 32) * console_font.height;
-  unsigned char *dst = cursor.here++;
-
-  for (short i = 0; i < console_font.height; i++) {
-    *dst = *src++;
-    dst += screen_bm.bytesPerRow;
+      FileIoctl(disp, DIOCSETMS, &m);
+    }
   }
-}
-
-void ConsoleDrawCursor(void) {
-  unsigned char *dst = cursor.here++;
-
-  for (short i = 0; i < console_font.height; i++) {
-    *dst = ~*dst;
-    dst += screen_bm.bytesPerRow;
-  }
-}
-
-#pragma GCC pop_options
-
-static void ConsoleNextLine(void) {
-  for (short x = cursor.x; x < cons_width; x++)
-    ConsoleDrawChar(' ');
-  cursor.x = 0;
-  if (++cursor.y >= cons_height)
-    cursor.y = 0;
-  UpdateHere();
-}
-
-void ConsolePutChar(char c) {
-  if (c < 32) {
-    if (c == '\n')
-      ConsoleNextLine();
-  } else {
-    ConsoleDrawChar(c);
-    if (++cursor.x >= cons_width)
-      ConsoleNextLine();
-  }
-}
-
-void ConsoleWrite(const char *buf, size_t nbyte) {
-  for (size_t i = 0; i < nbyte; i++)
-    ConsolePutChar(*buf++);
-}
-
-void ConsolePrintf(const char *fmt, ...) {
-  va_list ap;
-
-  va_start(ap, fmt);
-  kvprintf(ConsolePutChar, fmt, ap);
-  va_end(ap);
 }
