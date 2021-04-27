@@ -3,6 +3,7 @@
 import argparse
 import os
 import stat
+from array import array
 from struct import pack, unpack
 from io import BytesIO
 
@@ -51,28 +52,64 @@ def checksum(data):
     return (~chksum & 0xffffffff)
 
 
-# Number of block addresses in an i-node
-FS_NADDR = 13
+FS_SBOFF = 1024
+FS_SBSZ = 32
+FS_BLKSIZE = 512
+FS_MAGIC = 0x43697269
+FS_BPB = 8 * FS_BLKSIZE              # bits per block
+
+
+class Superblock(object):
+    __layout__ = '>IIIIIIII'
+    __slots__ = ('magic', 'nblocks', 'nfreeblk', 'ninodes', 'nfreeino',
+                 'inodestart', 'blkbmstart', 'datastart')
+
+    def __init__(self, nblocks, nfreeblk, ninodes, nfreeino, inodestart,
+                 blkbmstart, datastart):
+        self.magic = FS_MAGIC
+        self.nblocks = nblocks
+        self.nfreeblk = nfreeblk
+        self.ninodes = ninodes
+        self.nfreeino = nfreeino
+        self.inodestart = inodestart
+        self.blkbmstart = blkbmstart
+        self.datastart = datastart
+
+    @classmethod
+    def read(cls, data):
+        sb = unpack(cls.__layout__, data)
+        assert sb[0] == FS_MAGIC
+        return cls(*sb[1:])
+
+    def __bytes__(self):
+        return pack(self.__layout__, self.magic, self.nblocks,
+                    self.nfreeblk, self.ninodes, self.nfreeino,
+                    self.inodestart, self.blkbmstart, self.datastart)
+
+
+FS_INOBMOFF = FS_SBOFF + FS_BLKSIZE     # where i-node bitmap starts
+FS_NADDR = 13       # Number of block addresses in an i-node
+FS_INODESZ = 64     # I-node size in bytes
 
 # File permissions
-FS_IEXEC = 0x01   # executable
-FS_IWRITE = 0x02  # writable
-FS_IREAD = 0x04   # readable
+FS_IEXEC = 0x01     # executable
+FS_IWRITE = 0x02    # writable
+FS_IREAD = 0x04     # readable
 
 # File types
-FS_IFREG = 0x10  # regular file
-FS_IFDIR = 0x20  # directory file
-FS_IFCHR = 0x30  # character device
-FS_IFBLK = 0x40  # block device
-FS_IFLNK = 0x50  # symbolic link
-FS_IFMT = 0x70   # mask of file type
+FS_IFREG = 0x10     # regular file
+FS_IFDIR = 0x20     # directory file
+FS_IFCHR = 0x30     # character device
+FS_IFBLK = 0x40     # block device
+FS_IFLNK = 0x50     # symbolic link
+FS_IFMT = 0x70      # mask of file type
 
 
 class Inode(object):
-    __layout__ = '>HHII13I'
     __slots__ = ('number', 'mode', 'nlink', 'nblock', 'size', 'blocks')
+    __layout__ = '>HHII13I'
 
-    def __init__(self, number):
+    def __init__(self, number=0):
         self.number = number
         self.mode = 0
         self.nlink = 0
@@ -81,8 +118,8 @@ class Inode(object):
         self.blocks = [0 for i in range(FS_NADDR)]
 
     def __bytes__(self):
-        return struct.pack(self.__layout__, self.mode, self.nlink, self.nblock,
-                           self.size, *self.blocks)
+        return pack(self.__layout__, self.mode, self.nlink, self.nblock,
+                    self.size, *self.blocks)
 
     def __str__(self):
         return 'Inode[%d]' % self.number
@@ -97,33 +134,22 @@ class DirEntry(object):
     __slots__ = ('inum', 'name')
     __layout__ = '>H14s'
 
-    def __init__(self, inum, name):
+    def __init__(self, inum=0, name=b''):
         self.inum = inum
         self.name = name
 
     @classmethod
     def read(cls, data):
-        return DirEntry(*struct.unpack(self.__layout__, data))
+        return DirEntry(*unpack(self.__layout__, data))
 
     def __bytes__(self):
-        return struct.pack(self.__layout__, self.inum, self.name)
+        return pack(self.__layout__, self.inum, self.name)
 
     def __str__(self):
         return 'DirEntry<inum=%d, name=%r>' % (self.inum, self.name)
 
 
-FS_SBOFF = 1024
-FS_BLKSIZE = 512
-FS_MAGIC = 0x43697269
-FS_INODESZ = 64
-FS_SBSZ = 32
-FS_INOBMOFF = FS_SBOFF + FS_BLKSIZE  # where i-node bitmap starts
-FS_BPB = 8 * FS_BLKSIZE              # bits per block
-
-
 class Filesystem(object):
-    __superblock__ = '>I4xIIIIII'
-
     @classmethod
     def mkfs(cls, fo, ntotal, ninodes):
         # substract 3 for boot block and super block
@@ -146,39 +172,32 @@ class Filesystem(object):
         datbmblks = nleft - nblocks
 
         # we have all the data to determine super block value
-        fs = cls(fo)
-        fs.nblocks = nblocks
-        fs.nfreeblk = nblocks
-        fs.ninodes = ninodes
-        fs.nfreeino = ninodes
-        fs.blkbmstart = 3 + inobmblks
-        fs.inodestart = fs.blkbmstart + datbmblks
-        fs.datastart = fs.inodestart + inodeblks
+        blkbmstart = 3 + inobmblks
+        inodestart = blkbmstart + datbmblks
+        datastart = inodestart + inodeblks
+
+        sb = Superblock(nblocks, nblocks, ninodes, ninodes, blkbmstart,
+                        inodestart, datastart)
 
         fo.truncate(nblocks * FS_BLKSIZE)
-        fs.syncsb()
+
+        fs = cls(fo, sb)
+        fs.sbwrite()
 
         return fs
 
     @classmethod
     def mount(cls, fo):
-        fs = cls(fo)
-        (fs.nblocks, fs.nfreeblk, fs.ninodes, fs.nfreeino, fs.inodestart,
-         fs.blkbmstart, fs.datastart) = struct.unpack(cls.__superblock__,
-                                                      fo.read(FS_SBSZ))
-        assert fs.magic == FS_MAGIC
-        return fs
+        fo.seek(FS_SBOFF)
+        sb = Superblock.read(fo.read(FS_SBSZ))
+        return Filesystem(fo, sb)
 
-    def __init__(self, fo):
-        self.magic = FS_MAGIC
+    def __init__(self, fo, sb):
+        self.sb = sb
         self.__fo = fo
 
-    def syncsb(self):
-        sb = struct.pack(self.__superblock__, self.magic, self.ninodes,
-                         self.nblocks, self.nfreeblk, self.nfreeino,
-                         self.inodestart, self.datastart)
-
-        self.write(FS_SBOFF, sb)
+    def sbwrite(self):
+        self.write(FS_SBOFF, self.sb)
 
     def __bitalloc(self, off, n, start):
         for i in range(n):
@@ -194,23 +213,24 @@ class Filesystem(object):
         return None
 
     def ialloc(self):
-        inum = self.__bitalloc(FS_INOBMOFF, self.ninodes, 1)
+        inum = self.__bitalloc(FS_INOBMOFF, self.sb.ninodes, 1)
 
-        if not inum and self.ninodes > 0:
+        if not inum and self.sb.ninodes > 0:
             raise RuntimeError('no free i-node found!')
 
         return Inode(inum)
 
     def balloc(self):
-        bnum = self.__bitalloc(self.blkbmstart, self.nblocks, self.datastart)
+        bnum = self.__bitalloc(self.sb.blkbmstart, self.sb.nblocks,
+                               self.sb.datastart)
 
-        if not bnum and self.nblocks > 0:
+        if not bnum and self.sb.nblocks > 0:
             raise RuntimeError('no free block found!')
 
         return bnum
 
     def iwrite(self, inode):
-        off = self.inodestart * FS_BLKSIZE
+        off = self.sb.inodestart * FS_BLKSIZE
         self.write(off + (inode.number - 1) * FS_INODESZ, inode)
 
     def read(self, off, size):
