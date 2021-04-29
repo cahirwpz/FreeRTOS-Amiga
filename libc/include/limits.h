@@ -114,3 +114,5 @@
 /* limit of size_t */
 #define SIZE_MAX __SIZE_MAX__
 #define SSIZE_MAX ((ssize_t)(__SIZE_MAX__ / 2))
+
+#include <sys/syslimits.h>

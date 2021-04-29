@@ -17,9 +17,11 @@
 typedef void (*putchar_t)(void *, char);
 void kvprintf(putchar_t, void *, const char *fmt, va_list ap);
 int snprintf(char *str, size_t size, const char *format, ...);
+int vsnprintf(char *str, size_t size, const char *format, va_list ap);
 
 #ifdef _USERSPACE
 
 int dprintf(int fd, const char *fmt, ...);
+int vdprintf(int fd, const char *fmt, va_list ap);
 
 #endif /* !_USERSPACE */

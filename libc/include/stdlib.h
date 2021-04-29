@@ -18,5 +18,6 @@ u_long strtoul(const char *restrict str, char **restrict endptr, int base);
 __noreturn void exit(int);
 void free(void *);
 void *malloc(size_t);
+void *realloc(void *ptr, size_t size);
 
 #endif /* !_USERSPACE */
