@@ -56,7 +56,8 @@ FS_SBOFF = 1024
 FS_SBSZ = 32
 FS_BLKSIZE = 512
 FS_MAGIC = 0x43697269
-FS_BPB = 8 * FS_BLKSIZE              # bits per block
+FS_BPB = 8 * FS_BLKSIZE             # bits per block
+FS_PBP = FS_BLKSIZE / 4             # pointers per block
 
 
 class Superblock(object):
@@ -81,10 +82,44 @@ class Superblock(object):
         assert sb[0] == FS_MAGIC
         return cls(*sb[1:])
 
+    @classmethod
+    def make(cls, ntotal, ninodes):
+        # substract 3 for boot block and super block
+        nleft = ntotal - 3
+
+        # calculate number of i-nodes
+        ninodes = align(ninodes, FS_BLKSIZE // FS_INODESZ)
+        inodeblks = ninodes * FS_INODESZ // FS_BLKSIZE
+        inobmblks = align(ninodes, FS_BPB) // FS_BPB
+
+        if ninodes * FS_INODESZ > FS_BLKSIZE * ntotal / 8:
+            raise SystemExit(
+                    'i-nodes cannot take more than 1/8 of available space')
+
+        # substract space for i-node bitmap and table
+        nleft -= inobmblks + inodeblks
+
+        # calculate number of blocks
+        nblocks = (nleft * FS_BPB - (FS_BPB - 1)) // (FS_BPB + 1)
+        datbmblks = nleft - nblocks
+
+        # we have all the data to determine super block value
+        blkbmstart = 3 + inobmblks
+        inodestart = blkbmstart + datbmblks
+        datastart = inodestart + inodeblks
+
+        return cls(nblocks, nblocks, ninodes, ninodes,
+                   blkbmstart, inodestart, datastart)
+
     def __bytes__(self):
         return pack(self.__layout__, self.magic, self.nblocks,
                     self.nfreeblk, self.ninodes, self.nfreeino,
                     self.inodestart, self.blkbmstart, self.datastart)
+
+    @property
+    def inodeaddr(self, inum):
+        assert inum > 0 and inum <= self.ninodes
+        return self.sb.inodestart * FS_BLKSIZE + (inum - 1) * FS_INODESZ
 
 
 FS_INOBMOFF = FS_SBOFF + FS_BLKSIZE     # where i-node bitmap starts
@@ -151,39 +186,11 @@ class DirEntry(object):
 
 class Filesystem(object):
     @classmethod
-    def mkfs(cls, fo, ntotal, ninodes):
-        # substract 3 for boot block and super block
-        nleft = ntotal - 3
-
-        # calculate number of i-nodes
-        ninodes = align(ninodes, FS_BLKSIZE // FS_INODESZ)
-        inodeblks = ninodes * FS_INODESZ // FS_BLKSIZE
-        inobmblks = align(ninodes, FS_BPB) // FS_BPB
-
-        if ninodes * FS_INODESZ > FS_BLKSIZE * ntotal / 8:
-            raise SystemExit(
-                    'i-nodes cannot take more than 1/8 of available space')
-
-        # substract space for i-node bitmap and table
-        nleft -= inobmblks + inodeblks
-
-        # calculate number of blocks
-        nblocks = (nleft * FS_BPB - (FS_BPB - 1)) // (FS_BPB + 1)
-        datbmblks = nleft - nblocks
-
-        # we have all the data to determine super block value
-        blkbmstart = 3 + inobmblks
-        inodestart = blkbmstart + datbmblks
-        datastart = inodestart + inodeblks
-
-        sb = Superblock(nblocks, nblocks, ninodes, ninodes, blkbmstart,
-                        inodestart, datastart)
-
+    def mkfs(cls, fo, nblocks, ninodes):
+        sb = Superblock.make(nblocks, ninodes)
         fo.truncate(nblocks * FS_BLKSIZE)
-
         fs = cls(fo, sb)
         fs.sbwrite()
-
         return fs
 
     @classmethod
@@ -229,36 +236,99 @@ class Filesystem(object):
 
         return bnum
 
-    def iwrite(self, inode):
-        off = self.sb.inodestart * FS_BLKSIZE
-        self.write(off + (inode.number - 1) * FS_INODESZ, inode)
+    def isync(self, inode):
+        self.write(self.sb.inodeaddr(inode.number), inode)
 
     def read(self, off, size):
         self.__fo.seek(off)
         return self.__fo.read(size)
 
-    def write(self, off, *args):
+    def write(self, off, data):
         self.__fo.seek(off)
-        for data in args:
-            self.__fo.write(bytes(data))
+        self.__fo.write(bytes(data))
+
+    def newdir(self):
+        ino = fs.ialloc()
+        ino.mode = FS_IREAD | FS_IWRITE | FS_IEXEC | FS_IFDIR
+        ino.nlink = 2
+        self.isync(ino)
+
+        self.iappend(ino, DirEntry(ino.number, b'.'))
+        self.iappend(ino, DirEntry(ino.number, b'..'))
+
+        return ino
+
+    def indirp(self, pba, idx, alloc=False):
+        if pba > 0:
+            return unpack('>I', self.read(pba * FS_BLKSIZE + idx * 4, 4))[0]
+        return 0
+
+    def dirp(self, ino, idx, alloc=False):
+        return ino.blocks[idx]
+
+    def bmap(self, ino, lba, alloc=False):
+        idx = lba
+        if idx < FS_NADDR - 3:
+            return self.dirp(ino, idx)
+
+        idx -= FS_NADDR - 3
+        if idx < FS_PPB:
+            l0 = self.dirp(ino, FS_NADDR - 3)
+            return self.indirp(l0, idx)
+
+        idx -= FS_PPB
+        if idx < FS_PPB * FS_PPB:
+            l0 = self.dirp(ino, FS_NADDR - 2)
+            l1 = self.indirp(l0, idx // FS_PPB)
+            return self.indirp(l1, idx % FS_PPB)
+
+        idx -= FS_PPB * FS_PPB
+        l0 = self.dirp(ino, FS_NADDR - 1)
+        l1 = self.indirp(l0, idx // (FS_PPB * FS_PPB))
+        l2 = self.indirp(l1, (idx // FS_PPB) % FS_PPB)
+        return self.indirp(l2, idx % FS_PPB)
+
+    def bread(self, ino, lba):
+        pba = self.bmap(ino, lba)
+        if pba == 0:
+            return bytes(FS_BLKSIZE)
+        return self.read(pba * FS_BLKSIZE, FS_BLKSIZE)
+
+    def bwrite(self, ino, lba, data):
+        assert len(data) == FS_BLKSIZE
+        pba = self.bmap(ino, lba)
+        assert pba != 0
+        self.write(pba * FS_BLKSIZE, FS_BLKSIZE)
+
+    def bupdate(self, ino, lba, pos, data):
+        size = len(data)
+        if pos % FS_BLKSIZE or size % FS_BLKSIZE:
+            buf = self.bread(ino, pos // FS_BLKSIZE)
+            buf[off:off+n] = data
+            data = buf
+        self.bwrite(ino, pos // FS_BLKSIZE, data)
+
+    def iwrite(self, ino, pos, data):
+        i = 0
+        end = pos + len(data)
+
+        while pos < end:
+            nextpos = min(align(pos + 1, FS_BLKSIZE), end)
+            s = pos % FS_BLKSIZE
+            e = (nextpos - 1) % FS_BLKSIZE
+            n = e - s + 1
+            self.bupdate(ino, pos // FS_BLKSIZE, s, data[i:i+n])
+            pos = nextpos
+            i += n
+
+    def iappend(self, ino, data):
+        self.iwrite(ino, ino.size, data)
 
 
 def mkfs(image, nblocks, ninodes):
     with open(image, 'w+b') as fo:
         fs = Filesystem.mkfs(fo, nblocks, ninodes)
-
-        ino = fs.ialloc()
-        ino.mode = FS_IREAD | FS_IWRITE | FS_IEXEC | FS_IFDIR
-        ino.nlink = 2
-        ino.nblock = 1
-        ino.size = 2 * FS_DIRENTSZ
-        ino.blocks[0] = fs.balloc()
-        fs.iwrite(ino)
-
-        off = ino.blocks[0] * FS_BLKSIZE
-        de1 = DirEntry(1, b'.')
-        de2 = DirEntry(1, b'..')
-        fs.write(off, de1, de2)
+        fs.newdir()     # creates root directory
 
 
 def boot(image, bootcode):
