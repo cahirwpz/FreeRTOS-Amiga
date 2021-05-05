@@ -1,4 +1,4 @@
-# FreeRTOS-Amiga
+# EduKer
 
 Simplified Unix-like operating system for Amiga 500 (and alike) computer.
 It has modern kernel design based on current BSD family operating systems.
@@ -12,24 +12,34 @@ Programming environment is based on:
 Main assumptions:
 
  - kernel should fit in less than 64kB of RAM
- - simple AmigaOS-style executable files
- - no virtual memory management (process spawning by `vfork`)
- - simple Minix-like filesystem
+ - AmigaOS-style executable files
+ - Minix-like filesystem
  - basic set of tools in `/bin` directory
  - terminal driver
+ - process spawning by `vfork`
  - single threaded processes
- - sbrk based userspace memory allocation
+ - non-preemptible kernel
  - simple locking rules (no fine-grained locking systemwide)
  - single user
  - pipes
  - signals
 
+If page-based MMU is available then:
+
+ - simple virtual address space layout:
+   - code, data and stack segments
+   - sbrk based memory allocation
+ - real `fork`
+ - code segment sharing
+
 Provides drivers for:
 
- - floppy disk driver
- - terminal display
+ - storage devices:
+   - floppy drive
+   - IDE hard drive
+ - vt100 compatible console:
+   - display
+   - keyboard
+   - mouse
  - serial port
- - keyboard
- - mouse
- - floppy disk drive
  - various timers
