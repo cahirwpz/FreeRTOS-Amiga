@@ -27,15 +27,6 @@ typedef int (*DevFileIoctl_t)(DevFile_t *dev, u_long cmd, void *data,
                               FileFlags_t flags);
 typedef int (*DevFileEvent_t)(DevFile_t *dev, EvAction_t act, EvFilter_t filt);
 
-/* Provide default implementation for given device file operation. */
-int NullDevOpen(DevFile_t *dev, FileFlags_t flags);
-int NullDevClose(DevFile_t *dev, FileFlags_t flags);
-int NullDevRead(DevFile_t *dev, IoReq_t *req);
-int NullDevWrite(DevFile_t *dev, IoReq_t *req);
-int NullDevStrategy(Buf_t *buf);
-int NullDevIoctl(DevFile_t *dev, u_long cmd, void *data, FileFlags_t flags);
-int NullDevEvent(DevFile_t *dev, EvAction_t act, EvFilter_t filt);
-
 typedef enum DevFileType {
   DT_OTHER = 0,       /* other non-seekable device file */
   DT_CONS = 1,        /* raw console file */
@@ -57,15 +48,6 @@ struct DevFileOps {
   DevFileIoctl_t ioctl;       /* read or modify device properties */
   DevFileEvent_t event; /* register handler for can-read or can-write events */
 };
-
-#define DevFileOpen(_dev, _flags) ((_dev)->ops->open((_dev), (_flags)))
-#define DevFileClose(_dev, _flags) ((_dev)->ops->close((_dev), (_flags)))
-#define DevFileRead(_dev, _req) ((_dev)->ops->read((_dev), (_req)))
-#define DevFileWrite(_dev, _req) ((_dev)->ops->write((_dev), (_req)))
-#define DevFileIoctl(_dev, _cmd, _data, _flags)                                \
-  ((_dev)->ops->ioctl((_dev), (_cmd), (_data), (_flags)))
-#define DevFileEvent(_dev, _act, _filt)                                        \
-  ((_dev)->ops->event((_dev), (_act), (_filt)))
 
 /* DevFile node needed by filesystem implementation.
  * Simplified version of FreeBSD's cdev. */

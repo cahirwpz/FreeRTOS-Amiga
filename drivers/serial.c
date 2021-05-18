@@ -44,8 +44,6 @@ static DevFileOps_t SerialOps = {
   .close = SerialClose,
   .read = SerialRead,
   .write = SerialWrite,
-  .strategy = NullDevStrategy,
-  .ioctl = NullDevIoctl,
   .event = SerialEvent,
 };
 

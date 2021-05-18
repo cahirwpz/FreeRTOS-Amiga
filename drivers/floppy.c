@@ -48,13 +48,8 @@ static int FloppyReadWrite(DevFile_t *, IoReq_t *);
 
 static DevFileOps_t FloppyOps = {
   .type = DT_DISK,
-  .open = NullDevOpen,
-  .close = NullDevClose,
   .read = FloppyReadWrite,
   .write = FloppyReadWrite,
-  .strategy = NullDevStrategy,
-  .ioctl = NullDevIoctl,
-  .event = NullDevEvent,
 };
 
 static int FloppyAttach(Driver_t *drv) {

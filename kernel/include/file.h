@@ -25,14 +25,6 @@ typedef int (*FileSeek_t)(File_t *f, long offset, int whence);
 typedef int (*FileEvent_t)(File_t *f, EvAction_t act, EvFilter_t filt);
 typedef int (*FileClose_t)(File_t *f);
 
-/* Provide default implementation for given file operation. */
-int NullFileRead(File_t *f, IoReq_t *io);
-int NullFileWrite(File_t *f, IoReq_t *io);
-int NullFileIoctl(File_t *f, u_long cmd, void *data);
-int NullFileSeek(File_t *f, long offset, int whence);
-int NullFileEvent(File_t *f, EvAction_t act, EvFilter_t filt);
-int NullFileClose(File_t *f);
-
 /* Operations available for a file object.
  * Simplified version of FreeBSD's fileops. */
 typedef struct FileOps {

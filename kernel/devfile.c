@@ -44,22 +44,36 @@ DevFile_t *DevFileLookup(const char *name) {
   return dev;
 }
 
-int NullDevOk(void) {
+/* Provide default implementation for given device file operation. */
+static int NoDevOpen(DevFile_t *dev __unused, FileFlags_t flags __unused) {
   return 0;
 }
 
-__strong_alias(NullDevOpen, NullDevOk);
-__strong_alias(NullDevClose, NullDevOk);
+static int NoDevClose(DevFile_t *dev __unused, FileFlags_t flags __unused) {
+  return 0;
+}
 
-int NullDevNotImpl(void) {
+static int NoDevRead(DevFile_t *dev __unused, IoReq_t *req __unused) {
   return ENOSYS;
 }
 
-__strong_alias(NullDevRead, NullDevNotImpl);
-__strong_alias(NullDevWrite, NullDevNotImpl);
-__strong_alias(NullDevStrategy, NullDevNotImpl);
-__strong_alias(NullDevIoctl, NullDevNotImpl);
-__strong_alias(NullDevEvent, NullDevNotImpl);
+static int NoDevWrite(DevFile_t *dev __unused, IoReq_t *req __unused) {
+  return ENOSYS;
+}
+
+static int NoDevStrategy(Buf_t *buf __unused) {
+  return ENOSYS;
+}
+
+static int NoDevIoctl(DevFile_t *dev __unused, u_long cmd __unused,
+                      void *data __unused, FileFlags_t flags __unused) {
+  return ENOSYS;
+}
+
+static int NoDevEvent(DevFile_t *dev __unused, EvAction_t act __unused,
+                      EvFilter_t filt __unused) {
+  return ENOSYS;
+}
 
 int AddDevFile(const char *name, DevFileOps_t *ops, DevFile_t **devp) {
   DevFile_t *dev;
@@ -76,6 +90,21 @@ int AddDevFile(const char *name, DevFileOps_t *ops, DevFile_t **devp) {
     error = ENOMEM;
     goto leave;
   }
+
+  if (ops->open == NULL)
+    ops->open = NoDevOpen;
+  if (ops->close == NULL)
+    ops->close = NoDevClose;
+  if (ops->read == NULL)
+    ops->read = NoDevRead;
+  if (ops->write == NULL)
+    ops->write = NoDevWrite;
+  if (ops->ioctl == NULL)
+    ops->ioctl = NoDevIoctl;
+  if (ops->strategy == NULL)
+    ops->strategy = NoDevStrategy;
+  if (ops->event == NULL)
+    ops->event = NoDevEvent;
 
   TAILQ_INSERT_TAIL(&DevFileList, dev, node);
   dev->name = name;
@@ -104,13 +133,13 @@ int OpenDevFile(const char *name, File_t *f) {
     goto leave;
   }
 
-  if ((error = DevFileOpen(dev, f->flags)))
+  if ((error = dev->ops->open(dev, f->flags)))
     goto leave;
 
   f->ops = &DevFileOps;
   f->type = FT_DEVICE;
   f->device = dev;
-  dev->usecnt++;
+  Atomic_Increment_u32(&dev->usecnt);
 
 leave:
   xTaskResumeAll();
@@ -121,7 +150,7 @@ leave:
 static int DevRead(File_t *f, IoReq_t *io) {
   DevFile_t *dev = f->device;
   long nbyte = io->left;
-  int error = DevFileRead(dev, io);
+  int error = dev->ops->read(dev, io);
   if ((dev->ops->type & DT_SEEKABLE) && !error)
     f->offset += nbyte - io->left;
   return error;
@@ -130,7 +159,7 @@ static int DevRead(File_t *f, IoReq_t *io) {
 static int DevWrite(File_t *f, IoReq_t *io) {
   DevFile_t *dev = f->device;
   long nbyte = io->left;
-  int error = DevFileWrite(dev, io);
+  int error = dev->ops->write(dev, io);
   if ((dev->ops->type & DT_SEEKABLE) && !error)
     f->offset += nbyte - io->left;
   return error;
@@ -138,7 +167,7 @@ static int DevWrite(File_t *f, IoReq_t *io) {
 
 static int DevIoctl(File_t *f, u_long cmd, void *data) {
   DevFile_t *dev = f->device;
-  return DevFileIoctl(dev, cmd, data, f->flags);
+  return dev->ops->ioctl(dev, cmd, data, f->flags);
 }
 
 static int DevSeek(File_t *f, long offset, int whence) {
@@ -168,10 +197,10 @@ static int DevSeek(File_t *f, long offset, int whence) {
 static int DevClose(File_t *f) {
   DevFile_t *dev = f->device;
   Atomic_Decrement_u32(&dev->usecnt);
-  return DevFileClose(dev, f->flags);
+  return dev->ops->close(dev, f->flags);
 }
 
 static int DevEvent(File_t *f, EvAction_t act, EvFilter_t filt) {
   DevFile_t *dev = f->device;
-  return DevFileEvent(dev, act, filt);
+  return dev->ops->event(dev, act, filt);
 }
