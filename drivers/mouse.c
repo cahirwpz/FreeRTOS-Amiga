@@ -31,9 +31,6 @@ static DevFileOps_t MouseOps = {
   .open = MouseOpen,
   .close = MouseClose,
   .read = MouseRead,
-  .write = NullDevWrite,
-  .strategy = NullDevStrategy,
-  .ioctl = NullDevIoctl,
   .event = MouseEvent,
 };
 

@@ -8,27 +8,6 @@
 #include <file.h>
 #include <sys/errno.h>
 
-int NullFileOk(void) {
-  return 0;
-}
-
-__strong_alias(NullFileClose, NullFileOk);
-
-int NullFileNotImpl(void) {
-  return ENOSYS;
-}
-
-__strong_alias(NullFileRead, NullFileNotImpl);
-__strong_alias(NullFileWrite, NullFileNotImpl);
-__strong_alias(NullFileIoctl, NullFileNotImpl);
-__strong_alias(NullFileEvent, NullFileNotImpl);
-
-int NullFileNotSeekable(void) {
-  return ESPIPE;
-}
-
-__strong_alias(NullFileSeek, NullFileNotSeekable);
-
 File_t *FileHold(File_t *f) {
   uint32_t old = Atomic_Increment_u32(&f->usecount);
   configASSERT(old > 0);

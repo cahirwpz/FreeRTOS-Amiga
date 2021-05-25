@@ -62,7 +62,8 @@ typedef struct TtyState {
   MsgPort_t *readMp;
   MsgPort_t *writeMp;
   /* Used for communication with terminal device. */
-  DevFile_t *cons;
+  const char *consName;
+  File_t *cons;
   IoReq_t rxReq;
   IoReq_t txReq;
 } TtyState_t;
@@ -79,9 +80,6 @@ static DevFileOps_t TtyOps = {
   .close = TtyClose,
   .read = TtyRead,
   .write = TtyWrite,
-  .strategy = NullDevStrategy,
-  .ioctl = NullDevIoctl,
-  .event = NullDevEvent,
 };
 
 #define TTY_TASK_PRIO 2
@@ -97,7 +95,7 @@ int AddTtyDevFile(const char *name, DevFile_t *cons) {
     return ENOMEM;
 
   tty->name = name;
-  tty->cons = cons;
+  tty->consName = cons->name;
 
   int error;
   if ((error = AddDevFile(name, &TtyOps, &dev))) {
@@ -111,7 +109,7 @@ int AddTtyDevFile(const char *name, DevFile_t *cons) {
 }
 
 static int HandleRxReady(TtyState_t *tty) {
-  DevFile_t *cons = tty->cons;
+  File_t *cons = tty->cons;
   IoReq_t *req = &tty->rxReq;
   InputQueue_t *input = tty->input;
   int error = 0;
@@ -120,7 +118,7 @@ static int HandleRxReady(TtyState_t *tty) {
   while (input->len < BUFSIZ) {
     req->rbuf = input->buf + input->len;
     req->left = BUFSIZ - input->len;
-    if ((error = DevFileRead(cons, req))) {
+    if ((error = cons->ops->read(cons, req))) {
       DLOG("tty: rx-ready; would block\n");
       break;
     }
@@ -172,7 +170,7 @@ static void HandleReadReq(TtyState_t *tty) {
 }
 
 static int HandleTxReady(TtyState_t *tty) {
-  DevFile_t *cons = tty->cons;
+  File_t *cons = tty->cons;
   IoReq_t *req = &tty->txReq;
   OutputQueue_t *output = tty->output;
   int error = 0;
@@ -188,7 +186,7 @@ static int HandleTxReady(TtyState_t *tty) {
     /* Send asynchronous write request. */
     req->wbuf = &output->buf[output->tail];
     req->left = size;
-    if ((error = DevFileWrite(cons, req))) {
+    if ((error = cons->ops->write(cons, req))) {
       DLOG("tty: tx-ready; would block\n");
       break;
     }
@@ -278,8 +276,8 @@ static void ProcessInput(TtyState_t *tty) {
 static void TtyTask(void *data) {
   TtyState_t *tty = data;
 
-  DevFileEvent(tty->cons, EV_ADD, EVFILT_READ);
-  DevFileEvent(tty->cons, EV_ADD, EVFILT_WRITE);
+  FileEvent(tty->cons, EV_ADD, EVFILT_READ);
+  FileEvent(tty->cons, EV_ADD, EVFILT_WRITE);
 
   while (NotifyWait(NB_MSGPORT | NB_EVENT, portMAX_DELAY)) {
     DLOG("tty: wakeup\n");
@@ -295,8 +293,8 @@ static void TtyTask(void *data) {
     DLOG("tty: sleep\n");
   }
 
-  DevFileEvent(tty->cons, EV_DELETE, EVFILT_READ);
-  DevFileEvent(tty->cons, EV_DELETE, EVFILT_WRITE);
+  FileEvent(tty->cons, EV_DELETE, EVFILT_READ);
+  FileEvent(tty->cons, EV_DELETE, EVFILT_WRITE);
 
   /* Abort pending requests. */
   if (GetMsgData(tty->readMp))
@@ -312,7 +310,7 @@ static int TtyOpen(DevFile_t *dev, FileFlags_t flags __unused) {
   if (!dev->usecnt) {
     TtyState_t *tty = dev->data;
 
-    int error = DevFileOpen(tty->cons, F_READ | F_WRITE);
+    int error = FileOpen(tty->consName, O_RDWR | O_NONBLOCK, &tty->cons);
     if (error)
       return error;
 
@@ -346,7 +344,7 @@ static int TtyClose(DevFile_t *dev, FileFlags_t flags __unused) {
     MemFree(tty->output);
     MemFree(tty->input);
 
-    DevFileClose(tty->cons, F_READ | F_WRITE);
+    FileClose(tty->cons);
   }
 
   return ENOSYS;

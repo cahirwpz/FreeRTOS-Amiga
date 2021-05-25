@@ -249,9 +249,6 @@ static DevFileOps_t KeyboardOps = {
   .open = KeyboardOpen,
   .close = KeyboardClose,
   .read = KeyboardRead,
-  .write = NullDevWrite,
-  .strategy = NullDevStrategy,
-  .ioctl = NullDevIoctl,
   .event = KeyboardEvent,
 };
 

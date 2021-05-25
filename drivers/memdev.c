@@ -10,12 +10,7 @@ static int MemoryRead(DevFile_t *, IoReq_t *);
 static DevFileOps_t MemoryOps = {
   .type = DT_MEM,
   .open = MemoryOpen,
-  .close = NullDevClose,
   .read = MemoryRead,
-  .write = NullDevWrite,
-  .strategy = NullDevStrategy,
-  .ioctl = NullDevIoctl,
-  .event = NullDevEvent,
 };
 
 int AddMemoryDev(const char *name, const void *buf, size_t size) {

@@ -60,11 +60,8 @@ static DevFileOps_t DisplayOps = {
   .type = DT_OTHER,
   .open = DisplayOpen,
   .close = DisplayClose,
-  .read = NullDevRead,
   .write = DisplayWrite,
-  .strategy = NullDevStrategy,
   .ioctl = DisplayIoctl,
-  .event = NullDevEvent,
 };
 
 /*
